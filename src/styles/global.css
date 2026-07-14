@@ -42,6 +42,11 @@
   box-sizing: border-box;
 }
 
+/* display 指定を持つ要素でも hidden 属性を必ず優先する */
+[hidden] {
+  display: none !important;
+}
+
 html {
   font-family: var(--font-sans);
   font-size: 15px;
