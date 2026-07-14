@@ -1,0 +1,837 @@
+---
+import Base from '../../layouts/Base.astro';
+import { CASE_STATUS, EVENT_TYPE, STATUS_ORDER } from '../../lib/status';
+
+// クライアントJSで使う表示定義
+const statusDefs = Object.fromEntries(
+  STATUS_ORDER.map((s) => [s, { label: CASE_STATUS[s].label, mark: CASE_STATUS[s].mark, tone: CASE_STATUS[s].tone }]),
+);
+const eventTypeDefs = Object.fromEntries(
+  Object.entries(EVENT_TYPE).map(([k, v]) => [k, { label: v.label, mark: v.mark, tone: v.tone }]),
+);
+---
+
+<Base
+  title="管理画面"
+  description="非公開化ウォッチ 管理画面"
+  noindex
+>
+  <h1>管理画面</h1>
+  <p class="notice">
+    このページは Cloudflare Access で保護されている必要があります(docs/SETUP.md 参照)。
+    書き込みはすべて Supabase RLS(admin_users 登録済みUUID)で最終判定されます。
+  </p>
+
+  <div id="ad-unconfigured" class="notice" hidden>Supabase が未設定のため管理画面は利用できません。</div>
+
+  <section class="section card" id="ad-auth">
+    <div id="ad-logged-out" hidden>
+      <p>管理者本人の Google アカウントでログインしてください。</p>
+      <button type="button" class="btn btn--primary" id="ad-login">Googleでログイン</button>
+    </div>
+    <div id="ad-logged-in" hidden>
+      <span>ログイン中: <strong id="ad-email"></strong></span>
+      <span id="ad-admin-badge" class="badge badge--done" hidden style="margin-left:0.6rem">管理者確認済み</span>
+      <span id="ad-not-admin" class="badge badge--stop" hidden style="margin-left:0.6rem">管理者権限がありません</span>
+      <button type="button" class="btn" id="ad-logout" style="margin-left:1rem">ログアウト</button>
+    </div>
+    <p class="small muted" id="ad-auth-status" aria-live="polite"></p>
+  </section>
+
+  <div id="ad-main" hidden>
+    <nav class="section" aria-label="管理メニュー" style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+      <button class="btn" data-tab="companies">会社</button>
+      <button class="btn" data-tab="cases">案件</button>
+      <button class="btn" data-tab="events">出来事</button>
+      <button class="btn" data-tab="prices">株価</button>
+      <button class="btn" data-tab="corrections">訂正履歴</button>
+      <button class="btn" data-tab="publish">公開処理</button>
+      <button class="btn" data-tab="security">セキュリティ</button>
+    </nav>
+
+    <!-- ============ 会社 ============ -->
+    <section class="section" data-panel="companies" hidden>
+      <h2 class="section-title">会社の登録・編集</h2>
+      <div class="card" style="margin-bottom:0.8rem">
+        <form id="company-form" onsubmit="return false">
+          <input type="hidden" id="co-id" />
+          <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.6rem;">
+            <div class="form-row"><label for="co-code">証券コード *</label><input type="text" id="co-code" required /></div>
+            <div class="form-row"><label for="co-name">会社名 *</label><input type="text" id="co-name" required /></div>
+            <div class="form-row"><label for="co-market">市場</label><input type="text" id="co-market" placeholder="プライム 等" /></div>
+            <div class="form-row"><label for="co-industry">業種</label><input type="text" id="co-industry" /></div>
+          </div>
+          <label class="filter-check"><input type="checkbox" id="co-active" checked /> 有効</label>
+          <div style="display:flex; gap:0.6rem; margin-top:0.6rem;">
+            <button type="button" class="btn btn--primary" id="co-save">保存</button>
+            <button type="button" class="btn" id="co-clear">クリア(新規)</button>
+            <span class="small muted" id="co-status" aria-live="polite"></span>
+          </div>
+        </form>
+      </div>
+      <div class="table-wrap"><table class="case-table" id="company-table">
+        <thead><tr><th>コード</th><th>会社名</th><th>市場</th><th>業種</th><th>有効</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </section>
+
+    <!-- ============ 案件 ============ -->
+    <section class="section" data-panel="cases" hidden>
+      <h2 class="section-title">案件の登録・編集</h2>
+      <div class="card" style="margin-bottom:0.8rem">
+        <form id="case-form" onsubmit="return false">
+          <input type="hidden" id="ca-id" />
+          <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:0.6rem;">
+            <div class="form-row"><label for="ca-company">会社 *</label><select id="ca-company" required></select></div>
+            <div class="form-row"><label for="ca-title">案件タイトル *</label><input type="text" id="ca-title" required placeholder="〇〇、MBOによる非公開化" /></div>
+            <div class="form-row"><label for="ca-slug">スラッグ *(URL: /cases/スラッグ/)</label><input type="text" id="ca-slug" required placeholder="1234-company-name" pattern="[a-z0-9\-]+" /></div>
+            <div class="form-row"><label for="ca-status">ステータス *</label><select id="ca-status"></select></div>
+            <div class="form-row"><label for="ca-first">最初の観測報道日時</label><input type="datetime-local" id="ca-first" /></div>
+          </div>
+          <div class="form-row"><label for="ca-summary">概要</label><textarea id="ca-summary" style="min-height:4.5rem"></textarea></div>
+          <label class="filter-check"><input type="checkbox" id="ca-visible" /> 公開する(チェックなし=下書き)</label>
+          <div style="display:flex; gap:0.6rem; margin-top:0.6rem; flex-wrap:wrap;">
+            <button type="button" class="btn btn--primary" id="ca-save">保存</button>
+            <button type="button" class="btn" id="ca-clear">クリア(新規)</button>
+            <button type="button" class="btn" id="ca-preview">プレビュー</button>
+            <span class="small muted" id="ca-status-msg" aria-live="polite"></span>
+          </div>
+        </form>
+      </div>
+      <div class="table-wrap"><table class="case-table" id="case-admin-table">
+        <thead><tr><th>コード</th><th>案件</th><th>ステータス</th><th>公開</th><th>最終更新</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div class="card" id="preview-panel" hidden style="margin-top:1rem; border-color:var(--color-primary);">
+        <h3 style="margin-top:0">公開前プレビュー <span class="small muted">(非公開の出来事は「非公開」表示付き)</span></h3>
+        <div id="preview-body"></div>
+        <button type="button" class="btn" id="preview-close" style="margin-top:0.6rem">閉じる</button>
+      </div>
+    </section>
+
+    <!-- ============ 出来事 ============ -->
+    <section class="section" data-panel="events" hidden>
+      <h2 class="section-title">出来事の追加・編集</h2>
+      <div class="form-row" style="max-width:26rem">
+        <label for="ev-case-select">対象案件</label>
+        <select id="ev-case-select"></select>
+      </div>
+      <div class="card" style="margin-bottom:0.8rem">
+        <form id="event-form" onsubmit="return false">
+          <input type="hidden" id="ev-id" />
+          <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:0.6rem;">
+            <div class="form-row"><label for="ev-type">種類 *</label><select id="ev-type"></select></div>
+            <div class="form-row"><label for="ev-occurred">報道・公表日時 *</label><input type="datetime-local" id="ev-occurred" required /></div>
+            <div class="form-row"><label for="ev-title">見出し *</label><input type="text" id="ev-title" required /></div>
+            <div class="form-row"><label for="ev-source-name">媒体名・発表主体 *</label><input type="text" id="ev-source-name" required /></div>
+            <div class="form-row"><label for="ev-source-url">元情報URL</label><input type="url" id="ev-source-url" placeholder="https://…" /></div>
+            <div class="form-row"><label for="ev-sort">同時刻内の表示順</label><input type="number" id="ev-sort" value="0" /></div>
+          </div>
+          <div class="form-row"><label for="ev-summary">中立的な短い説明</label><textarea id="ev-summary" style="min-height:4rem"></textarea></div>
+          <label class="filter-check"><input type="checkbox" id="ev-corrected" /> 訂正済み表示を付ける</label>
+          <div class="form-row" id="ev-correction-row" hidden><label for="ev-correction-note">訂正内容の説明</label><input type="text" id="ev-correction-note" /></div>
+          <label class="filter-check"><input type="checkbox" id="ev-visible" /> 公開する(チェックなし=非公開)</label>
+          <div style="display:flex; gap:0.6rem; margin-top:0.6rem;">
+            <button type="button" class="btn btn--primary" id="ev-save">保存</button>
+            <button type="button" class="btn" id="ev-clear">クリア(新規)</button>
+            <span class="small muted" id="ev-status" aria-live="polite"></span>
+          </div>
+        </form>
+      </div>
+      <div class="table-wrap"><table class="case-table" id="event-table">
+        <thead><tr><th>日時</th><th>種類</th><th>見出し</th><th>媒体</th><th>公開</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </section>
+
+    <!-- ============ 株価 ============ -->
+    <section class="section" data-panel="prices" hidden>
+      <h2 class="section-title">株価情報の登録・編集</h2>
+      <div class="form-row" style="max-width:26rem">
+        <label for="pr-case-select">対象案件</label>
+        <select id="pr-case-select"></select>
+      </div>
+      <div class="card" style="margin-bottom:0.8rem">
+        <form id="price-form" onsubmit="return false">
+          <input type="hidden" id="pr-id" />
+          <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.6rem;">
+            <div class="form-row">
+              <label for="pr-type">種類 *</label>
+              <select id="pr-type">
+                <option value="pre_report_close">観測報道前終値</option>
+                <option value="current_close">現在株価(参考値)</option>
+                <option value="formal_offer_price">正式公開買付価格</option>
+              </select>
+            </div>
+            <div class="form-row"><label for="pr-price">価格(円)*</label><input type="number" id="pr-price" step="0.01" min="0" required /></div>
+            <div class="form-row"><label for="pr-date">基準日 *</label><input type="date" id="pr-date" required /></div>
+            <div class="form-row"><label for="pr-source">出典</label><input type="text" id="pr-source" placeholder="取引所公表値(手動登録)" /></div>
+          </div>
+          <div style="display:flex; gap:0.6rem; margin-top:0.6rem;">
+            <button type="button" class="btn btn--primary" id="pr-save">保存</button>
+            <button type="button" class="btn" id="pr-clear">クリア(新規)</button>
+            <span class="small muted" id="pr-status" aria-live="polite"></span>
+          </div>
+        </form>
+      </div>
+      <div class="table-wrap"><table class="case-table" id="price-table">
+        <thead><tr><th>種類</th><th class="num">価格</th><th>基準日</th><th>出典</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </section>
+
+    <!-- ============ 訂正履歴 ============ -->
+    <section class="section" data-panel="corrections" hidden>
+      <h2 class="section-title">訂正履歴の確認</h2>
+      <p class="small muted">「訂正」イベントおよび訂正済み表示の付いた出来事の一覧(最終修正の新しい順)。</p>
+      <div id="correction-list"></div>
+      <p class="empty-state" id="correction-empty" hidden>訂正履歴はありません。</p>
+    </section>
+
+    <!-- ============ 公開処理 ============ -->
+    <section class="section" data-panel="publish" hidden>
+      <h2 class="section-title">公開処理</h2>
+      <div class="card">
+        <p class="small">
+          「公開処理を実行」を押すと Cloudflare Pages の Deploy Hook が呼び出され、
+          現在 Supabase に登録されている公開データ(is_visible = true)で静的サイトが再ビルドされます。
+          反映まで数分かかります。
+        </p>
+        <p class="small muted">
+          Deploy Hook URL は Supabase の <code>admin_settings</code> テーブル(key: <code>deploy_hook_url</code>)に登録します(docs/SETUP.md 参照)。
+        </p>
+        <button type="button" class="btn btn--primary" id="publish-run">公開処理を実行(サイト再ビルド)</button>
+        <p class="small" id="publish-status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <!-- ============ セキュリティ ============ -->
+    <section class="section" data-panel="security" hidden>
+      <h2 class="section-title">セキュリティ(Supabase MFA)</h2>
+      <div class="card">
+        <p class="small">
+          Supabase Auth の TOTP(認証アプリ)を登録すると、DB側で aal2 セッションを必須化できます
+          (supabase/migrations/0001_init.sql のコメント参照)。
+        </p>
+        <div id="mfa-status" class="small muted"></div>
+        <button type="button" class="btn" id="mfa-enroll">TOTPを新規登録</button>
+        <div id="mfa-enroll-panel" hidden style="margin-top:0.8rem">
+          <p class="small">認証アプリでQRコードを読み取り、6桁のコードを入力してください。</p>
+          <div id="mfa-qr"></div>
+          <p class="small mono" id="mfa-secret"></p>
+          <input type="text" id="mfa-code" inputmode="numeric" placeholder="123456" style="max-width:8rem" />
+          <button type="button" class="btn btn--primary" id="mfa-verify">確認</button>
+          <p class="small" id="mfa-msg" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+  </div>
+</Base>
+
+<script is:inline define:vars={{ statusDefs, eventTypeDefs }}>
+  window.__ADMIN_DEFS__ = { statusDefs, eventTypeDefs };
+</script>
+
+<script>
+  import { getSupabase } from '../../lib/supabaseBrowser';
+
+  const { statusDefs, eventTypeDefs } = (window as any).__ADMIN_DEFS__ as {
+    statusDefs: Record<string, { label: string; mark: string; tone: string }>;
+    eventTypeDefs: Record<string, { label: string; mark: string; tone: string }>;
+  };
+
+  const supabase = getSupabase();
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+  const esc = (s: unknown) =>
+    String(s ?? '').replace(/[&<>"']/g, (ch) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch] as string,
+    );
+  const badge = (def: { label: string; mark: string; tone: string } | undefined, fallback: string) =>
+    def
+      ? `<span class="badge badge--${def.tone}"><span class="badge__mark">${def.mark}</span>${esc(def.label)}</span>`
+      : esc(fallback);
+
+  // datetime-local <-> ISO(ブラウザのローカルタイムゾーンで解釈)
+  function isoToLocal(iso: string | null): string {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  function localToIso(v: string): string | null {
+    if (!v) return null;
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  const fmtDate = (iso: string | null) => (iso ? isoToLocal(iso).replace('T', ' ') : '—');
+
+  let companies: any[] = [];
+  let cases: any[] = [];
+
+  // ---------------- 認証・管理者判定 ----------------
+  async function init() {
+    if (!supabase) {
+      $('ad-unconfigured').hidden = false;
+      return;
+    }
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData.session?.user;
+    if (!user) {
+      $('ad-logged-out').hidden = false;
+      return;
+    }
+    $('ad-logged-in').hidden = false;
+    $('ad-email').textContent = user.email ?? '';
+
+    const { data: isAdmin, error } = await supabase.rpc('is_admin');
+    if (error || !isAdmin) {
+      $('ad-not-admin').hidden = false;
+      $('ad-auth-status').textContent =
+        'このアカウントは admin_users に登録されていません。管理操作はDB側で拒否されます。';
+      return;
+    }
+    $('ad-admin-badge').hidden = false;
+    $('ad-main').hidden = false;
+    await reloadAll();
+    showTab('cases');
+  }
+
+  $('ad-login')?.addEventListener('click', async () => {
+    if (!supabase) return;
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${location.origin}/admin/` },
+    });
+  });
+  $('ad-logout')?.addEventListener('click', async () => {
+    await supabase?.auth.signOut();
+    location.reload();
+  });
+
+  // ---------------- タブ ----------------
+  function showTab(name: string) {
+    for (const panel of document.querySelectorAll<HTMLElement>('[data-panel]')) {
+      panel.hidden = panel.dataset.panel !== name;
+    }
+    for (const btn of document.querySelectorAll<HTMLButtonElement>('[data-tab]')) {
+      btn.classList.toggle('btn--primary', btn.dataset.tab === name);
+    }
+    if (name === 'corrections') loadCorrections();
+  }
+  document.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-tab]');
+    if (btn) showTab(btn.dataset.tab ?? 'cases');
+  });
+
+  async function reloadAll() {
+    await Promise.all([loadCompanies(), loadCases()]);
+    renderCompanySelects();
+    renderCaseSelects();
+    renderCompanyTable();
+    renderCaseTable();
+    await Promise.all([loadEvents(), loadPrices()]);
+  }
+
+  // ---------------- 会社 ----------------
+  async function loadCompanies() {
+    const { data, error } = await supabase!.from('companies').select('*').order('security_code');
+    if (error) $('co-status').textContent = `読込エラー: ${error.message}`;
+    companies = data ?? [];
+  }
+
+  function renderCompanySelects() {
+    const sel = $<HTMLSelectElement>('ca-company');
+    sel.innerHTML = companies
+      .map((c) => `<option value="${c.id}">${esc(c.security_code)} ${esc(c.name_ja)}</option>`)
+      .join('');
+  }
+
+  function renderCompanyTable() {
+    $('company-table').querySelector('tbody')!.innerHTML = companies
+      .map(
+        (c) => `<tr>
+          <td class="code">${esc(c.security_code)}</td>
+          <td>${esc(c.name_ja)}</td>
+          <td>${esc(c.market ?? '')}</td>
+          <td>${esc(c.industry ?? '')}</td>
+          <td>${c.is_active ? '有効' : '無効'}</td>
+          <td><button type="button" class="btn" data-edit-company="${c.id}">編集</button></td>
+        </tr>`,
+      )
+      .join('');
+  }
+
+  $('co-save')?.addEventListener('click', async () => {
+    const id = $<HTMLInputElement>('co-id').value;
+    const row: any = {
+      security_code: $<HTMLInputElement>('co-code').value.trim(),
+      name_ja: $<HTMLInputElement>('co-name').value.trim(),
+      market: $<HTMLInputElement>('co-market').value.trim() || null,
+      industry: $<HTMLInputElement>('co-industry').value.trim() || null,
+      is_active: $<HTMLInputElement>('co-active').checked,
+    };
+    if (!row.security_code || !row.name_ja) {
+      $('co-status').textContent = '証券コードと会社名は必須です';
+      return;
+    }
+    const q = id
+      ? supabase!.from('companies').update(row).eq('id', id)
+      : supabase!.from('companies').insert(row);
+    const { error } = await q;
+    $('co-status').textContent = error ? `保存エラー: ${error.message}` : '保存しました';
+    if (!error) {
+      await loadCompanies();
+      renderCompanySelects();
+      renderCompanyTable();
+    }
+  });
+
+  $('co-clear')?.addEventListener('click', () => {
+    $<HTMLInputElement>('co-id').value = '';
+    ($('company-form') as HTMLFormElement).reset();
+  });
+
+  // ---------------- 案件 ----------------
+  async function loadCases() {
+    const { data, error } = await supabase!
+      .from('cases')
+      .select('*')
+      .order('updated_at', { ascending: false });
+    if (error) $('ca-status-msg').textContent = `読込エラー: ${error.message}`;
+    cases = data ?? [];
+  }
+
+  function caseLabel(c: any): string {
+    const co = companies.find((x) => x.id === c.company_id);
+    return `${co ? co.security_code + ' ' + co.name_ja : '?'} — ${c.title}`;
+  }
+
+  function renderCaseSelects() {
+    const options = cases
+      .map((c) => `<option value="${c.id}">${esc(caseLabel(c))}</option>`)
+      .join('');
+    $<HTMLSelectElement>('ev-case-select').innerHTML = options;
+    $<HTMLSelectElement>('pr-case-select').innerHTML = options;
+    const statusSel = $<HTMLSelectElement>('ca-status');
+    statusSel.innerHTML = Object.entries(statusDefs)
+      .map(([k, v]) => `<option value="${k}">${esc(v.label)}</option>`)
+      .join('');
+    const evType = $<HTMLSelectElement>('ev-type');
+    evType.innerHTML = Object.entries(eventTypeDefs)
+      .map(([k, v]) => `<option value="${k}">${esc(v.label)}</option>`)
+      .join('');
+  }
+
+  function renderCaseTable() {
+    $('case-admin-table').querySelector('tbody')!.innerHTML = cases
+      .map((c) => {
+        const co = companies.find((x) => x.id === c.company_id);
+        return `<tr>
+          <td class="code">${esc(co?.security_code ?? '?')}</td>
+          <td>${esc(c.title)}<div class="small muted mono">/cases/${esc(c.slug)}/</div></td>
+          <td>${badge(statusDefs[c.status], c.status)}</td>
+          <td>${c.is_visible ? '公開' : '<span class="badge badge--pause">下書き</span>'}</td>
+          <td class="nowrap">${fmtDate(c.updated_at)}</td>
+          <td><button type="button" class="btn" data-edit-case="${c.id}">編集</button></td>
+        </tr>`;
+      })
+      .join('');
+  }
+
+  $('ca-save')?.addEventListener('click', async () => {
+    const id = $<HTMLInputElement>('ca-id').value;
+    const visible = $<HTMLInputElement>('ca-visible').checked;
+    const row: any = {
+      company_id: $<HTMLSelectElement>('ca-company').value,
+      title: $<HTMLInputElement>('ca-title').value.trim(),
+      slug: $<HTMLInputElement>('ca-slug').value.trim(),
+      status: $<HTMLSelectElement>('ca-status').value,
+      summary: $<HTMLTextAreaElement>('ca-summary').value.trim(),
+      first_reported_at: localToIso($<HTMLInputElement>('ca-first').value),
+      is_visible: visible,
+    };
+    if (!row.company_id || !row.title || !row.slug) {
+      $('ca-status-msg').textContent = '会社・タイトル・スラッグは必須です';
+      return;
+    }
+    // 初回公開時にサイト掲載日時を自動設定
+    const existing = cases.find((c) => c.id === id);
+    if (visible && !existing?.site_published_at) row.site_published_at = new Date().toISOString();
+
+    const q = id
+      ? supabase!.from('cases').update(row).eq('id', id)
+      : supabase!.from('cases').insert(row);
+    const { error } = await q;
+    $('ca-status-msg').textContent = error ? `保存エラー: ${error.message}` : '保存しました';
+    if (!error) {
+      await loadCases();
+      renderCaseSelects();
+      renderCaseTable();
+    }
+  });
+
+  $('ca-clear')?.addEventListener('click', () => {
+    $<HTMLInputElement>('ca-id').value = '';
+    ($('case-form') as HTMLFormElement).reset();
+  });
+
+  // ---------------- 出来事 ----------------
+  let events: any[] = [];
+
+  async function loadEvents() {
+    const caseId = $<HTMLSelectElement>('ev-case-select').value;
+    if (!caseId) {
+      events = [];
+      renderEventTable();
+      return;
+    }
+    const { data, error } = await supabase!
+      .from('case_events')
+      .select('*')
+      .eq('case_id', caseId)
+      .order('occurred_at');
+    if (error) $('ev-status').textContent = `読込エラー: ${error.message}`;
+    events = data ?? [];
+    renderEventTable();
+  }
+
+  function renderEventTable() {
+    $('event-table').querySelector('tbody')!.innerHTML = events
+      .map(
+        (e) => `<tr>
+          <td class="nowrap">${fmtDate(e.occurred_at)}</td>
+          <td>${badge(eventTypeDefs[e.event_type], e.event_type)}</td>
+          <td>${esc(e.title)}${e.metadata?.corrected ? ' <span class="badge badge--stop">訂正あり</span>' : ''}</td>
+          <td>${esc(e.source_name)}</td>
+          <td>${e.is_visible ? '公開' : '<span class="badge badge--pause">非公開</span>'}</td>
+          <td><button type="button" class="btn" data-edit-event="${e.id}">編集</button></td>
+        </tr>`,
+      )
+      .join('');
+  }
+
+  $('ev-case-select')?.addEventListener('change', loadEvents);
+
+  $('ev-corrected')?.addEventListener('change', () => {
+    $('ev-correction-row').hidden = !$<HTMLInputElement>('ev-corrected').checked;
+  });
+
+  $('ev-save')?.addEventListener('click', async () => {
+    const id = $<HTMLInputElement>('ev-id').value;
+    const corrected = $<HTMLInputElement>('ev-corrected').checked;
+    const visible = $<HTMLInputElement>('ev-visible').checked;
+    const row: any = {
+      case_id: $<HTMLSelectElement>('ev-case-select').value,
+      event_type: $<HTMLSelectElement>('ev-type').value,
+      occurred_at: localToIso($<HTMLInputElement>('ev-occurred').value),
+      title: $<HTMLInputElement>('ev-title').value.trim(),
+      summary: $<HTMLTextAreaElement>('ev-summary').value.trim(),
+      source_name: $<HTMLInputElement>('ev-source-name').value.trim(),
+      source_url: $<HTMLInputElement>('ev-source-url').value.trim(),
+      sort_order: Number($<HTMLInputElement>('ev-sort').value) || 0,
+      is_visible: visible,
+      metadata: corrected
+        ? { corrected: true, correction_note: $<HTMLInputElement>('ev-correction-note').value.trim() }
+        : null,
+    };
+    if (!row.case_id || !row.occurred_at || !row.title || !row.source_name) {
+      $('ev-status').textContent = '案件・日時・見出し・媒体名は必須です';
+      return;
+    }
+    const existing = events.find((e) => e.id === id);
+    if (visible && !existing?.site_published_at) row.site_published_at = new Date().toISOString();
+
+    const q = id
+      ? supabase!.from('case_events').update(row).eq('id', id)
+      : supabase!.from('case_events').insert(row);
+    const { error } = await q;
+    $('ev-status').textContent = error ? `保存エラー: ${error.message}` : '保存しました';
+    if (!error) await loadEvents();
+  });
+
+  $('ev-clear')?.addEventListener('click', () => {
+    $<HTMLInputElement>('ev-id').value = '';
+    ($('event-form') as HTMLFormElement).reset();
+    $('ev-correction-row').hidden = true;
+  });
+
+  // ---------------- 株価 ----------------
+  let prices: any[] = [];
+
+  async function loadPrices() {
+    const caseId = $<HTMLSelectElement>('pr-case-select').value;
+    if (!caseId) {
+      prices = [];
+      renderPriceTable();
+      return;
+    }
+    const { data, error } = await supabase!
+      .from('price_snapshots')
+      .select('*')
+      .eq('case_id', caseId)
+      .order('price_date', { ascending: false });
+    if (error) $('pr-status').textContent = `読込エラー: ${error.message}`;
+    prices = data ?? [];
+    renderPriceTable();
+  }
+
+  const priceTypeLabel: Record<string, string> = {
+    pre_report_close: '観測報道前終値',
+    current_close: '現在株価(参考値)',
+    formal_offer_price: '正式公開買付価格',
+  };
+
+  function renderPriceTable() {
+    $('price-table').querySelector('tbody')!.innerHTML = prices
+      .map(
+        (p) => `<tr>
+          <td>${esc(priceTypeLabel[p.price_type] ?? p.price_type)}</td>
+          <td class="num">${Number(p.price).toLocaleString('ja-JP')}円</td>
+          <td>${esc(p.price_date)}</td>
+          <td>${esc(p.source_name ?? '')}</td>
+          <td><button type="button" class="btn" data-edit-price="${p.id}">編集</button></td>
+        </tr>`,
+      )
+      .join('');
+  }
+
+  $('pr-case-select')?.addEventListener('change', loadPrices);
+
+  $('pr-save')?.addEventListener('click', async () => {
+    const id = $<HTMLInputElement>('pr-id').value;
+    const row: any = {
+      case_id: $<HTMLSelectElement>('pr-case-select').value,
+      price_type: $<HTMLSelectElement>('pr-type').value,
+      price: $<HTMLInputElement>('pr-price').value,
+      price_date: $<HTMLInputElement>('pr-date').value,
+      source_name: $<HTMLInputElement>('pr-source').value.trim() || null,
+    };
+    if (!row.case_id || !row.price || !row.price_date) {
+      $('pr-status').textContent = '案件・価格・基準日は必須です';
+      return;
+    }
+    const q = id
+      ? supabase!.from('price_snapshots').update(row).eq('id', id)
+      : supabase!.from('price_snapshots').insert(row);
+    const { error } = await q;
+    $('pr-status').textContent = error ? `保存エラー: ${error.message}` : '保存しました';
+    if (!error) await loadPrices();
+  });
+
+  $('pr-clear')?.addEventListener('click', () => {
+    $<HTMLInputElement>('pr-id').value = '';
+    ($('price-form') as HTMLFormElement).reset();
+  });
+
+  // ---------------- 編集ボタン(行 → フォーム) ----------------
+  document.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement;
+
+    const co = t.closest<HTMLButtonElement>('[data-edit-company]');
+    if (co) {
+      const c = companies.find((x) => x.id === co.dataset.editCompany);
+      if (!c) return;
+      $<HTMLInputElement>('co-id').value = c.id;
+      $<HTMLInputElement>('co-code').value = c.security_code;
+      $<HTMLInputElement>('co-name').value = c.name_ja;
+      $<HTMLInputElement>('co-market').value = c.market ?? '';
+      $<HTMLInputElement>('co-industry').value = c.industry ?? '';
+      $<HTMLInputElement>('co-active').checked = c.is_active;
+      return;
+    }
+
+    const ca = t.closest<HTMLButtonElement>('[data-edit-case]');
+    if (ca) {
+      const c = cases.find((x) => x.id === ca.dataset.editCase);
+      if (!c) return;
+      $<HTMLInputElement>('ca-id').value = c.id;
+      $<HTMLSelectElement>('ca-company').value = c.company_id;
+      $<HTMLInputElement>('ca-title').value = c.title;
+      $<HTMLInputElement>('ca-slug').value = c.slug;
+      $<HTMLSelectElement>('ca-status').value = c.status;
+      $<HTMLTextAreaElement>('ca-summary').value = c.summary ?? '';
+      $<HTMLInputElement>('ca-first').value = isoToLocal(c.first_reported_at);
+      $<HTMLInputElement>('ca-visible').checked = c.is_visible;
+      return;
+    }
+
+    const ev = t.closest<HTMLButtonElement>('[data-edit-event]');
+    if (ev) {
+      const x = events.find((y) => y.id === ev.dataset.editEvent);
+      if (!x) return;
+      $<HTMLInputElement>('ev-id').value = x.id;
+      $<HTMLSelectElement>('ev-type').value = x.event_type;
+      $<HTMLInputElement>('ev-occurred').value = isoToLocal(x.occurred_at);
+      $<HTMLInputElement>('ev-title').value = x.title;
+      $<HTMLTextAreaElement>('ev-summary').value = x.summary ?? '';
+      $<HTMLInputElement>('ev-source-name').value = x.source_name ?? '';
+      $<HTMLInputElement>('ev-source-url').value = x.source_url ?? '';
+      $<HTMLInputElement>('ev-sort').value = String(x.sort_order ?? 0);
+      $<HTMLInputElement>('ev-visible').checked = x.is_visible;
+      const corrected = x.metadata?.corrected === true;
+      $<HTMLInputElement>('ev-corrected').checked = corrected;
+      $('ev-correction-row').hidden = !corrected;
+      $<HTMLInputElement>('ev-correction-note').value = x.metadata?.correction_note ?? '';
+      return;
+    }
+
+    const pr = t.closest<HTMLButtonElement>('[data-edit-price]');
+    if (pr) {
+      const x = prices.find((y) => y.id === pr.dataset.editPrice);
+      if (!x) return;
+      $<HTMLInputElement>('pr-id').value = x.id;
+      $<HTMLSelectElement>('pr-type').value = x.price_type;
+      $<HTMLInputElement>('pr-price').value = String(x.price);
+      $<HTMLInputElement>('pr-date').value = x.price_date;
+      $<HTMLInputElement>('pr-source').value = x.source_name ?? '';
+    }
+  });
+
+  // ---------------- プレビュー ----------------
+  $('ca-preview')?.addEventListener('click', async () => {
+    const id = $<HTMLInputElement>('ca-id').value;
+    if (!id) {
+      $('ca-status-msg').textContent = '一覧から案件を選択(編集)してからプレビューしてください';
+      return;
+    }
+    const c = cases.find((x) => x.id === id);
+    const co = companies.find((x) => x.id === c.company_id);
+    const [{ data: evs }, { data: prs }] = await Promise.all([
+      supabase!.from('case_events').select('*').eq('case_id', id).order('occurred_at'),
+      supabase!.from('price_snapshots').select('*').eq('case_id', id).order('price_date', { ascending: false }),
+    ]);
+    const priceHtml = (prs ?? [])
+      .map(
+        (p) =>
+          `<div class="price-card"><p class="price-card__label">${esc(priceTypeLabel[p.price_type] ?? p.price_type)}</p><p class="price-card__value">${Number(p.price).toLocaleString('ja-JP')}円</p><p class="price-card__date">${esc(p.price_date)}</p></div>`,
+      )
+      .join('');
+    const evHtml = (evs ?? [])
+      .map(
+        (e) => `
+        <li class="timeline__item"><article class="event-card">
+          <div class="event-card__head">
+            ${badge(eventTypeDefs[e.event_type], e.event_type)}
+            <span class="event-card__date">${fmtDate(e.occurred_at)}</span>
+            ${e.is_visible ? '' : '<span class="badge badge--pause">非公開</span>'}
+            ${e.metadata?.corrected ? '<span class="badge badge--stop">訂正あり</span>' : ''}
+          </div>
+          <h3 class="event-card__title">${esc(e.title)}</h3>
+          <p class="event-card__summary">${esc(e.summary ?? '')}</p>
+          <div class="event-card__meta"><span>出典: ${esc(e.source_name)}</span></div>
+        </article></li>`,
+      )
+      .join('');
+    $('preview-body').innerHTML = `
+      <p class="case-head__company"><span class="mono">${esc(co?.security_code ?? '')}</span> ${esc(co?.market ?? '')}</p>
+      <h3 style="margin:0 0 0.4rem">${esc(co?.name_ja ?? '')} — ${esc(c.title)} ${badge(statusDefs[c.status], c.status)} ${c.is_visible ? '' : '<span class="badge badge--pause">案件自体が下書き</span>'}</h3>
+      <p>${esc(c.summary ?? '')}</p>
+      <div class="price-grid" style="margin-bottom:0.8rem">${priceHtml}</div>
+      <ol class="timeline">${evHtml}</ol>`;
+    $('preview-panel').hidden = false;
+    $('preview-panel').scrollIntoView({ behavior: 'smooth' });
+  });
+
+  $('preview-close')?.addEventListener('click', () => {
+    $('preview-panel').hidden = true;
+  });
+
+  // ---------------- 訂正履歴 ----------------
+  async function loadCorrections() {
+    const { data } = await supabase!
+      .from('case_events')
+      .select('*')
+      .or('event_type.eq.correction,metadata->>corrected.eq.true')
+      .order('updated_at', { ascending: false });
+    const list = data ?? [];
+    $('correction-empty').hidden = list.length > 0;
+    $('correction-list').innerHTML = list
+      .map((e) => {
+        const c = cases.find((x) => x.id === e.case_id);
+        return `<div class="card" style="margin-bottom:0.5rem">
+          <div class="event-card__head">
+            ${badge(eventTypeDefs[e.event_type], e.event_type)}
+            <span class="small muted">最終修正: ${fmtDate(e.updated_at)}</span>
+          </div>
+          <strong>${esc(e.title)}</strong>
+          <div class="small muted">${esc(c ? caseLabel(c) : e.case_id)}</div>
+          ${e.metadata?.correction_note ? `<p class="small" style="margin:0.3rem 0 0">訂正内容: ${esc(e.metadata.correction_note)}</p>` : ''}
+        </div>`;
+      })
+      .join('');
+  }
+
+  // ---------------- 公開処理 ----------------
+  $('publish-run')?.addEventListener('click', async () => {
+    const statusEl = $('publish-status');
+    statusEl.textContent = 'Deploy Hook URL を取得中…';
+    const { data, error } = await supabase!
+      .from('admin_settings')
+      .select('value')
+      .eq('key', 'deploy_hook_url')
+      .maybeSingle();
+    if (error || !data?.value) {
+      statusEl.textContent =
+        'Deploy Hook URL が未登録です。admin_settings に key=deploy_hook_url を登録してください(docs/SETUP.md 参照)。';
+      return;
+    }
+    statusEl.textContent = '再ビルドを要求しています…';
+    try {
+      await fetch(data.value, { method: 'POST', mode: 'no-cors' });
+      statusEl.textContent =
+        '公開処理を要求しました。Cloudflare Pages のビルドが完了するまで数分お待ちください。';
+    } catch (err) {
+      statusEl.textContent = `公開処理の要求に失敗しました: ${String(err)}`;
+    }
+  });
+
+  // ---------------- Supabase MFA (TOTP) ----------------
+  let enrollFactorId: string | null = null;
+
+  async function refreshMfaStatus() {
+    if (!supabase) return;
+    const { data } = await supabase.auth.mfa.listFactors();
+    const verified = data?.totp?.filter((f) => f.status === 'verified') ?? [];
+    $('mfa-status').textContent = verified.length
+      ? `登録済みのTOTP: ${verified.length}件`
+      : 'TOTPは未登録です。';
+  }
+
+  $('mfa-enroll')?.addEventListener('click', async () => {
+    if (!supabase) return;
+    const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
+    if (error || !data) {
+      $('mfa-msg').textContent = `登録開始に失敗しました: ${error?.message ?? ''}`;
+      $('mfa-enroll-panel').hidden = false;
+      return;
+    }
+    enrollFactorId = data.id;
+    $('mfa-qr').innerHTML = `<img src="${data.totp.qr_code}" alt="TOTP QRコード" width="180" height="180" />`;
+    $('mfa-secret').textContent = `シークレット: ${data.totp.secret}`;
+    $('mfa-enroll-panel').hidden = false;
+  });
+
+  $('mfa-verify')?.addEventListener('click', async () => {
+    if (!supabase || !enrollFactorId) return;
+    const code = $<HTMLInputElement>('mfa-code').value.trim();
+    const { data: challenge, error: chErr } = await supabase.auth.mfa.challenge({
+      factorId: enrollFactorId,
+    });
+    if (chErr || !challenge) {
+      $('mfa-msg').textContent = `チャレンジ作成に失敗: ${chErr?.message ?? ''}`;
+      return;
+    }
+    const { error } = await supabase.auth.mfa.verify({
+      factorId: enrollFactorId,
+      challengeId: challenge.id,
+      code,
+    });
+    $('mfa-msg').textContent = error
+      ? `確認に失敗しました: ${error.message}`
+      : 'TOTPを登録しました。次回ログインからMFAが要求されます。';
+    if (!error) refreshMfaStatus();
+  });
+
+  init().then(refreshMfaStatus);
+</script>

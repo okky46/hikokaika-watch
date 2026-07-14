@@ -49,6 +49,11 @@ as $$
   );
 $$;
 
+-- 管理画面が「ログイン中のユーザーが管理者かどうか」を確認するための RPC。
+-- (RLS は行を黙って除外するため、判定には関数呼び出しを使う)
+grant execute on function public.is_admin() to authenticated;
+revoke execute on function public.is_admin() from anon;
+
 -- 【推奨】Supabase MFA(TOTP)登録後は、上の関数を以下の aal2 必須版に
 -- 置き換える(要件 §10-6)。MFA未登録のまま置き換えると管理操作が
 -- できなくなるため、必ず /admin からTOTP登録を済ませてから実行すること。
