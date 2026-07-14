@@ -1,0 +1,21 @@
+{
+  "name": "hikokaika-watch",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "非公開化ウォッチ — 上場企業の非公開化・MBO・TOBに関する観測報道と経過を時系列で整理する公開データベース",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "astro": "^5.0.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "typescript": "^5.6.0"
+  }
+}
