@@ -1,0 +1,18 @@
+---
+/**
+ * 広告枠の予約スペース(要件 §13)。
+ * MVPでは広告を配信しないため hidden のまま出力する。
+ * 将来 AdSense 等を導入する際は、この枠に広告タグを挿入し hidden を外す。
+ * 通常コンテンツとの誤認を防ぐため「広告」ラベルを必ず表示する。
+ */
+interface Props {
+  slotId: string;
+}
+
+const { slotId } = Astro.props;
+---
+
+<aside class="ad-slot" data-ad-slot={slotId} hidden>
+  <p class="ad-slot__label">広告</p>
+  <!-- 広告タグ挿入位置: data-ad-slot="{slotId}" -->
+</aside>

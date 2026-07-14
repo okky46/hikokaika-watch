@@ -1,0 +1,14 @@
+---
+import { eventTypeDef } from '../lib/status';
+import type { EventType } from '../lib/types';
+
+interface Props {
+  type: EventType;
+}
+
+const def = eventTypeDef(Astro.props.type);
+---
+
+<span class={`badge badge--${def.tone}`}>
+  <span class="badge__mark" aria-hidden="true">{def.mark}</span>{def.label}
+</span>
