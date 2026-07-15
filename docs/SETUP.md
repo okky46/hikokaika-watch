@@ -109,3 +109,35 @@ npm run dev   # http://localhost:4321 (サンプルデータで動作)
 ```
 
 Supabase 連携込みで確認する場合は `.env.example` を `.env` にコピーして値を設定する。
+
+## DATA_SOURCE と本番フェイルクローズ
+
+ビルド時データソースは必ず `DATA_SOURCE` で明示します。
+
+- `DATA_SOURCE=sample`: `data/sample` の開発用データを使用します。ローカル開発・CI 専用です。
+- `DATA_SOURCE=supabase`: Supabase から公開データを取得します。`SUPABASE_URL` と `SUPABASE_SERVICE_ROLE_KEY` が必須です。不足時はビルドを失敗させます。
+- 未指定の場合はビルドを失敗させます。
+- 本番ドメインを `SITE_URL` / `URL` に明示した状態で `sample` を指定するとビルドを失敗させます。
+
+## Supabase MFA aal2 運用と復旧
+
+管理画面は Google ログイン後に Supabase Auth の AAL を確認し、`currentLevel=aal1` かつ `nextLevel=aal2` の場合は登録済みTOTPコードで `challenge` / `verify` を実行してから `is_admin()` を呼びます。DB側で `is_admin()` を aal2 必須版に切り替える前に、必ず管理者アカウントでTOTP登録を完了してください。
+
+誤設定で管理者がログインできなくなった場合は、Supabase SQL Editor で一時的に以下の aal1 許可版へ戻して復旧します。
+
+```sql
+create or replace function public.is_admin()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.admin_users
+    where user_id = auth.uid() and is_active
+  );
+$$;
+```
+
+復旧後、管理者のTOTP登録・ログインを確認し、必要に応じて aal2 必須版へ再度切り替えてください。

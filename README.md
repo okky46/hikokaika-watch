@@ -55,3 +55,7 @@ Cloudflare Access(管理画面保護)の手順は [docs/SETUP.md](docs/SETUP.md)
 ## ライセンス・免責
 
 掲載情報の取り扱い・免責事項はサイト内の「免責事項」「掲載基準」ページを参照。
+
+## ビルド時データソース
+
+本番誤公開防止のため、データソースは `DATA_SOURCE=sample` または `DATA_SOURCE=supabase` を必ず指定します。ローカル確認は `DATA_SOURCE=sample npm run build`、本番は `DATA_SOURCE=supabase` と `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` を設定してください。

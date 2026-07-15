@@ -51,3 +51,13 @@ npm run build   # サンプルデータで静的ビルド
 npm run check   # astro check(型チェック)
 npm run preview # ローカル確認
 ```
+
+## 2026-07-15 改修
+
+- 会社コメントの複数タグ・自動分類・管理画面UIを追加。
+- 案件ステータスに `denied` / `ended` を追加し、トップ画面を簡素化して主要チップ絞り込みを追加。
+- Supabase MFA の aal2 昇格フローを管理画面ログイン時に追加。
+- `DATA_SOURCE` 明示によるフェイルクローズ型ビルドへ変更。
+- メモをDB/UI双方で1,000文字に制限。
+- `revision_history` と監査トリガーを追加。
+- GitHub Actions CI と Node.js 標準テストを追加。

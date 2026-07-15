@@ -7,9 +7,11 @@
 export type CaseStatus =
   | 'rumored'
   | 'commented'
+  | 'denied'
   | 'announced'
   | 'completed'
   | 'withdrawn'
+  | 'ended'
   | 'dormant';
 
 export type EventType =
@@ -23,6 +25,19 @@ export type EventType =
   | 'consideration_ended'
   | 'withdrawal'
   | 'correction'
+  | 'other';
+
+export type CommentStance = 'acknowledged' | 'neutral' | 'denied' | 'declined' | 'unclear' | 'needs_review';
+export type CommentTag =
+  | 'consideration_acknowledged'
+  | 'strategic_options_under_review'
+  | 'proposal_received'
+  | 'discussions_ongoing'
+  | 'no_decision'
+  | 'not_company_announcement'
+  | 'not_under_consideration'
+  | 'report_denied'
+  | 'comment_declined'
   | 'other';
 
 export type PriceType = 'pre_report_close' | 'current_close' | 'formal_offer_price';
@@ -65,6 +80,8 @@ export interface RawEvent {
   updated_at: string;
   sort_order: number;
   is_visible: boolean;
+  comment_stance: CommentStance | null;
+  comment_tags: CommentTag[];
   metadata: { corrected?: boolean; correction_note?: string } | null;
 }
 
@@ -100,6 +117,7 @@ export interface CaseListItem {
   firstSourceName: string | null;
   lastUpdatedAt: string;
   hasFormalAnnouncement: boolean;
+  hasAcknowledgedCompanyComment: boolean;
   /** この案件の可視イベントに登場する媒体名(絞り込み用) */
   sourceNames: string[];
   preReportClose: PricePoint | null;
@@ -120,6 +138,8 @@ export interface CaseEventView {
   updatedAt: string;
   corrected: boolean;
   correctionNote: string | null;
+  commentStance: CommentStance | null;
+  commentTags: CommentTag[];
 }
 
 /** 案件詳細ページ用のビューモデル */

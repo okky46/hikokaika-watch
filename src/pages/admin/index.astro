@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { CASE_STATUS, EVENT_TYPE, STATUS_ORDER } from '../../lib/status';
+import { COMMENT_STANCE_LABELS, COMMENT_TAGS, COMMENT_TAG_ORDER } from '../../lib/commentTags';
 
 // クライアントJSで使う表示定義
 const statusDefs = Object.fromEntries(
@@ -9,6 +10,9 @@ const statusDefs = Object.fromEntries(
 const eventTypeDefs = Object.fromEntries(
   Object.entries(EVENT_TYPE).map(([k, v]) => [k, { label: v.label, mark: v.mark, tone: v.tone }]),
 );
+const commentTagDefs = COMMENT_TAGS;
+const commentTagOrder = COMMENT_TAG_ORDER;
+const commentStanceLabels = COMMENT_STANCE_LABELS;
 ---
 
 <Base
@@ -35,7 +39,7 @@ const eventTypeDefs = Object.fromEntries(
       <span id="ad-not-admin" class="badge badge--stop" hidden style="margin-left:0.6rem">管理者権限がありません</span>
       <button type="button" class="btn" id="ad-logout" style="margin-left:1rem">ログアウト</button>
     </div>
-    <p class="small muted" id="ad-auth-status" aria-live="polite"></p>
+    <div id="ad-mfa-challenge" hidden style="margin-top:0.7rem"><p class="small">登録済みTOTPコードを入力してください。</p><input type="text" id="ad-mfa-code" inputmode="numeric" placeholder="123456" style="max-width:8rem" /> <button type="button" class="btn btn--primary" id="ad-mfa-verify">MFA確認</button></div><p class="small muted" id="ad-auth-status" aria-live="polite"></p>
   </section>
 
   <div id="ad-main" hidden>
@@ -128,6 +132,11 @@ const eventTypeDefs = Object.fromEntries(
             <div class="form-row"><label for="ev-sort">同時刻内の表示順</label><input type="number" id="ev-sort" value="0" /></div>
           </div>
           <div class="form-row"><label for="ev-summary">中立的な短い説明</label><textarea id="ev-summary" style="min-height:4rem"></textarea></div>
+          <div class="form-row" id="ev-comment-tags-row" hidden>
+            <label>会社コメントタグ（複数選択可）</label>
+            <div id="ev-comment-tags" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:0.35rem"></div>
+            <p class="small" id="ev-comment-stance" aria-live="polite"></p>
+          </div>
           <label class="filter-check"><input type="checkbox" id="ev-corrected" /> 訂正済み表示を付ける</label>
           <div class="form-row" id="ev-correction-row" hidden><label for="ev-correction-note">訂正内容の説明</label><input type="text" id="ev-correction-note" /></div>
           <label class="filter-check"><input type="checkbox" id="ev-visible" /> 公開する(チェックなし=非公開)</label>
@@ -228,16 +237,19 @@ const eventTypeDefs = Object.fromEntries(
   </div>
 </Base>
 
-<script is:inline define:vars={{ statusDefs, eventTypeDefs }}>
-  window.__ADMIN_DEFS__ = { statusDefs, eventTypeDefs };
+<script is:inline define:vars={{ statusDefs, eventTypeDefs, commentTagDefs, commentTagOrder, commentStanceLabels }}>
+  window.__ADMIN_DEFS__ = { statusDefs, eventTypeDefs, commentTagDefs, commentTagOrder, commentStanceLabels };
 </script>
 
 <script>
   import { getSupabase } from '../../lib/supabaseBrowser';
 
-  const { statusDefs, eventTypeDefs } = (window as any).__ADMIN_DEFS__ as {
+  const { statusDefs, eventTypeDefs, commentTagDefs, commentTagOrder, commentStanceLabels } = (window as any).__ADMIN_DEFS__ as {
     statusDefs: Record<string, { label: string; mark: string; tone: string }>;
     eventTypeDefs: Record<string, { label: string; mark: string; tone: string }>;
+    commentTagDefs: Record<string, { label: string; description: string; group: string }>;
+    commentTagOrder: string[];
+    commentStanceLabels: Record<string, string>;
   };
 
   const supabase = getSupabase();
@@ -250,6 +262,36 @@ const eventTypeDefs = Object.fromEntries(
     def
       ? `<span class="badge badge--${def.tone}"><span class="badge__mark">${def.mark}</span>${esc(def.label)}</span>`
       : esc(fallback);
+
+
+  function classifyCommentStance(tags: string[]): string {
+    const groups = new Set(tags.map((t) => commentTagDefs[t]?.group).filter(Boolean));
+    if (groups.has('acknowledged') && groups.has('denied')) return 'needs_review';
+    if (groups.has('acknowledged')) return 'acknowledged';
+    if (groups.size === 1 && groups.has('denied')) return 'denied';
+    if (groups.size === 1 && groups.has('declined')) return 'declined';
+    if (groups.size === 1 && groups.has('neutral')) return 'neutral';
+    return 'unclear';
+  }
+  function selectedCommentTags(): string[] {
+    return [...document.querySelectorAll<HTMLInputElement>('[data-comment-tag]:checked')].map((x) => x.value);
+  }
+  function renderCommentTagUi() {
+    $('ev-comment-tags').innerHTML = commentTagOrder.map((tag) => {
+      const def = commentTagDefs[tag];
+      return `<label class="filter-check"><input type="checkbox" data-comment-tag value="${esc(tag)}" /> ${esc(def.label)}<span class="small muted"> — ${esc(def.description)}</span></label>`;
+    }).join('');
+    updateCommentStancePreview();
+  }
+  function updateCommentTagVisibility() {
+    const show = $<HTMLSelectElement>('ev-type').value === 'company_comment';
+    $('ev-comment-tags-row').hidden = !show;
+    if (show && !$('ev-comment-tags').innerHTML) renderCommentTagUi();
+  }
+  function updateCommentStancePreview() {
+    const stance = classifyCommentStance(selectedCommentTags());
+    $('ev-comment-stance').innerHTML = `自動分類: <strong>${esc(commentStanceLabels[stance] ?? stance)}</strong>${stance === 'needs_review' ? ' <span class="badge badge--stop">公開前に確認</span>' : ''}`;
+  }
 
   // datetime-local <-> ISO(ブラウザのローカルタイムゾーンで解釈)
   function isoToLocal(iso: string | null): string {
@@ -266,6 +308,7 @@ const eventTypeDefs = Object.fromEntries(
   }
   const fmtDate = (iso: string | null) => (iso ? isoToLocal(iso).replace('T', ' ') : '—');
 
+  let pendingMfaFactorId: string | null = null;
   let companies: any[] = [];
   let cases: any[] = [];
 
@@ -283,6 +326,16 @@ const eventTypeDefs = Object.fromEntries(
     }
     $('ad-logged-in').hidden = false;
     $('ad-email').textContent = user.email ?? '';
+
+    const { data: aal, error: aalErr } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aalErr) { $('ad-auth-status').textContent = `MFA状態の確認に失敗: ${aalErr.message}`; return; }
+    if (aal?.currentLevel === 'aal1' && aal?.nextLevel === 'aal2') {
+      const { data: factors } = await supabase.auth.mfa.listFactors();
+      pendingMfaFactorId = factors?.totp?.find((f) => f.status === 'verified')?.id ?? null;
+      $('ad-mfa-challenge').hidden = false;
+      $('ad-auth-status').textContent = pendingMfaFactorId ? '管理画面を表示するにはMFA確認が必要です。' : 'aal2が必要ですが登録済みTOTPが見つかりません。セキュリティタブで登録状態を確認してください。';
+      return;
+    }
 
     const { data: isAdmin, error } = await supabase.rpc('is_admin');
     if (error || !isAdmin) {
@@ -304,6 +357,16 @@ const eventTypeDefs = Object.fromEntries(
       options: { redirectTo: `${location.origin}/admin/` },
     });
   });
+  $('ad-mfa-verify')?.addEventListener('click', async () => {
+    if (!supabase || !pendingMfaFactorId) return;
+    const code = $<HTMLInputElement>('ad-mfa-code').value.trim();
+    const { data: ch, error: chErr } = await supabase.auth.mfa.challenge({ factorId: pendingMfaFactorId });
+    if (chErr || !ch) { $('ad-auth-status').textContent = `MFAチャレンジ作成に失敗: ${chErr?.message ?? ''}`; return; }
+    const { error } = await supabase.auth.mfa.verify({ factorId: pendingMfaFactorId, challengeId: ch.id, code });
+    if (error) { $('ad-auth-status').textContent = `MFA確認に失敗: ${error.message}`; return; }
+    location.reload();
+  });
+
   $('ad-logout')?.addEventListener('click', async () => {
     await supabase?.auth.signOut();
     location.reload();
@@ -421,6 +484,7 @@ const eventTypeDefs = Object.fromEntries(
     evType.innerHTML = Object.entries(eventTypeDefs)
       .map(([k, v]) => `<option value="${k}">${esc(v.label)}</option>`)
       .join('');
+    updateCommentTagVisibility();
   }
 
   function renderCaseTable() {
@@ -458,6 +522,11 @@ const eventTypeDefs = Object.fromEntries(
     // 初回公開時にサイト掲載日時を自動設定
     const existing = cases.find((c) => c.id === id);
     if (visible && !existing?.site_published_at) row.site_published_at = new Date().toISOString();
+    const currentCase = cases.find((c) => c.id === row.case_id);
+    if (row.event_type === 'company_comment' && currentCase) {
+      if (row.comment_stance === 'acknowledged' && currentCase.status === 'rumored') $('ev-status').textContent = '提案: 案件ステータスを「会社が検討を認めた段階」に変更できます。';
+      if (row.comment_stance === 'denied' && !['announced','completed','withdrawn'].includes(currentCase.status)) $('ev-status').textContent = '提案: 案件ステータスを「会社が明確に否定」に変更できます。';
+    }
 
     const q = id
       ? supabase!.from('cases').update(row).eq('id', id)
@@ -512,6 +581,8 @@ const eventTypeDefs = Object.fromEntries(
   }
 
   $('ev-case-select')?.addEventListener('change', loadEvents);
+  $('ev-type')?.addEventListener('change', updateCommentTagVisibility);
+  document.addEventListener('change', (e) => { if ((e.target as HTMLElement).matches('[data-comment-tag]')) updateCommentStancePreview(); });
 
   $('ev-corrected')?.addEventListener('change', () => {
     $('ev-correction-row').hidden = !$<HTMLInputElement>('ev-corrected').checked;
@@ -531,6 +602,8 @@ const eventTypeDefs = Object.fromEntries(
       source_url: $<HTMLInputElement>('ev-source-url').value.trim(),
       sort_order: Number($<HTMLInputElement>('ev-sort').value) || 0,
       is_visible: visible,
+      comment_tags: $<HTMLSelectElement>('ev-type').value === 'company_comment' ? selectedCommentTags() : [],
+      comment_stance: $<HTMLSelectElement>('ev-type').value === 'company_comment' ? classifyCommentStance(selectedCommentTags()) : null,
       metadata: corrected
         ? { corrected: true, correction_note: $<HTMLInputElement>('ev-correction-note').value.trim() }
         : null,
@@ -541,6 +614,11 @@ const eventTypeDefs = Object.fromEntries(
     }
     const existing = events.find((e) => e.id === id);
     if (visible && !existing?.site_published_at) row.site_published_at = new Date().toISOString();
+    const currentCase = cases.find((c) => c.id === row.case_id);
+    if (row.event_type === 'company_comment' && currentCase) {
+      if (row.comment_stance === 'acknowledged' && currentCase.status === 'rumored') $('ev-status').textContent = '提案: 案件ステータスを「会社が検討を認めた段階」に変更できます。';
+      if (row.comment_stance === 'denied' && !['announced','completed','withdrawn'].includes(currentCase.status)) $('ev-status').textContent = '提案: 案件ステータスを「会社が明確に否定」に変更できます。';
+    }
 
     const q = id
       ? supabase!.from('case_events').update(row).eq('id', id)
@@ -554,6 +632,7 @@ const eventTypeDefs = Object.fromEntries(
     $<HTMLInputElement>('ev-id').value = '';
     ($('event-form') as HTMLFormElement).reset();
     $('ev-correction-row').hidden = true;
+    updateCommentTagVisibility();
   });
 
   // ---------------- 株価 ----------------
@@ -669,6 +748,9 @@ const eventTypeDefs = Object.fromEntries(
       $<HTMLInputElement>('ev-source-url').value = x.source_url ?? '';
       $<HTMLInputElement>('ev-sort').value = String(x.sort_order ?? 0);
       $<HTMLInputElement>('ev-visible').checked = x.is_visible;
+      updateCommentTagVisibility();
+      for (const cb of document.querySelectorAll<HTMLInputElement>('[data-comment-tag]')) cb.checked = (x.comment_tags ?? []).includes(cb.value);
+      updateCommentStancePreview();
       const corrected = x.metadata?.corrected === true;
       $<HTMLInputElement>('ev-corrected').checked = corrected;
       $('ev-correction-row').hidden = !corrected;

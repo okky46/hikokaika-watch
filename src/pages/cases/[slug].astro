@@ -144,10 +144,10 @@ const elapsed = daysBetween(c.firstReportedAt, c.lastUpdatedAt);
       <p class="small muted" style="margin-bottom:0.5rem">
         このメモはあなただけが閲覧できる私的な整理用メモです。他のユーザーや管理者向けに公開されることはありません。
       </p>
-      <textarea id="note-body" placeholder="この案件についての自分用メモ(本人のみ閲覧可)"></textarea>
+      <textarea id="note-body" maxlength="1000" placeholder="この案件についての自分用メモ(本人のみ閲覧可)"></textarea>
       <div style="display:flex; gap:0.6rem; align-items:center; margin-top:0.5rem;">
         <button type="button" class="btn btn--primary" id="note-save">メモを保存</button>
-        <span class="small muted" id="note-status" aria-live="polite"></span>
+        <span class="small muted" id="note-count">0 / 1,000文字</span><span class="small muted" id="note-status" aria-live="polite"></span>
       </div>
     </div>
   </section>
@@ -247,6 +247,7 @@ const elapsed = daysBetween(c.firstReportedAt, c.lastUpdatedAt);
 
   noteSave?.addEventListener('click', async () => {
     if (!supabase || !userId) return;
+    if (noteBody.value.length > 1000) { noteStatus.textContent = '1,000文字を超えるメモは保存できません'; return; }
     noteSave.disabled = true;
     noteStatus.textContent = '保存中…';
     const { error } = await supabase
@@ -256,5 +257,7 @@ const elapsed = daysBetween(c.firstReportedAt, c.lastUpdatedAt);
     noteSave.disabled = false;
   });
 
-  init();
+  const updateNoteCount = () => { const el = document.getElementById('note-count'); if (el) el.textContent = `${noteBody.value.length} / 1,000文字`; };
+  noteBody?.addEventListener('input', updateNoteCount);
+  init().then(updateNoteCount);
 </script>

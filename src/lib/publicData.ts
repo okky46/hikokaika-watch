@@ -1,15 +1,16 @@
 // ============================================================
 // ビルド時の公開データ取得
 //
-// - SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY があれば Supabase から取得
-//   (is_visible = true のもののみ。Service Role Key はビルド環境のみで使用)
-// - なければ data/sample/ の架空サンプルデータでビルド
+// - DATA_SOURCE=sample なら data/sample/ を使用
+// - DATA_SOURCE=supabase なら Supabase から取得
+// - 未指定や本番sampleはフェイルクローズ
 //
 // このモジュールはビルド時(Node)専用。ブラウザからは import しない。
 // ============================================================
 import { createClient } from '@supabase/supabase-js';
 import fs from 'node:fs';
 import path from 'node:path';
+import { classifyCommentStance } from './commentTags';
 import type {
   CaseDetail,
   CaseEventView,
@@ -40,16 +41,23 @@ export async function loadPublicData(): Promise<PublicData> {
 }
 
 async function loadRaw(): Promise<RawData> {
+  const source = import.meta.env.DATA_SOURCE ?? process.env.DATA_SOURCE;
   const url = import.meta.env.SUPABASE_URL ?? process.env.SUPABASE_URL;
-  const key =
-    import.meta.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = import.meta.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const explicitSiteUrl = process.env.SITE_URL ?? process.env.URL ?? '';
+  const isProductionDomain = /^https?:\/\/(www\.)?hikokaika-watch\./.test(explicitSiteUrl);
 
-  if (url && key) {
+  if (source === 'sample') {
+    if (isProductionDomain) throw new Error('[publicData] 本番ドメインで DATA_SOURCE=sample は使用できません');
+    console.log('[publicData] DATA_SOURCE=sample のためサンプルデータを使用します');
+    return loadFromSample();
+  }
+  if (source === 'supabase') {
+    if (!url || !key) throw new Error('[publicData] DATA_SOURCE=supabase には SUPABASE_URL と SUPABASE_SERVICE_ROLE_KEY が必要です');
     console.log('[publicData] Supabase から公開データを取得します');
     return loadFromSupabase(url, key);
   }
-  console.warn('[publicData] SUPABASE_URL 未設定のため data/sample/ のサンプルデータでビルドします');
-  return loadFromSample();
+  throw new Error('[publicData] DATA_SOURCE は sample または supabase を明示してください');
 }
 
 async function loadFromSupabase(url: string, key: string): Promise<RawData> {
@@ -132,10 +140,10 @@ function assemble(raw: RawData): PublicData {
       ...prices.map((p) => p.updated_at),
     ]);
 
-    const hasFormalAnnouncement =
-      c.status === 'announced' ||
-      c.status === 'completed' ||
-      events.some((e) => e.event_type === 'formal_announcement');
+    const hasFormalAnnouncement = events.some((e) => e.event_type === 'formal_announcement');
+    const hasAcknowledgedCompanyComment = events.some(
+      (e) => e.event_type === 'company_comment' && (e.comment_stance ?? classifyCommentStance(e.comment_tags ?? [])) === 'acknowledged',
+    );
 
     const sourceNames = [
       ...new Set(events.map((e) => e.source_name).filter((s) => s.length > 0)),
@@ -153,6 +161,8 @@ function assemble(raw: RawData): PublicData {
       updatedAt: e.updated_at,
       corrected: e.metadata?.corrected === true,
       correctionNote: e.metadata?.correction_note ?? null,
+      commentStance: e.comment_stance ?? null,
+      commentTags: e.comment_tags ?? [],
     }));
 
     details.push({
@@ -170,6 +180,7 @@ function assemble(raw: RawData): PublicData {
       lastUpdatedAt,
       sitePublishedAt: c.site_published_at,
       hasFormalAnnouncement,
+      hasAcknowledgedCompanyComment,
       sourceNames,
       preReportClose,
       currentClose,

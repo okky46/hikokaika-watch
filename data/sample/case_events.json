@@ -12,7 +12,9 @@
     "updated_at": "2026-05-12T21:00:00+09:00",
     "sort_order": 0,
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "comment_tags": [],
+    "comment_stance": null
   },
   {
     "id": "c0000001-0000-4000-8000-000000000102",
@@ -27,7 +29,13 @@
     "updated_at": "2026-05-12T21:10:00+09:00",
     "sort_order": 1,
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "comment_tags": [
+      "consideration_acknowledged",
+      "not_company_announcement",
+      "no_decision"
+    ],
+    "comment_stance": "acknowledged"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000103",
@@ -42,7 +50,9 @@
     "updated_at": "2026-05-20T20:00:00+09:00",
     "sort_order": 0,
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "comment_tags": [],
+    "comment_stance": null
   },
   {
     "id": "c0000001-0000-4000-8000-000000000104",
@@ -57,7 +67,9 @@
     "updated_at": "2026-06-10T20:00:00+09:00",
     "sort_order": 0,
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "comment_tags": [],
+    "comment_stance": null
   },
   {
     "id": "c0000001-0000-4000-8000-000000000201",
@@ -72,7 +84,9 @@
     "updated_at": "2026-06-28T22:00:00+09:00",
     "sort_order": 0,
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "comment_tags": [],
+    "comment_stance": null
   },
   {
     "id": "c0000001-0000-4000-8000-000000000301",
@@ -87,7 +101,9 @@
     "updated_at": "2026-04-03T21:30:00+09:00",
     "sort_order": 0,
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "comment_tags": [],
+    "comment_stance": null
   },
   {
     "id": "c0000001-0000-4000-8000-000000000302",
@@ -102,7 +118,12 @@
     "updated_at": "2026-04-04T20:00:00+09:00",
     "sort_order": 0,
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "comment_tags": [
+      "not_company_announcement",
+      "no_decision"
+    ],
+    "comment_stance": "neutral"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000401",
@@ -117,7 +138,9 @@
     "updated_at": "2025-09-18T21:00:00+09:00",
     "sort_order": 0,
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "comment_tags": [],
+    "comment_stance": null
   },
   {
     "id": "c0000001-0000-4000-8000-000000000402",
@@ -132,7 +155,9 @@
     "updated_at": "2025-11-05T20:00:00+09:00",
     "sort_order": 0,
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "comment_tags": [],
+    "comment_stance": null
   },
   {
     "id": "c0000001-0000-4000-8000-000000000403",
@@ -147,7 +172,9 @@
     "updated_at": "2026-01-10T18:00:00+09:00",
     "sort_order": 0,
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "comment_tags": [],
+    "comment_stance": null
   },
   {
     "id": "c0000001-0000-4000-8000-000000000501",
@@ -162,7 +189,9 @@
     "updated_at": "2025-06-10T22:00:00+09:00",
     "sort_order": 0,
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "comment_tags": [],
+    "comment_stance": null
   },
   {
     "id": "c0000001-0000-4000-8000-000000000502",
@@ -177,7 +206,9 @@
     "updated_at": "2025-08-01T20:00:00+09:00",
     "sort_order": 0,
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "comment_tags": [],
+    "comment_stance": null
   },
   {
     "id": "c0000001-0000-4000-8000-000000000503",
@@ -192,7 +223,9 @@
     "updated_at": "2025-10-16T19:00:00+09:00",
     "sort_order": 0,
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "comment_tags": [],
+    "comment_stance": null
   },
   {
     "id": "c0000001-0000-4000-8000-000000000601",
@@ -207,7 +240,9 @@
     "updated_at": "2025-03-05T21:00:00+09:00",
     "sort_order": 0,
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "comment_tags": [],
+    "comment_stance": null
   },
   {
     "id": "c0000001-0000-4000-8000-000000000602",
@@ -222,7 +257,11 @@
     "updated_at": "2025-03-06T20:00:00+09:00",
     "sort_order": 0,
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "comment_tags": [
+      "consideration_acknowledged"
+    ],
+    "comment_stance": "acknowledged"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000603",
@@ -237,7 +276,9 @@
     "updated_at": "2025-07-31T19:00:00+09:00",
     "sort_order": 0,
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "comment_tags": [],
+    "comment_stance": null
   },
   {
     "id": "c0000001-0000-4000-8000-000000000701",
@@ -252,7 +293,12 @@
     "updated_at": "2026-07-03T20:00:00+09:00",
     "sort_order": 0,
     "is_visible": true,
-    "metadata": { "corrected": true, "correction_note": "買付価格に関する記述が媒体側で訂正されたため、本カードの説明を修正しました(2026/07/03)。" }
+    "metadata": {
+      "corrected": true,
+      "correction_note": "買付価格に関する記述が媒体側で訂正されたため、本カードの説明を修正しました(2026/07/03)。"
+    },
+    "comment_tags": [],
+    "comment_stance": null
   },
   {
     "id": "c0000001-0000-4000-8000-000000000702",
@@ -267,6 +313,8 @@
     "updated_at": "2026-07-03T20:00:00+09:00",
     "sort_order": 0,
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "comment_tags": [],
+    "comment_stance": null
   }
 ]

@@ -75,3 +75,9 @@
   `created_by_type` / `review_status` 等はマイグレーション追加のみで対応可能。
 - AI 収集は「下書き保存 → 管理者承認 → 公開」フローを想定し、`is_visible` フラグと
   管理画面のプレビュー機能が承認フローの土台になる。
+
+## 会社コメント分類と監査ログ
+
+会社コメントイベントは `case_events.comment_tags` に複数タグを保持し、TypeScript の `src/lib/commentTags.ts` で表示名・説明・分類影響を一元管理します。タグから `comment_stance` を自動算出し、公開データにも会社コメント分類を含めます。
+
+管理者操作の内部監査は `revision_history` にDBトリガーで記録します。公開画面の「訂正あり」とは分離し、対象は `companies`、`cases`、`case_events`、`price_snapshots` です。`admin_settings` は履歴対象外です。

@@ -69,10 +69,10 @@ const statusMap = Object.fromEntries(
         <p class="small muted" style="margin-bottom:0.5rem">
           特定の案件に紐づかない、あなた専用の自由記述メモです(1件)。
         </p>
-        <textarea id="mp-global-note" placeholder="全体メモ(本人のみ閲覧可)"></textarea>
+        <textarea id="mp-global-note" maxlength="1000" placeholder="全体メモ(本人のみ閲覧可)"></textarea>
         <div style="display:flex; gap:0.6rem; align-items:center; margin-top:0.5rem;">
           <button type="button" class="btn btn--primary" id="mp-global-save">保存</button>
-          <span class="small muted" id="mp-global-status" aria-live="polite"></span>
+          <span class="small muted" id="mp-global-count">0 / 1,000文字</span><span class="small muted" id="mp-global-status" aria-live="polite"></span>
         </div>
       </div>
     </section>
@@ -284,12 +284,18 @@ const statusMap = Object.fromEntries(
 
   $('mp-global-save')?.addEventListener('click', async () => {
     if (!supabase || !userId) return;
+    if (globalNote.value.length > 1000) { globalStatus.textContent = '1,000文字を超えるメモは保存できません'; return; }
+    const btn = $('mp-global-save') as HTMLButtonElement;
+    btn.disabled = true;
     globalStatus.textContent = '保存中…';
     const { error } = await supabase
       .from('user_global_notes')
       .upsert({ user_id: userId, body: globalNote.value });
     globalStatus.textContent = error ? `保存に失敗しました: ${error.message}` : '保存しました';
+    btn.disabled = false;
   });
 
-  init();
+  const updateGlobalCount = () => { const el = $('mp-global-count'); el.textContent = `${globalNote.value.length} / 1,000文字`; };
+  globalNote?.addEventListener('input', updateGlobalCount);
+  init().then(updateGlobalCount);
 </script>
