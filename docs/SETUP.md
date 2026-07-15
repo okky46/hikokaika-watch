@@ -5,9 +5,13 @@
 ## 1. Supabase プロジェクト
 
 1. https://supabase.com で新規プロジェクト作成(Free プラン、リージョンは Tokyo 推奨)。
-2. SQL Editor で `supabase/migrations/0001_init.sql` の内容を実行する。
-   - テーブル・RLS ポリシー・`is_admin()` 関数が作成される。
-3. (任意)`supabase` CLI を使う場合: `supabase db push`。
+2. SQL Editor で最新の `supabase/migrations` をファイル名順にすべて適用する。
+   - 現時点では、少なくとも以下の順番で実行する。
+     1. `supabase/migrations/0001_init.sql`
+     2. `supabase/migrations/0002_comment_mfa_audit_notes.sql`
+   - `0001_init.sql` でテーブル・RLS ポリシー・`is_admin()` 関数が作成される。
+   - `0002_comment_mfa_audit_notes.sql` で会社コメントの複数タグ・分類、`denied` / `ended` ステータス、メモの1,000文字制限、`revision_history`、MFA・監査関連の追加設定が適用される。`0002` を適用しないと、これらの列・制約・設定が不足し、管理画面での保存や監査機能が正しく動作しない。
+3. (任意)`supabase` CLI を使う場合: `supabase db push` で未適用のマイグレーションをすべて適用する。
 
 ## 2. Google OAuth(Supabase Auth)
 
@@ -43,13 +47,19 @@
 3. 環境変数(Production):
    | 変数 | 値 |
    |---|---|
+   | `DATA_SOURCE` | `supabase` |
    | `SUPABASE_URL` | `https://<project-ref>.supabase.co` |
    | `SUPABASE_SERVICE_ROLE_KEY` | Service Role Key(**ビルド専用。他で使わない**) |
    | `PUBLIC_SUPABASE_URL` | `https://<project-ref>.supabase.co` |
    | `PUBLIC_SUPABASE_ANON_KEY` | anon key |
    | `SITE_URL` | `https://<本番ドメイン>` |
    | `PUBLIC_REQUEST_FORM_URL` | Google フォームの URL |
-4. Settings → Builds & deployments → **Deploy Hooks** で hook を作成し、URL を控える。
+4. 環境ごとの `DATA_SOURCE` は以下を明示する。
+   - 本番: `DATA_SOURCE=supabase`。上記の本番環境変数表に必ず設定する。
+   - ローカル開発・CI: `DATA_SOURCE=sample`。
+   - Cloudflare Preview 環境でサンプルデータを使う場合も、未指定にせず `DATA_SOURCE=sample` を明示する。
+   - 本番ドメインでは誤公開防止のため `DATA_SOURCE=sample` は拒否され、ビルドが失敗する。
+5. Settings → Builds & deployments → **Deploy Hooks** で hook を作成し、URL を控える。
 
 ## 5. 公開処理(Deploy Hook)の登録
 
@@ -114,10 +124,11 @@ Supabase 連携込みで確認する場合は `.env.example` を `.env` にコ�
 
 ビルド時データソースは必ず `DATA_SOURCE` で明示します。
 
-- `DATA_SOURCE=sample`: `data/sample` の開発用データを使用します。ローカル開発・CI 専用です。
-- `DATA_SOURCE=supabase`: Supabase から公開データを取得します。`SUPABASE_URL` と `SUPABASE_SERVICE_ROLE_KEY` が必須です。不足時はビルドを失敗させます。
+- 本番: `DATA_SOURCE=supabase`。Supabase から公開データを取得します。`SUPABASE_URL` と `SUPABASE_SERVICE_ROLE_KEY` が必須です。不足時はビルドを失敗させます。
+- ローカル開発・CI: `DATA_SOURCE=sample`。`data/sample` の開発用データを使用します。
+- Cloudflare Preview 環境でサンプルデータを使う場合も、`DATA_SOURCE=sample` を明示します。
 - 未指定の場合はビルドを失敗させます。
-- 本番ドメインを `SITE_URL` / `URL` に明示した状態で `sample` を指定するとビルドを失敗させます。
+- 本番ドメインを `SITE_URL` / `URL` に明示した状態で `sample` を指定すると、誤公開防止のためビルドを失敗させます。
 
 ## メモ1000文字制約の検証運用
 
