@@ -1,5 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { latestCommentStanceFromEvent } from '../src/lib/commentTags.ts';
 import { firstVisibleReportOccurredAt } from '../src/lib/derive.ts';
 
 function event(event_type, occurred_at, is_visible = true) {
@@ -42,5 +43,41 @@ describe('firstVisibleReportOccurredAt', () => {
       event('correction', '2026-04-02T00:00:00Z'),
     ]);
     assert.equal(r, null);
+  });
+});
+
+describe('latestCommentStanceFromEvent', () => {
+  it('最新イベントがtimely_disclosureでcomment_stanceがnullかつcomment_tagsが空ならnull', () => {
+    assert.equal(latestCommentStanceFromEvent({ comment_stance: null, comment_tags: [] }), null);
+  });
+
+  it('comment_tags自体が未設定でもnull', () => {
+    assert.equal(latestCommentStanceFromEvent({ comment_stance: null }), null);
+  });
+
+  it('comment_stanceが明示されている場合はその値を維持', () => {
+    assert.equal(
+      latestCommentStanceFromEvent({ comment_stance: 'declined', comment_tags: ['consideration_acknowledged'] }),
+      'declined',
+    );
+  });
+
+  it('comment_stanceがなく非空のcomment_tagsがある場合は自動分類する', () => {
+    assert.equal(
+      latestCommentStanceFromEvent({ comment_stance: null, comment_tags: ['consideration_acknowledged'] }),
+      'acknowledged',
+    );
+  });
+
+  it('複数のコメント系イベントがある場合は最新イベントの情報だけが表示に使われる', () => {
+    const events = [
+      { comment_stance: 'acknowledged', comment_tags: ['consideration_acknowledged'] },
+      { comment_stance: null, comment_tags: [] },
+    ];
+    assert.equal(latestCommentStanceFromEvent(events.at(-1)), null);
+  });
+
+  it('コメント系イベントがない場合はnull', () => {
+    assert.equal(latestCommentStanceFromEvent(null), null);
   });
 });

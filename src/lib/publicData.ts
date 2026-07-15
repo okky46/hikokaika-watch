@@ -11,7 +11,7 @@
 import { createClient } from '@supabase/supabase-js';
 import fs from 'node:fs';
 import path from 'node:path';
-import { classifyCommentStance } from './commentTags';
+import { classifyCommentStance, latestCommentStanceFromEvent } from './commentTags';
 import { resolvePublicDataEnvironment } from './buildEnv';
 import { hasFormalAnnouncement } from './caseFilters';
 import { deriveCaseFields, firstVisibleReportOccurredAt } from './derive';
@@ -159,9 +159,7 @@ function assemble(raw: RawData): PublicData {
       (e) => e.event_type === 'company_comment' || e.event_type === 'timely_disclosure',
     );
     const latestCommentEvent = commentLikeEvents[commentLikeEvents.length - 1] ?? null;
-    const latestCommentStance =
-      latestCommentEvent?.comment_stance ??
-      (latestCommentEvent ? classifyCommentStance(latestCommentEvent.comment_tags ?? []) : null);
+    const latestCommentStance = latestCommentStanceFromEvent(latestCommentEvent);
 
     const lastVisibleEventOccurredAt = events[events.length - 1]?.occurred_at ?? null;
     const derived = deriveCaseFields({

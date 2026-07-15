@@ -35,6 +35,17 @@ export function classifyCommentStance(tags: readonly string[]): CommentStance {
   return 'unclear';
 }
 
+export function latestCommentStanceFromEvent(
+  event: { comment_stance: CommentStance | null; comment_tags?: readonly string[] | null } | null,
+): CommentStance | null {
+  if (!event) return null;
+  if (event.comment_stance) return event.comment_stance;
+  if (event.comment_tags && event.comment_tags.length > 0) {
+    return classifyCommentStance(event.comment_tags);
+  }
+  return null;
+}
+
 export const COMMENT_STANCE_LABELS: Record<CommentStance, string> = {
   acknowledged: '検討・協議等の存在を認めた',
   neutral: '否定も肯定もしていない',
