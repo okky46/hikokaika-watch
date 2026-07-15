@@ -25,6 +25,10 @@ const PRE_ANNOUNCEMENT_EFFECTIVE_STATUSES: readonly CaseStatus[] = [
 const HEAT_COOLDOWN_DAYS = 90;
 const DORMANT_THRESHOLD_DAYS = 240;
 
+function isPositiveFinitePrice(point: PricePoint | null): point is PricePoint {
+  return point !== null && Number.isFinite(point.price) && point.price > 0;
+}
+
 export interface DeriveCaseInput {
   status: CaseStatus;
   /** 可視イベントの種別一覧(順不同でよい) */
@@ -66,17 +70,21 @@ export function deriveCaseFields(input: DeriveCaseInput): DerivedCaseFields {
   const heatLevel = heatBase as HeatLevel;
 
   const speculationPremium =
-    input.preReportClose && input.currentClose
+    isPositiveFinitePrice(input.preReportClose) && isPositiveFinitePrice(input.currentClose)
       ? (input.currentClose.price - input.preReportClose.price) / input.preReportClose.price
       : null;
 
   const tobPremium =
-    TOB_PREMIUM_STATUSES.includes(input.status) && input.formalOfferPrice && input.preReportClose
+    TOB_PREMIUM_STATUSES.includes(input.status) &&
+    isPositiveFinitePrice(input.formalOfferPrice) &&
+    isPositiveFinitePrice(input.preReportClose)
       ? (input.formalOfferPrice.price - input.preReportClose.price) / input.preReportClose.price
       : null;
 
   const arbSpread =
-    input.status === 'announced' && input.formalOfferPrice && input.currentClose
+    input.status === 'announced' &&
+    isPositiveFinitePrice(input.formalOfferPrice) &&
+    isPositiveFinitePrice(input.currentClose)
       ? (input.formalOfferPrice.price - input.currentClose.price) / input.currentClose.price
       : null;
 
@@ -102,4 +110,14 @@ export function deriveCaseFields(input: DeriveCaseInput): DerivedCaseFields {
     effectiveStatus,
     isPreAnnouncement,
   };
+}
+
+export function firstVisibleReportOccurredAt(
+  events: readonly { event_type: EventType; occurred_at: string; is_visible: boolean }[],
+): string | null {
+  const firstReport = events
+    .filter((e) => e.is_visible && REPORT_EVENT_TYPES.includes(e.event_type))
+    .sort((a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime())[0];
+
+  return firstReport?.occurred_at ?? null;
 }

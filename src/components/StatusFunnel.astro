@@ -54,8 +54,15 @@ const steps = [
   { mark: '■', label: '成立・完了', countLabel: '', tone: 'post-completed' },
 ] as const;
 
+function branchStepState(i: number): 'passed' | 'pending' {
+  if (effectiveStatus === 'withdrawn') return i <= 2 ? 'passed' : 'pending';
+  if (i === 0) return reportCount > 0 ? 'passed' : 'pending';
+  if (i === 1) return commentCount > 0 ? 'passed' : 'pending';
+  return 'pending';
+}
+
 function stepState(i: number): 'passed' | 'current' | 'pending' {
-  if (isBranch) return i <= (branchAfterIndex as number) ? 'passed' : 'pending';
+  if (isBranch) return branchStepState(i);
   if (mainIndex === undefined) return 'pending';
   if (i < mainIndex) return 'passed';
   if (i === mainIndex) return 'current';
@@ -70,9 +77,9 @@ function stepState(i: number): 'passed' | 'current' | 'pending' {
         <span class="badge__mark" aria-hidden="true">{step.mark}</span>{step.label}{step.countLabel}
       </span>
       {isBranch && i === branchAfterIndex && branchDef && (
-        <span class="status-funnel__branch-row">
+        <span class="status-funnel__branch-row status-funnel__branch-row--current" aria-current="step">
           <span class="status-funnel__arrow" aria-hidden="true">↳</span>
-          <span class={`badge badge--${branchTone} status-funnel__badge`} title={branchDef.description}>
+          <span class={`badge badge--${branchTone} status-funnel__badge status-funnel__badge--branch-current`} title={branchDef.description}>
             <span class="badge__mark" aria-hidden="true">{branchDef.mark}</span>{branchDef.label}
           </span>
         </span>

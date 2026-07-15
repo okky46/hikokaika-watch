@@ -217,3 +217,29 @@ describe('daysSinceFirstReport', () => {
     assert.equal(r.daysSinceFirstReport, null);
   });
 });
+
+const PRICE = (price) => ({ price, priceDate: '2026-01-01', sourceName: null });
+
+function assertInvalidPriceNulls(overrides, field) {
+  for (const price of [0, -1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+    const r = deriveCaseFields(baseInput(overrides(price)));
+    assert.equal(r[field], null, `${field} should be null for invalid price: ${price}`);
+  }
+}
+
+describe('invalid price guards', () => {
+  it('speculationPremium は分母・分子の価格が正の有限値の場合だけ計算する', () => {
+    assertInvalidPriceNulls((price) => ({ preReportClose: PRICE(price), currentClose: PRICE(1200) }), 'speculationPremium');
+    assertInvalidPriceNulls((price) => ({ preReportClose: PRICE(1000), currentClose: PRICE(price) }), 'speculationPremium');
+  });
+
+  it('tobPremium は分母・分子の価格が正の有限値の場合だけ計算する', () => {
+    assertInvalidPriceNulls((price) => ({ status: 'announced', preReportClose: PRICE(price), formalOfferPrice: PRICE(1500) }), 'tobPremium');
+    assertInvalidPriceNulls((price) => ({ status: 'announced', preReportClose: PRICE(1000), formalOfferPrice: PRICE(price) }), 'tobPremium');
+  });
+
+  it('arbSpread は分母・分子の価格が正の有限値の場合だけ計算する', () => {
+    assertInvalidPriceNulls((price) => ({ status: 'announced', formalOfferPrice: PRICE(1500), currentClose: PRICE(price) }), 'arbSpread');
+    assertInvalidPriceNulls((price) => ({ status: 'announced', formalOfferPrice: PRICE(price), currentClose: PRICE(1200) }), 'arbSpread');
+  });
+});

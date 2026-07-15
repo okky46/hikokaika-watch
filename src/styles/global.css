@@ -752,10 +752,11 @@ select {
   border-color: var(--color-line);
 }
 
-.status-funnel__step--current .status-funnel__badge {
+.status-funnel__step--current .status-funnel__badge,
+.status-funnel__badge--branch-current {
   border-width: 2px;
   font-weight: 800;
-  box-shadow: 0 0 0 2px rgba(28, 39, 51, 0.06);
+  box-shadow: 0 0 0 2px rgba(28, 39, 51, 0.08);
 }
 
 .status-funnel__branch-row {
@@ -763,6 +764,11 @@ select {
   align-items: center;
   gap: 0.3rem;
   margin-top: 0.2rem;
+  max-width: 100%;
+}
+
+.status-funnel__branch-row--current {
+  font-weight: 800;
 }
 
 .status-funnel__arrow {

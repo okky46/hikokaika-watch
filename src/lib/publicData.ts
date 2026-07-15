@@ -14,7 +14,7 @@ import path from 'node:path';
 import { classifyCommentStance } from './commentTags';
 import { resolvePublicDataEnvironment } from './buildEnv';
 import { hasFormalAnnouncement } from './caseFilters';
-import { deriveCaseFields } from './derive';
+import { deriveCaseFields, firstVisibleReportOccurredAt } from './derive';
 import type {
   CaseDetail,
   CaseEventView,
@@ -137,10 +137,8 @@ function assemble(raw: RawData): PublicData {
     const currentClose = latestPrice(prices, 'current_close');
     const formalOfferPrice = latestPrice(prices, 'formal_offer_price');
 
-    const firstEvent = events[0] ?? null;
-    const firstReport =
-      events.find((e) => e.event_type === 'observation_report') ?? firstEvent;
-    const firstReportedAt = c.first_reported_at ?? firstReport?.occurred_at ?? null;
+    const firstReportedAt = firstVisibleReportOccurredAt(events);
+    const firstReport = firstReportedAt ? events.find((e) => e.occurred_at === firstReportedAt) ?? null : null;
 
     const lastUpdatedAt = maxIso([
       c.updated_at,
