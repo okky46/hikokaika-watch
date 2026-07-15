@@ -4,19 +4,13 @@ import StatusBadge from '../components/StatusBadge.astro';
 import AdSlot from '../components/AdSlot.astro';
 import { loadPublicData } from '../lib/publicData';
 import { CASE_STATUS, STATUS_ORDER } from '../lib/status';
+import { isAcknowledgedCase } from '../lib/caseFilters';
 import { formatDate, formatPrice, reportYear } from '../lib/format';
 
 const data = await loadPublicData();
 const { cases, allSourceNames, isSampleData } = data;
 
-const stats = {
-  total: cases.length,
-  preAnnouncement: cases.filter((c) => CASE_STATUS[c.status].preAnnouncement).length,
-  commented: cases.filter((c) => c.status === 'commented').length,
-  announced: cases.filter((c) => c.status === 'announced' || c.status === 'completed').length,
-};
-
-const latest = cases.slice(0, 5);
+const latestUpdatedAt = cases[0]?.lastUpdatedAt ?? null;
 
 const years = [
   ...new Set(cases.map((c) => reportYear(c.firstReportedAt)).filter((y): y is number => y !== null)),
@@ -43,50 +37,17 @@ const description =
     </p>
   </section>
 
-  <section class="section" aria-label="集計">
-    <div class="stats-grid">
-      <div class="stat-card">
-        <p class="stat-card__label">総観測案件数</p>
-        <p class="stat-card__value">{stats.total}<span class="stat-card__unit"> 件</span></p>
-      </div>
-      <div class="stat-card">
-        <p class="stat-card__label">正式発表前</p>
-        <p class="stat-card__value">{stats.preAnnouncement}<span class="stat-card__unit"> 件</span></p>
-      </div>
-      <div class="stat-card">
-        <p class="stat-card__label">会社コメントあり</p>
-        <p class="stat-card__value">{stats.commented}<span class="stat-card__unit"> 件</span></p>
-      </div>
-      <div class="stat-card">
-        <p class="stat-card__label">正式発表済み</p>
-        <p class="stat-card__value">{stats.announced}<span class="stat-card__unit"> 件</span></p>
-      </div>
-    </div>
-    <p class="small muted" style="margin-top:0.4rem">
-      ※ 集計は登録された客観的ステータスに基づくものであり、主観的な評価ではありません。
-    </p>
-  </section>
-
-  <section class="section" aria-label="最新更新">
-    <h2 class="section-title">最新更新</h2>
-    <ul class="card" style="margin:0; padding:0.6rem 1rem; list-style:none;">
-      {latest.map((c) => (
-        <li style="display:flex; gap:0.7rem; align-items:center; flex-wrap:wrap; padding:0.35rem 0; border-bottom:1px solid var(--color-line);">
-          <span class="small muted nowrap">{formatDate(c.lastUpdatedAt)}</span>
-          <StatusBadge status={c.status} />
-          <a class="case-link" href={`/cases/${c.slug}/`}>
-            {c.companyName}<span class="mono small">({c.securityCode})</span>
-          </a>
-          <span class="small muted">{c.title}</span>
-        </li>
-      ))}
-    </ul>
-  </section>
+  <p class="small muted" style="margin-top:0.4rem">全{cases.length}件　最終更新：{formatDate(latestUpdatedAt)}</p>
 
   <AdSlot slotId="home-below-stats" />
 
   <section class="section" aria-label="案件の検索・絞り込み">
     <h2 class="section-title">案件一覧</h2>
+    <div class="section" style="display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:0.6rem" aria-label="主要絞り込み">
+      <button type="button" class="btn btn--primary" data-quick-filter="all">すべて</button>
+      <button type="button" class="btn" data-quick-filter="acknowledged">会社が検討を認めた</button>
+      <button type="button" class="btn" data-quick-filter="announced">非公開化公表済み</button>
+    </div>
 
     <form class="filter-bar card" id="filter-form" style="margin-bottom:0.8rem" onsubmit="return false">
       <div class="filter-field filter-field--wide">
@@ -169,6 +130,7 @@ const description =
               data-sources={c.sourceNames.join('|')}
               data-year={String(reportYear(c.firstReportedAt) ?? '')}
               data-formal={c.hasFormalAnnouncement ? '1' : '0'}
+              data-acknowledged={isAcknowledgedCase(c) ? '1' : '0'}
             >
               <td class="code" data-label="証券コード">{c.securityCode}</td>
               <td class="cell-name">
@@ -274,6 +236,7 @@ const description =
   const source = document.getElementById('f-source') as HTMLSelectElement;
   const year = document.getElementById('f-year') as HTMLSelectElement;
   const formal = document.getElementById('f-formal') as HTMLSelectElement;
+  let quickFilter = 'all';
   const favOnly = document.getElementById('f-fav') as HTMLInputElement;
   const intensitySel = document.getElementById('f-intensity') as HTMLSelectElement;
 
@@ -292,6 +255,8 @@ const description =
           (d.name ?? '').toLowerCase().includes(qv) ||
           (d.code ?? '').toLowerCase().includes(qv);
       }
+      if (ok && quickFilter === 'acknowledged') ok = d.acknowledged === '1';
+      if (ok && quickFilter === 'announced') ok = d.formal === '1';
       if (ok && status.value) ok = d.status === status.value;
       if (ok && source.value) ok = (d.sources ?? '').split('|').includes(source.value);
       if (ok && year.value) ok = d.year === year.value;
@@ -307,6 +272,13 @@ const description =
     emptyEl.hidden = visible > 0;
   }
 
+  document.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-quick-filter]');
+    if (!btn) return;
+    quickFilter = btn.dataset.quickFilter ?? 'all';
+    for (const b of document.querySelectorAll<HTMLButtonElement>('[data-quick-filter]')) b.classList.toggle('btn--primary', b === btn);
+    applyFilters();
+  });
   form.addEventListener('input', applyFilters);
   applyFilters();
 

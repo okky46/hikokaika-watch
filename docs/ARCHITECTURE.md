@@ -31,8 +31,7 @@
   (MVP の案件数規模では十分。外部リクエストは発生しない)。
 - Service Role Key は **ビルド環境(Cloudflare Pages のビルド環境変数)にのみ** 存在し、
   `PUBLIC_` プレフィックスを付けないためブラウザへは絶対に出ない。
-- ローカル開発・CI では Supabase 環境変数がなければ `data/sample/` の架空サンプルデータで
-  ビルドされる(開発とデモが Supabase なしで完結する)。
+- ローカル開発では `DEPLOY_ENV` と `DATA_SOURCE` が両方未設定の場合のみ `development + sample` にフォールバックし、CI / Cloudflare Pages では `DEPLOY_ENV` と `DATA_SOURCE` を明示する。`SITE_URL` は canonical / OGP / sitemap 用で、データソースや実行環境の判定には使わない。
 - 再公開フロー: 管理画面の「公開処理」→ Deploy Hook → 数分後に静的サイトが更新される。
   Deploy Hook URL は Supabase の `admin_settings` テーブル(管理者のみ RLS で読める)に保存する。
 
@@ -75,3 +74,9 @@
   `created_by_type` / `review_status` 等はマイグレーション追加のみで対応可能。
 - AI 収集は「下書き保存 → 管理者承認 → 公開」フローを想定し、`is_visible` フラグと
   管理画面のプレビュー機能が承認フローの土台になる。
+
+## 会社コメント分類と監査ログ
+
+会社コメントイベントは `case_events.comment_tags` に複数タグを保持し、TypeScript の `src/lib/commentTags.ts` で表示名・説明・分類影響を一元管理します。タグから `comment_stance` を自動算出し、公開データにも会社コメント分類を含めます。
+
+管理者操作の内部監査は `revision_history` にDBトリガーで記録します。公開画面の「訂正あり」とは分離し、対象は `companies`、`cases`、`case_events`、`price_snapshots` です。`admin_settings` は履歴対象外です。

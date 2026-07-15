@@ -30,6 +30,13 @@ export const CASE_STATUS: Record<CaseStatus, StatusDef> = {
     preAnnouncement: true,
     description: '観測報道に対して会社がコメント(適時開示等)を出した状態',
   },
+  denied: {
+    label: '会社が明確に否定',
+    mark: '×',
+    tone: 'stop',
+    preAnnouncement: true,
+    description: '会社が検討事実または報道内容を明確に否定した状態',
+  },
   announced: {
     label: '正式発表済み',
     mark: '●',
@@ -51,21 +58,30 @@ export const CASE_STATUS: Record<CaseStatus, StatusDef> = {
     preAnnouncement: false,
     description: '公開買付等が撤回された、または不成立となった状態',
   },
-  dormant: {
-    label: '検討終了・未進展',
+  ended: {
+    label: '検討・協議終了',
     mark: '□',
     tone: 'pause',
     preAnnouncement: true,
-    description: '検討終了が公表された、または報道後に長期間進展がない状態',
+    description: '会社が検討・協議の終了を公表した状態',
+  },
+  dormant: {
+    label: '長期未進展',
+    mark: '□',
+    tone: 'pause',
+    preAnnouncement: true,
+    description: '報道・コメント後に長期間進展がない状態',
   },
 };
 
 export const STATUS_ORDER: CaseStatus[] = [
   'rumored',
   'commented',
+  'denied',
   'announced',
   'completed',
   'withdrawn',
+  'ended',
   'dormant',
 ];
 
