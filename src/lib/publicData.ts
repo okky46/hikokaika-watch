@@ -14,6 +14,7 @@ import path from 'node:path';
 import { classifyCommentStance } from './commentTags';
 import { resolvePublicDataEnvironment } from './buildEnv';
 import { hasFormalAnnouncement } from './caseFilters';
+import { deriveCaseFields } from './derive';
 import type {
   CaseDetail,
   CaseEventView,
@@ -111,6 +112,9 @@ function assemble(raw: RawData): PublicData {
   const eventsByCase = groupBy(raw.events, (e) => e.case_id);
   const pricesByCase = groupBy(raw.prices, (p) => p.case_id);
 
+  // 派生値の計算基準時刻(=このビルドの generatedAt と同一)
+  const now = new Date();
+
   const details: CaseDetail[] = [];
 
   for (const c of raw.cases) {
@@ -153,6 +157,26 @@ function assemble(raw: RawData): PublicData {
       ...new Set(events.map((e) => e.source_name).filter((s) => s.length > 0)),
     ];
 
+    const commentLikeEvents = events.filter(
+      (e) => e.event_type === 'company_comment' || e.event_type === 'timely_disclosure',
+    );
+    const latestCommentEvent = commentLikeEvents[commentLikeEvents.length - 1] ?? null;
+    const latestCommentStance =
+      latestCommentEvent?.comment_stance ??
+      (latestCommentEvent ? classifyCommentStance(latestCommentEvent.comment_tags ?? []) : null);
+
+    const lastVisibleEventOccurredAt = events[events.length - 1]?.occurred_at ?? null;
+    const derived = deriveCaseFields({
+      status: c.status,
+      eventTypes: events.map((e) => e.event_type),
+      lastVisibleEventOccurredAt,
+      firstReportedAt,
+      preReportClose,
+      currentClose,
+      formalOfferPrice,
+      now,
+    });
+
     const eventViews: CaseEventView[] = events.map((e) => ({
       id: e.id,
       eventType: e.event_type,
@@ -189,6 +213,8 @@ function assemble(raw: RawData): PublicData {
       preReportClose,
       currentClose,
       formalOfferPrice,
+      latestCommentStance,
+      ...derived,
       events: eventViews,
     });
   }
@@ -209,7 +235,7 @@ function assemble(raw: RawData): PublicData {
     details,
     allSourceNames,
     isSampleData: raw.isSampleData,
-    generatedAt: new Date().toISOString(),
+    generatedAt: now.toISOString(),
   };
 }
 

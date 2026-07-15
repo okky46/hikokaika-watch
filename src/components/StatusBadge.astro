@@ -1,14 +1,30 @@
 ---
-import { statusDef } from '../lib/status';
+import { statusDef, publicStatusTone } from '../lib/status';
 import type { CaseStatus } from '../lib/types';
 
 interface Props {
+  /** 表示用ステータス(effectiveStatus)を渡す */
   status: CaseStatus;
+  /** rumored 表示用: 第N報カウント */
+  reportCount?: number;
+  /** commented 表示用: コメント回数 */
+  commentCount?: number;
+  /** rumored / commented 表示用: ヒートレベル(1〜4) */
+  heatLevel?: 1 | 2 | 3 | 4;
 }
 
-const def = statusDef(Astro.props.status);
+const { status, reportCount = 0, commentCount = 0, heatLevel } = Astro.props;
+const def = statusDef(status);
+const tone = publicStatusTone(status, heatLevel);
+
+const label =
+  status === 'rumored'
+    ? `観測 第${reportCount}報`
+    : status === 'commented'
+      ? `コメントあり(${commentCount}回目)`
+      : def.label;
 ---
 
-<span class={`badge badge--${def.tone}`} title={def.description}>
-  <span class="badge__mark" aria-hidden="true">{def.mark}</span>{def.label}
+<span class={`badge badge--${tone}`} title={def.description}>
+  <span class="badge__mark" aria-hidden="true">{def.mark}</span>{label}
 </span>

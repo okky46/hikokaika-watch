@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import StatusBadge from '../../components/StatusBadge.astro';
+import StatusFunnel from '../../components/StatusFunnel.astro';
 import EventTypeBadge from '../../components/EventTypeBadge.astro';
 import AdSlot from '../../components/AdSlot.astro';
 import { loadPublicData } from '../../lib/publicData';
@@ -49,7 +50,12 @@ const elapsed = daysBetween(c.firstReportedAt, c.lastUpdatedAt);
     </p>
     <h1>{c.companyName} — {c.title}</h1>
     <div style="display:flex; align-items:center; gap:0.7rem; flex-wrap:wrap;">
-      <StatusBadge status={c.status} />
+      <StatusBadge
+        status={c.effectiveStatus}
+        reportCount={c.reportCount}
+        commentCount={c.commentCount}
+        heatLevel={c.heatLevel}
+      />
       <button
         type="button"
         class="btn"
@@ -71,6 +77,13 @@ const elapsed = daysBetween(c.firstReportedAt, c.lastUpdatedAt);
     </div>
     <p style="margin-top:0.6rem">{c.summary}</p>
   </header>
+
+  <StatusFunnel
+    effectiveStatus={c.effectiveStatus}
+    reportCount={c.reportCount}
+    commentCount={c.commentCount}
+    heatLevel={c.heatLevel}
+  />
 
   <section class="section" aria-label="株価情報">
     <h2 class="section-title">株価情報</h2>

@@ -4,8 +4,10 @@ import StatusBadge from '../components/StatusBadge.astro';
 import AdSlot from '../components/AdSlot.astro';
 import { loadPublicData } from '../lib/publicData';
 import { CASE_STATUS, STATUS_ORDER } from '../lib/status';
+import { COMMENT_STANCE_LABELS } from '../lib/commentTags';
 import { isAcknowledgedCase } from '../lib/caseFilters';
 import { formatDate, formatPrice, reportYear } from '../lib/format';
+import type { CommentStance } from '../lib/types';
 
 const data = await loadPublicData();
 const { cases, allSourceNames, isSampleData } = data;
@@ -17,6 +19,40 @@ const years = [
 ].sort((a, b) => b - a);
 
 const formUrl = import.meta.env.PUBLIC_REQUEST_FORM_URL ?? '';
+
+// 発表前(rumored/commented/denied/ended/dormant)と発表後(announced/completed/withdrawn)にセクションを分ける(要件 §1-2)
+const preCases = cases
+  .filter((c) => c.isPreAnnouncement)
+  .slice()
+  .sort(
+    (a, b) =>
+      b.heatLevel - a.heatLevel || new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime(),
+  );
+const postCases = cases
+  .filter((c) => !c.isPreAnnouncement)
+  .slice()
+  .sort((a, b) => new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime());
+
+function formatPercent(v: number | null): string {
+  if (v === null) return '—';
+  const pct = v * 100;
+  const sign = pct > 0 ? '+' : '';
+  return `${sign}${pct.toFixed(1)}%`;
+}
+
+function percentClass(v: number | null): string {
+  if (v === null) return '';
+  return v > 0 ? 'value-positive' : v < 0 ? 'value-negative' : '';
+}
+
+const COMMENT_STANCE_MARK: Record<CommentStance, string> = {
+  acknowledged: '◆',
+  neutral: '‐',
+  denied: '×',
+  declined: '…',
+  unclear: '?',
+  needs_review: '!',
+};
 
 const description =
   '上場企業の非公開化・MBO・TOBに関する観測報道、会社コメント、正式発表、その後の経過と株価情報を案件単位で時系列に整理した公開データベース。';
@@ -104,29 +140,34 @@ const description =
       <span class="filter-count" id="filter-count" aria-live="polite"></span>
     </form>
 
+    <h3 class="section-title" style="margin-top:0.4rem">発表前(観測報道段階)</h3>
+    <p class="small muted">報道回数が多いほど「アツい」案件です。既定の並び順は熱量(heatLevel)の高い順です。</p>
     <div class="table-wrap">
-      <table class="case-table" id="case-table">
+      <table class="case-table" id="case-table-pre">
         <thead>
           <tr>
             <th scope="col">コード</th>
             <th scope="col">会社名 / 案件</th>
             <th scope="col">ステータス</th>
+            <th scope="col">報道回数</th>
+            <th scope="col">コメントスタンス</th>
+            <th scope="col" class="num">思惑プレミアム</th>
+            <th scope="col" class="num">経過日数</th>
             <th scope="col">最初の観測報道</th>
             <th scope="col">最初の媒体</th>
             <th scope="col">最終更新</th>
             <th scope="col" class="num">報道前株価</th>
             <th scope="col" class="num">現在株価</th>
-            <th scope="col" class="num">正式買付価格</th>
             <th scope="col"><span class="visually-hidden">お気に入り</span>★</th>
           </tr>
         </thead>
         <tbody>
-          {cases.map((c) => (
+          {preCases.map((c) => (
             <tr
               data-case-id={c.id}
               data-name={`${c.companyName} ${c.title}`}
               data-code={c.securityCode}
-              data-status={c.status}
+              data-status={c.effectiveStatus}
               data-sources={c.sourceNames.join('|')}
               data-year={String(reportYear(c.firstReportedAt) ?? '')}
               data-formal={c.hasFormalAnnouncement ? '1' : '0'}
@@ -137,13 +178,38 @@ const description =
                 <a class="case-link" href={`/cases/${c.slug}/`}>{c.companyName}</a>
                 <div class="small muted">{c.title}</div>
               </td>
-              <td class="cell-status"><StatusBadge status={c.status} /></td>
+              <td class="cell-status">
+                <StatusBadge
+                  status={c.effectiveStatus}
+                  reportCount={c.reportCount}
+                  commentCount={c.commentCount}
+                  heatLevel={c.heatLevel}
+                />
+              </td>
+              <td class="cell-report" data-label="報道回数" title={`第${c.reportCount}報`}>
+                <span class={`badge badge--heat-${c.heatLevel}`}>
+                  <span class="badge__mark" aria-hidden="true">◇</span>{c.reportCount}
+                </span>
+              </td>
+              <td class="cell-stance" data-label="コメントスタンス">
+                {c.latestCommentStance ? (
+                  <span class="badge badge--comment">
+                    <span class="badge__mark" aria-hidden="true">{COMMENT_STANCE_MARK[c.latestCommentStance]}</span>
+                    {COMMENT_STANCE_LABELS[c.latestCommentStance]}
+                  </span>
+                ) : '—'}
+              </td>
+              <td class={`num cell-premium ${percentClass(c.speculationPremium)}`} data-label="思惑プレミアム">
+                {formatPercent(c.speculationPremium)}
+              </td>
+              <td class="num cell-elapsed" data-label="経過日数">
+                {c.daysSinceFirstReport === null ? '—' : `${c.daysSinceFirstReport}日`}
+              </td>
               <td class="cell-first nowrap" data-label="最初の観測報道">{formatDate(c.firstReportedAt)}</td>
               <td class="cell-source" data-label="最初の媒体">{c.firstSourceName ?? '—'}</td>
               <td class="cell-updated nowrap" data-label="最終更新">{formatDate(c.lastUpdatedAt)}</td>
               <td class="num" data-label="報道前株価">{formatPrice(c.preReportClose?.price)}</td>
               <td class="num" data-label="現在株価">{formatPrice(c.currentClose?.price)}</td>
-              <td class="num" data-label="正式買付価格">{formatPrice(c.formalOfferPrice?.price)}</td>
               <td class="fav-cell cell-fav">
                 <button
                   type="button"
@@ -158,10 +224,82 @@ const description =
           ))}
         </tbody>
       </table>
-      <p class="empty-state" id="empty-state" hidden>条件に一致する案件はありません。</p>
+      <p class="empty-state" id="empty-state-pre" hidden>条件に一致する案件はありません。</p>
+    </div>
+
+    <h3 class="section-title">発表後(アーカイブ)</h3>
+    <p class="small muted">正式発表済みの案件です。答え合わせ用の記録として、成立・撤回まで含めて掲載します。</p>
+    <div class="table-wrap">
+      <table class="case-table" id="case-table-post">
+        <thead>
+          <tr>
+            <th scope="col">コード</th>
+            <th scope="col">会社名 / 案件</th>
+            <th scope="col">ステータス</th>
+            <th scope="col" class="num">TOBプレミアム</th>
+            <th scope="col" class="num">裁定スプレッド</th>
+            <th scope="col">最初の観測報道</th>
+            <th scope="col">最初の媒体</th>
+            <th scope="col">最終更新</th>
+            <th scope="col" class="num">報道前株価</th>
+            <th scope="col" class="num">現在株価</th>
+            <th scope="col" class="num">正式買付価格</th>
+            <th scope="col"><span class="visually-hidden">お気に入り</span>★</th>
+          </tr>
+        </thead>
+        <tbody>
+          {postCases.map((c) => {
+            const arbUpside = c.arbSpread !== null && c.arbSpread < 0;
+            return (
+              <tr
+                class={arbUpside ? 'row-highlight' : ''}
+                data-case-id={c.id}
+                data-name={`${c.companyName} ${c.title}`}
+                data-code={c.securityCode}
+                data-status={c.effectiveStatus}
+                data-sources={c.sourceNames.join('|')}
+                data-year={String(reportYear(c.firstReportedAt) ?? '')}
+                data-formal={c.hasFormalAnnouncement ? '1' : '0'}
+                data-acknowledged={isAcknowledgedCase(c) ? '1' : '0'}
+              >
+                <td class="code" data-label="証券コード">{c.securityCode}</td>
+                <td class="cell-name">
+                  <a class="case-link" href={`/cases/${c.slug}/`}>{c.companyName}</a>
+                  <div class="small muted">{c.title}</div>
+                </td>
+                <td class="cell-status"><StatusBadge status={c.effectiveStatus} /></td>
+                <td class={`num cell-premium ${percentClass(c.tobPremium)}`} data-label="TOBプレミアム">
+                  {formatPercent(c.tobPremium)}
+                </td>
+                <td class={`num cell-premium ${percentClass(c.arbSpread)}`} data-label="裁定スプレッド">
+                  {formatPercent(c.arbSpread)}
+                  {arbUpside && <span class="row-highlight__note">▲上振れ</span>}
+                </td>
+                <td class="cell-first nowrap" data-label="最初の観測報道">{formatDate(c.firstReportedAt)}</td>
+                <td class="cell-source" data-label="最初の媒体">{c.firstSourceName ?? '—'}</td>
+                <td class="cell-updated nowrap" data-label="最終更新">{formatDate(c.lastUpdatedAt)}</td>
+                <td class="num" data-label="報道前株価">{formatPrice(c.preReportClose?.price)}</td>
+                <td class="num" data-label="現在株価">{formatPrice(c.currentClose?.price)}</td>
+                <td class="num" data-label="正式買付価格">{formatPrice(c.formalOfferPrice?.price)}</td>
+                <td class="fav-cell cell-fav">
+                  <button
+                    type="button"
+                    class="fav-toggle"
+                    data-fav-toggle={c.id}
+                    aria-pressed="false"
+                    aria-label={`${c.companyName}をお気に入りに登録`}
+                    title="お気に入り(ログインが必要です)"
+                  >☆</button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <p class="empty-state" id="empty-state-post" hidden>条件に一致する案件はありません。</p>
     </div>
     <p class="small muted" style="margin-top:0.5rem">
-      株価は管理者が公開情報をもとに手動登録した参考値です(リアルタイムではありません)。並び順は最終更新日の新しい順です。
+      株価は管理者が公開情報をもとに手動登録した参考値です(リアルタイムではありません)。
     </p>
     {formUrl && (
       <p class="small">
@@ -226,10 +364,14 @@ const description =
   import { getSupabase } from '../lib/supabaseBrowser';
 
   // ---------- 絞り込み(すべてページ内で完結。外部リクエストなし) ----------
+  // 発表前・発表後の2テーブルに対して同じ条件で絞り込む。
   const form = document.getElementById('filter-form') as HTMLFormElement;
-  const rows = [...document.querySelectorAll<HTMLTableRowElement>('#case-table tbody tr')];
+  const rows = [...document.querySelectorAll<HTMLTableRowElement>('.case-table tbody tr')];
   const countEl = document.getElementById('filter-count')!;
-  const emptyEl = document.getElementById('empty-state')!;
+  const emptyElPre = document.getElementById('empty-state-pre')!;
+  const emptyElPost = document.getElementById('empty-state-post')!;
+  const rowsPre = [...document.querySelectorAll<HTMLTableRowElement>('#case-table-pre tbody tr')];
+  const rowsPost = [...document.querySelectorAll<HTMLTableRowElement>('#case-table-post tbody tr')];
 
   const q = document.getElementById('f-q') as HTMLInputElement;
   const status = document.getElementById('f-status') as HTMLSelectElement;
@@ -269,7 +411,8 @@ const description =
       if (ok) visible++;
     }
     countEl.textContent = `${visible} / ${rows.length} 件`;
-    emptyEl.hidden = visible > 0;
+    emptyElPre.hidden = rowsPre.some((row) => !row.hidden);
+    emptyElPost.hidden = rowsPost.some((row) => !row.hidden);
   }
 
   document.addEventListener('click', (e) => {

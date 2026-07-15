@@ -123,6 +123,25 @@ export interface CaseListItem {
   preReportClose: PricePoint | null;
   currentClose: PricePoint | null;
   formalOfferPrice: PricePoint | null;
+  /** 最新の会社コメント系イベント(company_comment / timely_disclosure)の comment_stance。無ければ null */
+  latestCommentStance: CommentStance | null;
+  /** 第N報カウント(observation_report + follow_up_report) */
+  reportCount: number;
+  /** コメントカウント(company_comment + timely_disclosure) */
+  commentCount: number;
+  heatLevel: 1 | 2 | 3 | 4;
+  /** 思惑プレミアム((現在値 - 報道前終値) / 報道前終値) */
+  speculationPremium: number | null;
+  /** TOBプレミアム((TOB価格 - 報道前終値) / 報道前終値) */
+  tobPremium: number | null;
+  /** 裁定スプレッド((TOB価格 - 現在値) / 現在値) */
+  arbSpread: number | null;
+  /** 最初の観測報道からの経過日数(今日基準) */
+  daysSinceFirstReport: number | null;
+  /** 表示用ステータス(dormant 判定を含む。DBのstatusは変更しない) */
+  effectiveStatus: CaseStatus;
+  /** effectiveStatus が発表前系(rumored/commented/denied/ended/dormant)かどうか */
+  isPreAnnouncement: boolean;
 }
 
 /** タイムライン表示用の出来事 */
