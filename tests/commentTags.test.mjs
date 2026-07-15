@@ -15,7 +15,7 @@ function classify(tags) {
   if (set.size === 1 && set.has('neutral')) return 'neutral';
   return 'unclear';
 }
-const isAcknowledgedCase = (c) => c.status === 'commented' && c.hasAcknowledgedCompanyComment;
+const isAcknowledgedCase = (c) => c.hasAcknowledgedCompanyComment === true;
 const isAnnouncedCase = (c) => c.hasFormalAnnouncement;
 
 describe('company comment classification', () => {
@@ -25,7 +25,15 @@ describe('company comment classification', () => {
 });
 
 describe('home quick filters', () => {
-  it('acknowledged filter excludes denied', () => assert.equal(isAcknowledgedCase({ status: 'denied', hasAcknowledgedCompanyComment: true }), false));
+  it('acknowledged filter includes cases that advanced to announced', () => assert.equal(isAcknowledgedCase({ status: 'announced', hasAcknowledgedCompanyComment: true }), true));
+  it('acknowledged filter includes cases that advanced to completed', () => assert.equal(isAcknowledgedCase({ status: 'completed', hasAcknowledgedCompanyComment: true }), true));
+  it('acknowledged filter includes cases that advanced to ended', () => assert.equal(isAcknowledgedCase({ status: 'ended', hasAcknowledgedCompanyComment: true }), true));
+  it('acknowledged filter excludes plain commented cases without an acknowledged comment', () => assert.equal(isAcknowledgedCase({ status: 'commented', hasAcknowledgedCompanyComment: false }), false));
+  it('acknowledged filter excludes denied- or neutral-only comments', () => {
+    assert.equal(classify(['not_under_consideration', 'report_denied']), 'denied');
+    assert.equal(classify(['no_decision']), 'neutral');
+    assert.equal(isAcknowledgedCase({ status: 'commented', hasAcknowledgedCompanyComment: false }), false);
+  });
   it('formal announcement includes withdrawn cases', () => assert.equal(isAnnouncedCase({ status: 'withdrawn', hasFormalAnnouncement: true }), true));
   it('formal announcement keeps announced/completed status fallback', () => {
     const source = fs.readFileSync('src/lib/publicData.ts', 'utf8');

@@ -133,11 +133,16 @@ where conname in (
   'user_global_notes_body_length_check'
 );
 
-select id, user_id, case_id, char_length(body) as length
+select
+  user_id,
+  case_id,
+  char_length(body) as body_length
 from public.user_case_notes
 where char_length(body) > 1000;
 
-select user_id, char_length(body) as length
+select
+  user_id,
+  char_length(body) as body_length
 from public.user_global_notes
 where char_length(body) > 1000;
 ```

@@ -140,11 +140,12 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
           <label class="filter-check"><input type="checkbox" id="ev-corrected" /> 訂正済み表示を付ける</label>
           <div class="form-row" id="ev-correction-row" hidden><label for="ev-correction-note">訂正内容の説明</label><input type="text" id="ev-correction-note" /></div>
           <label class="filter-check"><input type="checkbox" id="ev-visible" /> 公開する(チェックなし=非公開)</label>
-          <div style="display:flex; gap:0.6rem; margin-top:0.6rem;">
+          <div style="display:flex; gap:0.6rem; margin-top:0.6rem; align-items:center; flex-wrap:wrap;">
             <button type="button" class="btn btn--primary" id="ev-save">保存</button>
             <button type="button" class="btn" id="ev-clear">クリア(新規)</button>
             <span class="small muted" id="ev-status" aria-live="polite"></span>
           </div>
+          <p class="small" id="ev-status-suggestion" aria-live="polite"></p>
         </form>
       </div>
       <div class="table-wrap"><table class="case-table" id="event-table">
@@ -291,6 +292,29 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   function updateCommentStancePreview() {
     const stance = classifyCommentStance(selectedCommentTags());
     $('ev-comment-stance').innerHTML = `自動分類: <strong>${esc(commentStanceLabels[stance] ?? stance)}</strong>${stance === 'needs_review' ? ' <span class="badge badge--stop">公開前に確認</span>' : ''}`;
+    updateEventStatusSuggestion();
+  }
+
+  function updateEventStatusSuggestion() {
+    const suggestion = $('ev-status-suggestion');
+    suggestion.innerHTML = '';
+    const eventType = $<HTMLSelectElement>('ev-type').value;
+    if (eventType !== 'company_comment') return;
+    const stance = classifyCommentStance(selectedCommentTags());
+    const currentCase = cases.find((c) => c.id === $<HTMLSelectElement>('ev-case-select').value);
+    if (!currentCase) return;
+    if (stance === 'needs_review') {
+      suggestion.innerHTML = '<span class="badge badge--stop">矛盾タグあり</span> acknowledged と denied のタグが同時に選択されています。公開前にタグを確認してください。';
+      return;
+    }
+    let message = '';
+    if (stance === 'acknowledged' && currentCase.status === 'rumored') {
+      message = '提案: 案件ステータスを「会社が検討を認めた段階」に変更できます。';
+    }
+    if (stance === 'denied' && !['announced', 'completed', 'withdrawn'].includes(currentCase.status)) {
+      message = '提案: 案件ステータスを「会社が明確に否定」に変更できます。';
+    }
+    if (message) suggestion.innerHTML = `${esc(message)} <button type="button" class="btn" data-go-case-edit>案件編集タブへ</button>`;
   }
 
   // datetime-local <-> ISO(ブラウザのローカルタイムゾーンで解釈)
@@ -385,6 +409,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   document.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-tab]');
     if (btn) showTab(btn.dataset.tab ?? 'cases');
+    if ((e.target as HTMLElement).closest('[data-go-case-edit]')) showTab('cases');
   });
 
   async function reloadAll() {
@@ -522,12 +547,6 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     // 初回公開時にサイト掲載日時を自動設定
     const existing = cases.find((c) => c.id === id);
     if (visible && !existing?.site_published_at) row.site_published_at = new Date().toISOString();
-    const currentCase = cases.find((c) => c.id === row.case_id);
-    if (row.event_type === 'company_comment' && currentCase) {
-      if (row.comment_stance === 'acknowledged' && currentCase.status === 'rumored') $('ev-status').textContent = '提案: 案件ステータスを「会社が検討を認めた段階」に変更できます。';
-      if (row.comment_stance === 'denied' && !['announced','completed','withdrawn'].includes(currentCase.status)) $('ev-status').textContent = '提案: 案件ステータスを「会社が明確に否定」に変更できます。';
-    }
-
     const q = id
       ? supabase!.from('cases').update(row).eq('id', id)
       : supabase!.from('cases').insert(row);
@@ -580,8 +599,15 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       .join('');
   }
 
-  $('ev-case-select')?.addEventListener('change', loadEvents);
-  $('ev-type')?.addEventListener('change', updateCommentTagVisibility);
+  $('ev-case-select')?.addEventListener('change', async () => {
+    $('ev-status-suggestion').innerHTML = '';
+    await loadEvents();
+    updateEventStatusSuggestion();
+  });
+  $('ev-type')?.addEventListener('change', () => {
+    updateCommentTagVisibility();
+    updateEventStatusSuggestion();
+  });
   document.addEventListener('change', (e) => { if ((e.target as HTMLElement).matches('[data-comment-tag]')) updateCommentStancePreview(); });
 
   $('ev-corrected')?.addEventListener('change', () => {
@@ -614,17 +640,12 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     }
     const existing = events.find((e) => e.id === id);
     if (visible && !existing?.site_published_at) row.site_published_at = new Date().toISOString();
-    const currentCase = cases.find((c) => c.id === row.case_id);
-    if (row.event_type === 'company_comment' && currentCase) {
-      if (row.comment_stance === 'acknowledged' && currentCase.status === 'rumored') $('ev-status').textContent = '提案: 案件ステータスを「会社が検討を認めた段階」に変更できます。';
-      if (row.comment_stance === 'denied' && !['announced','completed','withdrawn'].includes(currentCase.status)) $('ev-status').textContent = '提案: 案件ステータスを「会社が明確に否定」に変更できます。';
-    }
-
     const q = id
       ? supabase!.from('case_events').update(row).eq('id', id)
       : supabase!.from('case_events').insert(row);
     const { error } = await q;
     $('ev-status').textContent = error ? `保存エラー: ${error.message}` : '保存しました';
+    updateEventStatusSuggestion();
     if (!error) await loadEvents();
   });
 
@@ -632,6 +653,8 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     $<HTMLInputElement>('ev-id').value = '';
     ($('event-form') as HTMLFormElement).reset();
     $('ev-correction-row').hidden = true;
+    $('ev-status').textContent = '';
+    $('ev-status-suggestion').innerHTML = '';
     updateCommentTagVisibility();
   });
 
