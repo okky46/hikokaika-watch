@@ -16,4 +16,4 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm test
-      - run: DATA_SOURCE=sample npm run build
+      - run: DEPLOY_ENV=test DATA_SOURCE=sample npm run build

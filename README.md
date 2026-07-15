@@ -29,7 +29,7 @@ npm run build    # 静的ビルド(dist/)
 npm run preview  # ビルド結果の確認
 ```
 
-環境変数なしでもサンプルデータ(`data/sample/`)でビルド・動作する。
+Cloudflare Pages 以外のローカル環境では、`DEPLOY_ENV` と `DATA_SOURCE` が両方未設定の場合のみ、安全な既定値として `DEPLOY_ENV=development` / `DATA_SOURCE=sample` が使われるため、リポジトリ取得直後でもサンプルデータ(`data/sample/`)で動作する。どちらか一方だけを設定した場合や未知の値はエラーになる。
 Supabase / Google フォーム連携は `.env.example` を `.env` にコピーして設定する。
 
 ## デプロイ・初期セットアップ
@@ -58,4 +58,4 @@ Cloudflare Access(管理画面保護)の手順は [docs/SETUP.md](docs/SETUP.md)
 
 ## ビルド時データソース
 
-本番誤公開防止のため、データソースは `DATA_SOURCE=sample` または `DATA_SOURCE=supabase` を必ず指定します。ローカル確認は `DATA_SOURCE=sample npm run build`、本番は `DATA_SOURCE=supabase` と `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` を設定してください。
+本番誤公開防止のため、ビルド環境は `DEPLOY_ENV=development|test|preview|production`、データソースは `DATA_SOURCE=sample|supabase` で判定します。Cloudflare Pages では両方必須で、本番は `DEPLOY_ENV=production DATA_SOURCE=supabase` と `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` を設定してください。ローカル開発では両方未設定の場合に限り `development + sample` にフォールバックします。`SITE_URL` は canonical / OGP / sitemap 用であり、環境判定には使用しません。

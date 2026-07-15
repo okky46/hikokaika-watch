@@ -3,7 +3,8 @@
 //
 // - DATA_SOURCE=sample なら data/sample/ を使用
 // - DATA_SOURCE=supabase なら Supabase から取得
-// - 未指定や本番sampleはフェイルクローズ
+// - Cloudflare Pages では未指定や production + sample をフェイルクローズ
+// - Cloudflare Pages 以外で DEPLOY_ENV / DATA_SOURCE が両方未設定なら development + sample
 //
 // このモジュールはビルド時(Node)専用。ブラウザからは import しない。
 // ============================================================
@@ -11,6 +12,8 @@ import { createClient } from '@supabase/supabase-js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { classifyCommentStance } from './commentTags';
+import { resolvePublicDataEnvironment } from './buildEnv';
+import { hasFormalAnnouncement } from './caseFilters';
 import type {
   CaseDetail,
   CaseEventView,
@@ -41,23 +44,24 @@ export async function loadPublicData(): Promise<PublicData> {
 }
 
 async function loadRaw(): Promise<RawData> {
-  const source = import.meta.env.DATA_SOURCE ?? process.env.DATA_SOURCE;
+  const env = {
+    ...process.env,
+    DEPLOY_ENV: process.env.DEPLOY_ENV ?? import.meta.env.DEPLOY_ENV,
+    DATA_SOURCE: process.env.DATA_SOURCE ?? import.meta.env.DATA_SOURCE,
+    CF_PAGES: process.env.CF_PAGES ?? import.meta.env.CF_PAGES,
+  };
+  const { deployEnv, dataSource } = resolvePublicDataEnvironment(env);
   const url = import.meta.env.SUPABASE_URL ?? process.env.SUPABASE_URL;
   const key = import.meta.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const explicitSiteUrl = process.env.SITE_URL ?? process.env.URL ?? '';
-  const isProductionDomain = /^https?:\/\/(www\.)?hikokaika-watch\./.test(explicitSiteUrl);
 
-  if (source === 'sample') {
-    if (isProductionDomain) throw new Error('[publicData] 本番ドメインで DATA_SOURCE=sample は使用できません');
-    console.log('[publicData] DATA_SOURCE=sample のためサンプルデータを使用します');
+  if (dataSource === 'sample') {
+    console.log(`[publicData] DEPLOY_ENV=${deployEnv} / DATA_SOURCE=sample のためサンプルデータを使用します`);
     return loadFromSample();
   }
-  if (source === 'supabase') {
-    if (!url || !key) throw new Error('[publicData] DATA_SOURCE=supabase には SUPABASE_URL と SUPABASE_SERVICE_ROLE_KEY が必要です');
-    console.log('[publicData] Supabase から公開データを取得します');
-    return loadFromSupabase(url, key);
-  }
-  throw new Error('[publicData] DATA_SOURCE は sample または supabase を明示してください');
+
+  if (!url || !key) throw new Error('[publicData] DATA_SOURCE=supabase には SUPABASE_URL と SUPABASE_SERVICE_ROLE_KEY が必要です');
+  console.log(`[publicData] DEPLOY_ENV=${deployEnv} / DATA_SOURCE=supabase のため Supabase から公開データを取得します`);
+  return loadFromSupabase(url, key);
 }
 
 async function loadFromSupabase(url: string, key: string): Promise<RawData> {
@@ -140,10 +144,7 @@ function assemble(raw: RawData): PublicData {
       ...prices.map((p) => p.updated_at),
     ]);
 
-    const hasFormalAnnouncement =
-      c.status === 'announced' ||
-      c.status === 'completed' ||
-      events.some((e) => e.event_type === 'formal_announcement');
+    const caseHasFormalAnnouncement = hasFormalAnnouncement(c.status, events);
     const hasAcknowledgedCompanyComment = events.some(
       (e) => e.event_type === 'company_comment' && (e.comment_stance ?? classifyCommentStance(e.comment_tags ?? [])) === 'acknowledged',
     );
@@ -182,7 +183,7 @@ function assemble(raw: RawData): PublicData {
       firstSourceName: firstReport?.source_name || null,
       lastUpdatedAt,
       sitePublishedAt: c.site_published_at,
-      hasFormalAnnouncement,
+      hasFormalAnnouncement: caseHasFormalAnnouncement,
       hasAcknowledgedCompanyComment,
       sourceNames,
       preReportClose,

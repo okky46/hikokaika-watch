@@ -47,6 +47,7 @@
 3. 環境変数(Production):
    | 変数 | 値 |
    |---|---|
+   | `DEPLOY_ENV` | `production` |
    | `DATA_SOURCE` | `supabase` |
    | `SUPABASE_URL` | `https://<project-ref>.supabase.co` |
    | `SUPABASE_SERVICE_ROLE_KEY` | Service Role Key(**ビルド専用。他で使わない**) |
@@ -54,11 +55,12 @@
    | `PUBLIC_SUPABASE_ANON_KEY` | anon key |
    | `SITE_URL` | `https://<本番ドメイン>` |
    | `PUBLIC_REQUEST_FORM_URL` | Google フォームの URL |
-4. 環境ごとの `DATA_SOURCE` は以下を明示する。
-   - 本番: `DATA_SOURCE=supabase`。上記の本番環境変数表に必ず設定する。
-   - ローカル開発・CI: `DATA_SOURCE=sample`。
-   - Cloudflare Preview 環境でサンプルデータを使う場合も、未指定にせず `DATA_SOURCE=sample` を明示する。
-   - 本番ドメインでは誤公開防止のため `DATA_SOURCE=sample` は拒否され、ビルドが失敗する。
+4. 環境ごとの `DEPLOY_ENV` / `DATA_SOURCE` は以下を明示する。
+   - 本番: `DEPLOY_ENV=production` / `DATA_SOURCE=supabase`。上記の本番環境変数表に必ず設定する。
+   - ローカル開発: `DEPLOY_ENV=development` / `DATA_SOURCE=sample`。両方未設定の場合のみ、この安全な既定値へフォールバックする。
+   - CI: `DEPLOY_ENV=test` / `DATA_SOURCE=sample`。
+   - Cloudflare Preview でサンプルデータを使う場合: `DEPLOY_ENV=preview` / `DATA_SOURCE=sample` を明示する。
+   - `DEPLOY_ENV=production` では誤公開防止のため `DATA_SOURCE=sample` は拒否され、ビルドが失敗する。`SITE_URL` は canonical / OGP / sitemap 用で、環境判定には使用しない。
 5. Settings → Builds & deployments → **Deploy Hooks** で hook を作成し、URL を控える。
 
 ## 5. 公開処理(Deploy Hook)の登録
@@ -122,13 +124,14 @@ Supabase 連携込みで確認する場合は `.env.example` を `.env` にコ�
 
 ## DATA_SOURCE と本番フェイルクローズ
 
-ビルド時データソースは必ず `DATA_SOURCE` で明示します。
+ビルド時の環境判定は `DEPLOY_ENV`、データ取得元は `DATA_SOURCE` で明示します。`SITE_URL` は canonical / OGP / sitemap 用であり、環境判定には使用しません。
 
-- 本番: `DATA_SOURCE=supabase`。Supabase から公開データを取得します。`SUPABASE_URL` と `SUPABASE_SERVICE_ROLE_KEY` が必須です。不足時はビルドを失敗させます。
-- ローカル開発・CI: `DATA_SOURCE=sample`。`data/sample` の開発用データを使用します。
-- Cloudflare Preview 環境でサンプルデータを使う場合も、`DATA_SOURCE=sample` を明示します。
-- 未指定の場合はビルドを失敗させます。
-- 本番ドメインを `SITE_URL` / `URL` に明示した状態で `sample` を指定すると、誤公開防止のためビルドを失敗させます。
+- Cloudflare Pages 上(`CF_PAGES=1`)では `DEPLOY_ENV` と `DATA_SOURCE` が必須です。未設定ならビルドを失敗させます。
+- 本番: `DEPLOY_ENV=production` / `DATA_SOURCE=supabase`。Supabase から公開データを取得します。`SUPABASE_URL` と `SUPABASE_SERVICE_ROLE_KEY` が必須です。不足時はビルドを失敗させます。
+- ローカル開発: `DEPLOY_ENV=development` / `DATA_SOURCE=sample`。Cloudflare Pages 以外で両方未設定の場合のみ、この安全な既定値を使います。
+- CI: `DEPLOY_ENV=test` / `DATA_SOURCE=sample`。
+- Cloudflare Preview でサンプルデータを使う場合: `DEPLOY_ENV=preview` / `DATA_SOURCE=sample` を明示します。
+- 片方だけが設定されている場合、未知の値、または `DEPLOY_ENV=production` / `DATA_SOURCE=sample` はビルドを失敗させます。
 
 ## メモ1000文字制約の検証運用
 

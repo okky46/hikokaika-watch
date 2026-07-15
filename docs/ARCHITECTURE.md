@@ -31,8 +31,7 @@
   (MVP の案件数規模では十分。外部リクエストは発生しない)。
 - Service Role Key は **ビルド環境(Cloudflare Pages のビルド環境変数)にのみ** 存在し、
   `PUBLIC_` プレフィックスを付けないためブラウザへは絶対に出ない。
-- ローカル開発・CI では Supabase 環境変数がなければ `data/sample/` の架空サンプルデータで
-  ビルドされる(開発とデモが Supabase なしで完結する)。
+- ローカル開発では `DEPLOY_ENV` と `DATA_SOURCE` が両方未設定の場合のみ `development + sample` にフォールバックし、CI / Cloudflare Pages では `DEPLOY_ENV` と `DATA_SOURCE` を明示する。`SITE_URL` は canonical / OGP / sitemap 用で、データソースや実行環境の判定には使わない。
 - 再公開フロー: 管理画面の「公開処理」→ Deploy Hook → 数分後に静的サイトが更新される。
   Deploy Hook URL は Supabase の `admin_settings` テーブル(管理者のみ RLS で読める)に保存する。
 

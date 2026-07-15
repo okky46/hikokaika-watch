@@ -17,6 +17,15 @@ function classify(tags) {
 }
 const isAcknowledgedCase = (c) => c.hasAcknowledgedCompanyComment === true;
 const isAnnouncedCase = (c) => c.hasFormalAnnouncement;
+function resolveEnv(env) {
+  const cf = env.CF_PAGES === '1';
+  if (!cf && env.DEPLOY_ENV === undefined && env.DATA_SOURCE === undefined) return { deployEnv: 'development', dataSource: 'sample' };
+  if (env.DEPLOY_ENV === undefined || env.DATA_SOURCE === undefined) throw new Error('missing');
+  if (!['development', 'test', 'preview', 'production'].includes(env.DEPLOY_ENV)) throw new Error('bad deploy');
+  if (!['sample', 'supabase'].includes(env.DATA_SOURCE)) throw new Error('bad source');
+  if (env.DEPLOY_ENV === 'production' && env.DATA_SOURCE === 'sample') throw new Error('production sample');
+  return { deployEnv: env.DEPLOY_ENV, dataSource: env.DATA_SOURCE };
+}
 
 describe('company comment classification', () => {
   it('acknowledged wins over neutral', () => assert.equal(classify(['consideration_acknowledged', 'not_company_announcement', 'no_decision']), 'acknowledged'));
@@ -35,11 +44,16 @@ describe('home quick filters', () => {
     assert.equal(isAcknowledgedCase({ status: 'commented', hasAcknowledgedCompanyComment: false }), false);
   });
   it('formal announcement includes withdrawn cases', () => assert.equal(isAnnouncedCase({ status: 'withdrawn', hasFormalAnnouncement: true }), true));
-  it('formal announcement keeps announced/completed status fallback', () => {
-    const source = fs.readFileSync('src/lib/publicData.ts', 'utf8');
-    assert.match(source, /c\.status === 'announced'/);
-    assert.match(source, /c\.status === 'completed'/);
+  it('formal announcement keeps announced/completed/withdrawn status fallback', () => {
+    const source = fs.readFileSync('src/lib/caseFilters.ts', 'utf8');
+    assert.match(source, /FORMAL_ANNOUNCEMENT_STATUS_FALLBACKS = \['announced', 'completed', 'withdrawn'\]/);
     assert.match(source, /event_type === 'formal_announcement'/);
+  });
+  it('pre-announcement and inactive statuses are not formal fallbacks without formal events', () => {
+    const source = fs.readFileSync('src/lib/caseFilters.ts', 'utf8');
+    for (const status of ['ended', 'denied', 'dormant', 'commented', 'rumored']) {
+      assert.doesNotMatch(source, new RegExp(`FORMAL_ANNOUNCEMENT_STATUS_FALLBACKS = \[[^\]]*'${status}'`));
+    }
   });
 });
 
@@ -50,11 +64,31 @@ describe('static data and safety rails', () => {
     assert.match(source, /case_events\.json'\)\.filter\(\(e\) => e\.is_visible\)/);
     assert.match(source, /\.eq\('is_visible', true\)/);
   });
-  it('supabase source fails closed without credentials', () => {
-    const source = fs.readFileSync('src/lib/publicData.ts', 'utf8');
-    assert.match(source, /DATA_SOURCE=supabase/);
-    assert.match(source, /SUPABASE_SERVICE_ROLE_KEY/);
-    assert.match(source, /throw new Error/);
+  it('non-Cloudflare unset environment falls back to development sample', () => {
+    assert.deepEqual(resolveEnv({}), { deployEnv: 'development', dataSource: 'sample' });
+  });
+  it('Cloudflare unset environment fails closed', () => {
+    assert.throws(() => resolveEnv({ CF_PAGES: '1' }));
+  });
+  it('production sample, one-sided, and unknown environment settings fail', () => {
+    assert.throws(() => resolveEnv({ DEPLOY_ENV: 'production', DATA_SOURCE: 'sample' }));
+    assert.throws(() => resolveEnv({ DEPLOY_ENV: 'development' }));
+    assert.throws(() => resolveEnv({ DATA_SOURCE: 'sample' }));
+    assert.throws(() => resolveEnv({ DEPLOY_ENV: 'staging', DATA_SOURCE: 'sample' }));
+    assert.throws(() => resolveEnv({ DEPLOY_ENV: 'development', DATA_SOURCE: 'fixture' }));
+  });
+  it('SITE_URL does not affect environment resolution', () => {
+    assert.deepEqual(resolveEnv({ SITE_URL: 'https://hikokaika-watch.pages.dev' }), { deployEnv: 'development', dataSource: 'sample' });
+    assert.deepEqual(resolveEnv({ DEPLOY_ENV: 'test', DATA_SOURCE: 'sample', SITE_URL: 'https://hikokaika-watch.pages.dev' }), { deployEnv: 'test', dataSource: 'sample' });
+  });
+  it('supabase source fails closed without credentials and environment logic is centralized', () => {
+    const publicData = fs.readFileSync('src/lib/publicData.ts', 'utf8');
+    const buildEnv = fs.readFileSync('src/lib/buildEnv.ts', 'utf8');
+    assert.match(publicData, /DATA_SOURCE=supabase/);
+    assert.match(publicData, /SUPABASE_SERVICE_ROLE_KEY/);
+    assert.match(publicData, /resolvePublicDataEnvironment/);
+    assert.match(buildEnv, /CF_PAGES/);
+    assert.match(buildEnv, /DEPLOY_ENV=production[^]*DATA_SOURCE=sample/);
   });
   it('note 1000 character limit exists in DB and UI', () => {
     const migration = fs.readFileSync('supabase/migrations/0002_comment_mfa_audit_notes.sql', 'utf8');
