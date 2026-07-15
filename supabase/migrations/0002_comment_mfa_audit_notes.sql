@@ -15,9 +15,21 @@ alter table public.cases add constraint cases_status_check check (status in (
 ));
 
 alter table public.user_case_notes drop constraint if exists user_case_notes_body_length_check;
-alter table public.user_case_notes add constraint user_case_notes_body_length_check check (char_length(body) <= 1000);
+alter table public.user_case_notes add constraint user_case_notes_body_length_check check (char_length(body) <= 1000) not valid;
 alter table public.user_global_notes drop constraint if exists user_global_notes_body_length_check;
-alter table public.user_global_notes add constraint user_global_notes_body_length_check check (char_length(body) <= 1000);
+alter table public.user_global_notes add constraint user_global_notes_body_length_check check (char_length(body) <= 1000) not valid;
+
+do $$
+begin
+  if not exists (select 1 from public.user_case_notes where char_length(body) > 1000) then
+    alter table public.user_case_notes validate constraint user_case_notes_body_length_check;
+  end if;
+
+  if not exists (select 1 from public.user_global_notes where char_length(body) > 1000) then
+    alter table public.user_global_notes validate constraint user_global_notes_body_length_check;
+  end if;
+end;
+$$;
 
 create table if not exists public.revision_history (
   id uuid primary key default gen_random_uuid(),

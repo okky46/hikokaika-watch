@@ -27,6 +27,12 @@ describe('company comment classification', () => {
 describe('home quick filters', () => {
   it('acknowledged filter excludes denied', () => assert.equal(isAcknowledgedCase({ status: 'denied', hasAcknowledgedCompanyComment: true }), false));
   it('formal announcement includes withdrawn cases', () => assert.equal(isAnnouncedCase({ status: 'withdrawn', hasFormalAnnouncement: true }), true));
+  it('formal announcement keeps announced/completed status fallback', () => {
+    const source = fs.readFileSync('src/lib/publicData.ts', 'utf8');
+    assert.match(source, /c\.status === 'announced'/);
+    assert.match(source, /c\.status === 'completed'/);
+    assert.match(source, /event_type === 'formal_announcement'/);
+  });
 });
 
 describe('static data and safety rails', () => {
@@ -43,7 +49,11 @@ describe('static data and safety rails', () => {
     assert.match(source, /throw new Error/);
   });
   it('note 1000 character limit exists in DB and UI', () => {
-    assert.match(fs.readFileSync('supabase/migrations/0002_comment_mfa_audit_notes.sql', 'utf8'), /char_length\(body\) <= 1000/);
+    const migration = fs.readFileSync('supabase/migrations/0002_comment_mfa_audit_notes.sql', 'utf8');
+    assert.match(migration, /char_length\(body\) <= 1000/);
+    assert.match(migration, /not valid/i);
+    assert.match(migration, /validate constraint user_case_notes_body_length_check/i);
+    assert.match(migration, /validate constraint user_global_notes_body_length_check/i);
     assert.match(fs.readFileSync('src/pages/cases/[slug].astro', 'utf8'), /maxlength="1000"/);
     assert.match(fs.readFileSync('src/pages/mypage.astro', 'utf8'), /maxlength="1000"/);
   });

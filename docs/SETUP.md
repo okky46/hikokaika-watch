@@ -119,6 +119,36 @@ Supabase 連携込みで確認する場合は `.env.example` を `.env` にコ�
 - 未指定の場合はビルドを失敗させます。
 - 本番ドメインを `SITE_URL` / `URL` に明示した状態で `sample` を指定するとビルドを失敗させます。
 
+## メモ1000文字制約の検証運用
+
+`supabase/migrations/0002_comment_mfa_audit_notes.sql` は、既存DBに1,000文字を超える案件別メモ・全体メモがあってもマイグレーションが失敗しないよう、`user_case_notes` / `user_global_notes` のCHECK制約を `NOT VALID` で追加します。これにより、新規INSERT・UPDATEには1,000文字制約が適用されますが、既存の違反行は無断で切り詰めず保持されます。
+
+マイグレーション内では既存違反行が存在しない場合のみ `VALIDATE CONSTRAINT` を実行します。後日、制約状態と違反行を確認する場合は Supabase SQL Editor で以下を実行してください。
+
+```sql
+select conname, convalidated
+from pg_constraint
+where conname in (
+  'user_case_notes_body_length_check',
+  'user_global_notes_body_length_check'
+);
+
+select id, user_id, case_id, char_length(body) as length
+from public.user_case_notes
+where char_length(body) > 1000;
+
+select user_id, char_length(body) as length
+from public.user_global_notes
+where char_length(body) > 1000;
+```
+
+既存違反行をユーザー確認のうえ整理した後、以下で制約を検証済みにできます。
+
+```sql
+alter table public.user_case_notes validate constraint user_case_notes_body_length_check;
+alter table public.user_global_notes validate constraint user_global_notes_body_length_check;
+```
+
 ## Supabase MFA aal2 運用と復旧
 
 管理画面は Google ログイン後に Supabase Auth の AAL を確認し、`currentLevel=aal1` かつ `nextLevel=aal2` の場合は登録済みTOTPコードで `challenge` / `verify` を実行してから `is_admin()` を呼びます。DB側で `is_admin()` を aal2 必須版に切り替える前に、必ず管理者アカウントでTOTP登録を完了してください。

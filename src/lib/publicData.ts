@@ -140,7 +140,10 @@ function assemble(raw: RawData): PublicData {
       ...prices.map((p) => p.updated_at),
     ]);
 
-    const hasFormalAnnouncement = events.some((e) => e.event_type === 'formal_announcement');
+    const hasFormalAnnouncement =
+      c.status === 'announced' ||
+      c.status === 'completed' ||
+      events.some((e) => e.event_type === 'formal_announcement');
     const hasAcknowledgedCompanyComment = events.some(
       (e) => e.event_type === 'company_comment' && (e.comment_stance ?? classifyCommentStance(e.comment_tags ?? [])) === 'acknowledged',
     );
