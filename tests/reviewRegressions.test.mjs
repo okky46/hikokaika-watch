@@ -337,6 +337,68 @@ describe('daily_close normalization behavior', () => {
     assert.equal(priceHelpers.normalizeDailyCloses([idA, idB], () => [])[0].price, 1400);
   });
 
+
+  it('falls through to created_at when updated_at is missing or invalid and is independent of input order', () => {
+    const cases = [
+      {
+        name: 'missing updated_at uses newer created_at',
+        older: rawPrice({ id: 'a-older-created', price: '1000', updated_at: null, created_at: '2026-07-01T00:00:00.000Z' }),
+        newer: rawPrice({ id: 'b-newer-created', price: '1200', updated_at: null, created_at: '2026-07-02T00:00:00.000Z' }),
+      },
+      {
+        name: 'invalid updated_at uses newer created_at',
+        older: rawPrice({ id: 'a-invalid-older-created', price: '1300', updated_at: 'not-a-date', created_at: '2026-07-01T00:00:00.000Z' }),
+        newer: rawPrice({ id: 'b-invalid-newer-created', price: '1400', updated_at: 'also-not-a-date', created_at: '2026-07-02T00:00:00.000Z' }),
+      },
+    ];
+
+    for (const { name, older, newer } of cases) {
+      assert.equal(priceHelpers.normalizeDailyCloses([older, newer], () => [])[0].price, Number(newer.price), name);
+      assert.equal(priceHelpers.normalizeDailyCloses([newer, older], () => [])[0].price, Number(newer.price), `${name} reversed`);
+      assert.equal(Number.isNaN(priceHelpers.compareDailyClosePreference(older, newer)), false, name);
+    }
+  });
+
+  it('prefers valid updated_at over missing or invalid updated_at in either input order', () => {
+    const cases = [
+      {
+        name: 'valid updated_at beats missing updated_at',
+        invalid: rawPrice({ id: 'a-missing-updated', price: '1000', updated_at: null }),
+        valid: rawPrice({ id: 'b-valid-updated', price: '1200', updated_at: '2026-07-03T00:00:00.000Z' }),
+      },
+      {
+        name: 'valid updated_at beats invalid updated_at',
+        invalid: rawPrice({ id: 'a-invalid-updated', price: '1300', updated_at: 'not-a-date' }),
+        valid: rawPrice({ id: 'b-valid-updated', price: '1400', updated_at: '2026-07-03T00:00:00.000Z' }),
+      },
+    ];
+
+    for (const { name, invalid, valid } of cases) {
+      assert.equal(priceHelpers.normalizeDailyCloses([invalid, valid], () => [])[0].price, Number(valid.price), name);
+      assert.equal(priceHelpers.normalizeDailyCloses([valid, invalid], () => [])[0].price, Number(valid.price), `${name} reversed`);
+      assert.equal(Number.isNaN(priceHelpers.compareDailyClosePreference(invalid, valid)), false, name);
+    }
+  });
+
+  it('uses created_at validity and then existing id direction when timestamps are tied or invalid', () => {
+    const missingCreated = rawPrice({ id: 'a-missing-created', price: '1000', updated_at: '2026-07-03T00:00:00.000Z', created_at: null });
+    const validCreated = rawPrice({ id: 'b-valid-created', price: '1200', updated_at: '2026-07-03T00:00:00.000Z', created_at: '2026-07-02T00:00:00.000Z' });
+    assert.equal(priceHelpers.normalizeDailyCloses([missingCreated, validCreated], () => [])[0].price, 1200);
+    assert.equal(priceHelpers.normalizeDailyCloses([validCreated, missingCreated], () => [])[0].price, 1200);
+
+    const lowerIdAllMissing = rawPrice({ id: 'a-lower-id-loses', price: '1300', updated_at: null, created_at: null });
+    const higherIdAllMissing = rawPrice({ id: 'b-higher-id-wins', price: '1400', updated_at: null, created_at: null });
+    assert.equal(priceHelpers.normalizeDailyCloses([lowerIdAllMissing, higherIdAllMissing], () => [])[0].price, 1400);
+    assert.equal(priceHelpers.normalizeDailyCloses([higherIdAllMissing, lowerIdAllMissing], () => [])[0].price, 1400);
+    assert.equal(Number.isNaN(priceHelpers.compareDailyClosePreference(lowerIdAllMissing, higherIdAllMissing)), false);
+
+    const lowerIdAllInvalid = rawPrice({ id: 'a-invalid-lower-id-loses', price: '1500', updated_at: 'bad-updated', created_at: 'bad-created' });
+    const higherIdAllInvalid = rawPrice({ id: 'b-invalid-higher-id-wins', price: '1600', updated_at: 'worse-updated', created_at: 'worse-created' });
+    assert.equal(priceHelpers.normalizeDailyCloses([lowerIdAllInvalid, higherIdAllInvalid], () => [])[0].price, 1600);
+    assert.equal(priceHelpers.normalizeDailyCloses([higherIdAllInvalid, lowerIdAllInvalid], () => [])[0].price, 1600);
+    assert.equal(Number.isNaN(priceHelpers.compareDailyClosePreference(lowerIdAllInvalid, higherIdAllInvalid)), false);
+  });
+
   it('skips invalid daily_close prices and detects admin duplicates excluding the editing row', () => {
     const warnings = [];
     const result = priceHelpers.normalizeDailyCloses([

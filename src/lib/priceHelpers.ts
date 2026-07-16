@@ -8,11 +8,15 @@ function timeValue(value: string | null | undefined): number {
   return Number.isFinite(time) ? time : Number.NEGATIVE_INFINITY;
 }
 
-function compareDailyClosePreference(a: RawPrice, b: RawPrice): number {
-  const updatedDiff = timeValue(a.updated_at) - timeValue(b.updated_at);
-  if (updatedDiff !== 0) return updatedDiff;
-  const createdDiff = timeValue(a.created_at) - timeValue(b.created_at);
-  if (createdDiff !== 0) return createdDiff;
+export function compareDailyClosePreference(a: RawPrice, b: RawPrice): number {
+  const updatedA = timeValue(a.updated_at);
+  const updatedB = timeValue(b.updated_at);
+  if (updatedA !== updatedB) return updatedA < updatedB ? -1 : 1;
+
+  const createdA = timeValue(a.created_at);
+  const createdB = timeValue(b.created_at);
+  if (createdA !== createdB) return createdA < createdB ? -1 : 1;
+
   return a.id.localeCompare(b.id);
 }
 
