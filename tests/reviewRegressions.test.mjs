@@ -512,7 +512,8 @@ describe('phase 3 analytics and advertising regressions', () => {
     }
 
     const build = (adEnv) => {
-      const result = spawnSync('npm', ['run', 'build'], {
+      const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+      const result = spawnSync(npmCommand, ['run', 'build'], {
         cwd: process.cwd(),
         encoding: 'utf8',
         env: {
