@@ -53,6 +53,27 @@ describe('structured note parsing and saving behavior', () => {
     }
   });
 
+  it('detects visible note content after structured parsing', () => {
+    const emptyV1 = fullV1();
+    assert.equal(helpers.hasNoteContent(emptyV1), false);
+    assert.equal(helpers.hasNoteContent(fullV1({
+      scenario: ' \n ',
+      targetPrice: '\t',
+      exitCondition: '  \n',
+      nextCheckDate: ' ',
+      freeText: '\n\n',
+    })), false);
+
+    for (const field of ['scenario', 'targetPrice', 'exitCondition', 'nextCheckDate', 'freeText']) {
+      assert.equal(helpers.hasNoteContent(fullV1({ [field]: field === 'nextCheckDate' ? '2026-07-16' : '入力あり' })), true, field);
+    }
+
+    assert.equal(helpers.hasNoteContent(helpers.parseStructuredNote('通常のlegacy本文').note), true);
+    assert.equal(helpers.hasNoteContent(helpers.parseStructuredNote('').note), false);
+    assert.equal(helpers.hasNoteContent(helpers.parseStructuredNote('  \n\t  ').note), false);
+    assert.equal(helpers.hasNoteContent(helpers.parseStructuredNote('{invalid legacy text').note), true);
+  });
+
   it('chooses actual save body at the 1,000 character boundary', () => {
     for (const length of [949, 950, 999, 1000]) {
       const freeText = 'あ'.repeat(length);

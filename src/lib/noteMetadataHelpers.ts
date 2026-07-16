@@ -60,6 +60,16 @@ export function serializeStructuredNote(note: StructuredNotePayload): string {
   return JSON.stringify(note);
 }
 
+export function hasNoteContent(note: StructuredNotePayload): boolean {
+  return Boolean(
+    note.scenario.trim()
+      || note.targetPrice.trim()
+      || note.exitCondition.trim()
+      || note.nextCheckDate.trim()
+      || note.freeText.trim(),
+  );
+}
+
 export function chooseNoteSaveBody(note: StructuredNotePayload, loadedFormat: LoadedNoteFormat): SaveNoteResult {
   const jsonBody = serializeStructuredNote(note);
   const jsonLength = textLength(jsonBody);

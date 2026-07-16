@@ -85,7 +85,7 @@ const statusMap = Object.fromEntries(
 
 <script>
   import { getSupabase, isSupabaseConfigured } from '../lib/supabaseBrowser';
-  import { parseStructuredNote } from '../lib/noteMetadataHelpers';
+  import { hasNoteContent, parseStructuredNote } from '../lib/noteMetadataHelpers';
 
   type CaseInfo = {
     id: string;
@@ -199,8 +199,8 @@ const statusMap = Object.fromEntries(
       .order('updated_at', { ascending: false });
     const today = formatLocalDate(new Date());
     const notes = (data ?? [])
-      .filter((n) => n.body.trim().length > 0)
       .map((n) => ({ ...n, structured: parseStructuredNote(n.body).note }))
+      .filter((n) => hasNoteContent(n.structured))
       .sort((a, b) => {
         const ad = a.structured.nextCheckDate || '9999-12-31';
         const bd = b.structured.nextCheckDate || '9999-12-31';
