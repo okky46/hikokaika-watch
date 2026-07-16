@@ -203,9 +203,7 @@ function assemble(raw: RawData): PublicData {
       correctionNote: e.metadata?.correction_note ?? null,
       commentStance: e.comment_stance ?? null,
       commentTags: e.comment_tags ?? [],
-      largeShareholding: e.event_type === 'large_shareholding_report' && e.metadata?.holder_name && typeof e.metadata.ratio === 'number'
-        ? { holderName: e.metadata.holder_name, ratio: e.metadata.ratio, previousRatio: e.metadata.previous_ratio ?? null, filingDate: e.metadata.filing_date ?? null, changeType: e.metadata.change_type ?? null }
-        : null,
+      largeShareholding: buildLargeShareholdingView(e),
     }));
 
     details.push({
@@ -299,6 +297,26 @@ function maxIso(isos: (string | null)[]): string {
     if (iso && iso > max) max = iso;
   }
   return max || new Date(0).toISOString();
+}
+
+
+function isValidPercent(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100;
+}
+
+function buildLargeShareholdingView(e: RawEvent): CaseEventView['largeShareholding'] {
+  if (e.event_type !== 'large_shareholding_report') return null;
+  const holderName = typeof e.metadata?.holder_name === 'string' ? e.metadata.holder_name.trim() : '';
+  const ratio = e.metadata?.ratio;
+  if (!holderName || !isValidPercent(ratio)) return null;
+  const previousRatio = isValidPercent(e.metadata?.previous_ratio) ? e.metadata.previous_ratio : null;
+  return {
+    holderName,
+    ratio,
+    previousRatio,
+    filingDate: e.metadata?.filing_date ?? null,
+    changeType: e.metadata?.change_type ?? null,
+  };
 }
 
 function groupBy<T>(items: T[], keyFn: (item: T) => string): Map<string, T[]> {

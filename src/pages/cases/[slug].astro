@@ -204,28 +204,65 @@ const elapsed = daysBetween(c.firstReportedAt, c.lastUpdatedAt);
   const noteStatus = document.getElementById('note-status') as HTMLElement;
   const caseId = favBtn?.dataset.caseId ?? '';
 
+  type LoadedNoteFormat = 'json' | 'legacy';
+  type NotePayload = { v: 1; scenario: string; targetPrice: string; exitCondition: string; nextCheckDate: string; freeText: string };
+  type SaveNoteResult = { ok: true; body: string; format: LoadedNoteFormat; length: number } | { ok: false; message: string; length: number };
+
+  const NOTE_BODY_LIMIT = 1000;
   let userId: string | null = null;
   let isFavorite = false;
+  let loadedNoteFormat: LoadedNoteFormat = 'json';
 
-  function parseStructuredNote(body: string) {
+  function noteLength(value: string): number {
+    return Array.from(value).length;
+  }
+
+  function parseStructuredNote(body: string): { note: NotePayload; format: LoadedNoteFormat } {
     try {
       const parsed = JSON.parse(body);
-      if (parsed?.v === 1) return parsed;
-    } catch { /* 旧形式は自由メモとして扱う */ }
-    return { v: 1, scenario: '', targetPrice: '', exitCondition: '', nextCheckDate: '', freeText: body };
+      if (parsed?.v === 1) {
+        return {
+          note: {
+            v: 1,
+            scenario: parsed.scenario ?? '',
+            targetPrice: parsed.targetPrice ?? '',
+            exitCondition: parsed.exitCondition ?? '',
+            nextCheckDate: parsed.nextCheckDate ?? '',
+            freeText: parsed.freeText ?? '',
+          },
+          format: 'json',
+        };
+      }
+    } catch { /* JSON.parseに失敗する旧形式は自由メモとして扱う */ }
+    return { note: { v: 1, scenario: '', targetPrice: '', exitCondition: '', nextCheckDate: '', freeText: body }, format: 'legacy' };
   }
 
   function fillNote(body: string) {
-    const n = parseStructuredNote(body);
-    noteScenario.value = n.scenario ?? '';
-    noteTargetPrice.value = n.targetPrice ?? '';
-    noteExitCondition.value = n.exitCondition ?? '';
-    noteNextCheckDate.value = n.nextCheckDate ?? '';
-    noteBody.value = n.freeText ?? '';
+    const parsed = parseStructuredNote(body);
+    const n = parsed.note;
+    loadedNoteFormat = parsed.format;
+    noteScenario.value = n.scenario;
+    noteTargetPrice.value = n.targetPrice;
+    noteExitCondition.value = n.exitCondition;
+    noteNextCheckDate.value = n.nextCheckDate;
+    noteBody.value = n.freeText;
   }
 
-  function serializeNote(): string {
-    return JSON.stringify({ v: 1, scenario: noteScenario.value, targetPrice: noteTargetPrice.value, exitCondition: noteExitCondition.value, nextCheckDate: noteNextCheckDate.value, freeText: noteBody.value });
+  function hasStructuredNoteFields(): boolean {
+    return Boolean(noteScenario.value || noteTargetPrice.value || noteExitCondition.value || noteNextCheckDate.value);
+  }
+
+  function buildSaveNoteBody(): SaveNoteResult {
+    const jsonBody = JSON.stringify({ v: 1, scenario: noteScenario.value, targetPrice: noteTargetPrice.value, exitCondition: noteExitCondition.value, nextCheckDate: noteNextCheckDate.value, freeText: noteBody.value });
+    const jsonLength = noteLength(jsonBody);
+    if (jsonLength <= NOTE_BODY_LIMIT) return { ok: true, body: jsonBody, format: 'json', length: jsonLength };
+
+    const rawLength = noteLength(noteBody.value);
+    if (loadedNoteFormat === 'legacy' && !hasStructuredNoteFields() && rawLength <= NOTE_BODY_LIMIT) {
+      return { ok: true, body: noteBody.value, format: 'legacy', length: rawLength };
+    }
+
+    return { ok: false, message: '構造化項目を含めると1,000文字を超えるため保存できません。自由メモを短くしてください', length: jsonLength };
   }
 
   function renderFav() {
@@ -295,18 +332,30 @@ const elapsed = daysBetween(c.firstReportedAt, c.lastUpdatedAt);
 
   noteSave?.addEventListener('click', async () => {
     if (!supabase || !userId) return;
-    const body = serializeNote();
-    if (body.length > 1000) { noteStatus.textContent = '1,000文字を超えるメモは保存できません'; return; }
+    const saveBody = buildSaveNoteBody();
+    if (!saveBody.ok) { noteStatus.textContent = saveBody.message; updateNoteCount(); return; }
+    const body = saveBody.body;
     noteSave.disabled = true;
     noteStatus.textContent = '保存中…';
     const { error } = await supabase
       .from('user_case_notes')
       .upsert({ user_id: userId, case_id: caseId, body });
+    if (!error) loadedNoteFormat = saveBody.format;
     noteStatus.textContent = error ? `保存に失敗しました: ${error.message}` : '保存しました';
     noteSave.disabled = false;
+    updateNoteCount();
   });
 
-  const updateNoteCount = () => { const el = document.getElementById('note-count'); if (el) el.textContent = `${serializeNote().length} / 1,000文字`; };
+  const updateNoteCount = () => {
+    const el = document.getElementById('note-count');
+    if (!el) return;
+    const saveBody = buildSaveNoteBody();
+    el.textContent = `${saveBody.length} / 1,000文字${saveBody.ok ? '' : '（超過）'}`;
+  };
   noteBody?.addEventListener('input', updateNoteCount);
+  noteScenario?.addEventListener('input', updateNoteCount);
+  noteTargetPrice?.addEventListener('input', updateNoteCount);
+  noteExitCondition?.addEventListener('input', updateNoteCount);
+  noteNextCheckDate?.addEventListener('input', updateNoteCount);
   init().then(updateNoteCount);
 </script>

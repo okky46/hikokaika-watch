@@ -140,8 +140,8 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
           <label class="filter-check"><input type="checkbox" id="ev-corrected" /> 訂正済み表示を付ける</label>
           <div class="form-row" id="ev-correction-row" hidden><label for="ev-correction-note">訂正内容の説明</label><input type="text" id="ev-correction-note" /></div>
           <div id="ev-large-shareholding-row" hidden style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.6rem;">
-            <div class="form-row"><label for="ev-holder-name">保有者名</label><input type="text" id="ev-holder-name" /></div>
-            <div class="form-row"><label for="ev-ratio">保有割合(%)</label><input type="number" id="ev-ratio" step="0.01" min="0" /></div>
+            <div class="form-row"><label for="ev-holder-name">保有者名 *</label><input type="text" id="ev-holder-name" /></div>
+            <div class="form-row"><label for="ev-ratio">保有割合(%) *</label><input type="number" id="ev-ratio" step="0.01" min="0" /></div>
             <div class="form-row"><label for="ev-previous-ratio">前回割合(%)</label><input type="number" id="ev-previous-ratio" step="0.01" min="0" /></div>
             <div class="form-row"><label for="ev-filing-date">提出日</label><input type="date" id="ev-filing-date" /></div>
             <div class="form-row"><label for="ev-change-type">変化</label><select id="ev-change-type"><option value="new">新規</option><option value="increase">増加</option><option value="decrease">減少</option><option value="exit">退出</option></select></div>
@@ -628,6 +628,11 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     const id = $<HTMLInputElement>('ev-id').value;
     const corrected = $<HTMLInputElement>('ev-corrected').checked;
     const visible = $<HTMLInputElement>('ev-visible').checked;
+    const metadataResult = buildEventMetadata(corrected);
+    if (!metadataResult.ok) {
+      $('ev-status').textContent = metadataResult.error;
+      return;
+    }
     const row: any = {
       case_id: $<HTMLSelectElement>('ev-case-select').value,
       event_type: $<HTMLSelectElement>('ev-type').value,
@@ -640,7 +645,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       is_visible: visible,
       comment_tags: $<HTMLSelectElement>('ev-type').value === 'company_comment' ? selectedCommentTags() : [],
       comment_stance: $<HTMLSelectElement>('ev-type').value === 'company_comment' ? classifyCommentStance(selectedCommentTags()) : null,
-      metadata: buildEventMetadata(corrected),
+      metadata: metadataResult.metadata,
     };
     if (!row.case_id || !row.occurred_at || !row.title || !row.source_name) {
       $('ev-status').textContent = '案件・日時・見出し・媒体名は必須です';
@@ -657,18 +662,38 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     if (!error) await loadEvents();
   });
 
-  function buildEventMetadata(corrected: boolean): any {
+  function parsePercentInput(rawValue: string, label: string, required: boolean): { ok: true; value: number | null } | { ok: false; error: string } {
+    const trimmed = rawValue.trim();
+    if (!trimmed) {
+      return required ? { ok: false, error: `${label}を入力してください` } : { ok: true, value: null };
+    }
+    const value = Number(trimmed);
+    if (!Number.isFinite(value)) return { ok: false, error: `${label}は数値で入力してください` };
+    if (value < 0 || value > 100) return { ok: false, error: `${label}は0以上100以下で入力してください` };
+    return { ok: true, value };
+  }
+
+  function buildEventMetadata(corrected: boolean): { ok: true; metadata: any } | { ok: false; error: string } {
     const eventType = $<HTMLSelectElement>('ev-type').value;
     if (eventType === 'large_shareholding_report') {
+      const holderName = $<HTMLInputElement>('ev-holder-name').value.trim();
+      if (!holderName) return { ok: false, error: '保有者名を入力してください' };
+      const ratio = parsePercentInput($<HTMLInputElement>('ev-ratio').value, '保有割合', true);
+      if (!ratio.ok) return ratio;
+      const previousRatio = parsePercentInput($<HTMLInputElement>('ev-previous-ratio').value, '前回割合', false);
+      if (!previousRatio.ok) return previousRatio;
       return {
-        holder_name: $<HTMLInputElement>('ev-holder-name').value.trim(),
-        ratio: Number($<HTMLInputElement>('ev-ratio').value),
-        previous_ratio: $<HTMLInputElement>('ev-previous-ratio').value ? Number($<HTMLInputElement>('ev-previous-ratio').value) : null,
-        filing_date: $<HTMLInputElement>('ev-filing-date').value || null,
-        change_type: $<HTMLSelectElement>('ev-change-type').value,
+        ok: true,
+        metadata: {
+          holder_name: holderName,
+          ratio: ratio.value,
+          previous_ratio: previousRatio.value,
+          filing_date: $<HTMLInputElement>('ev-filing-date').value || null,
+          change_type: $<HTMLSelectElement>('ev-change-type').value,
+        },
       };
     }
-    return corrected ? { corrected: true, correction_note: $<HTMLInputElement>('ev-correction-note').value.trim() } : null;
+    return { ok: true, metadata: corrected ? { corrected: true, correction_note: $<HTMLInputElement>('ev-correction-note').value.trim() } : null };
   }
 
   $('ev-clear')?.addEventListener('click', () => {
