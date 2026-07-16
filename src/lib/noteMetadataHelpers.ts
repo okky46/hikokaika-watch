@@ -9,6 +9,16 @@ export type StructuredNotePayload = {
   freeText: string;
 };
 
+
+export type NotePreview = {
+  scenario: string | null;
+  targetPrice: string | null;
+  exitCondition: string | null;
+  nextCheckDate: string | null;
+  freeText: string | null;
+  freeTextPreview: string | null;
+};
+
 export type SaveNoteResult =
   | { ok: true; body: string; format: LoadedNoteFormat; length: number }
   | { ok: false; message: string; length: number };
@@ -82,6 +92,19 @@ export function chooseNoteSaveBody(note: StructuredNotePayload, loadedFormat: Lo
   }
 
   return { ok: false, message: '構造化項目を含めると1,000文字を超えるため保存できません。自由メモを短くしてください', length: jsonLength };
+}
+
+
+export function buildNotePreview(note: StructuredNotePayload): NotePreview {
+  const freeText = note.freeText.trim();
+  return {
+    scenario: note.scenario.trim() || null,
+    targetPrice: note.targetPrice.trim() || null,
+    exitCondition: note.exitCondition.trim() || null,
+    nextCheckDate: note.nextCheckDate.trim() || null,
+    freeText: freeText || null,
+    freeTextPreview: freeText ? (textLength(freeText) > 120 ? `${Array.from(freeText).slice(0, 120).join('')}…` : freeText) : null,
+  };
 }
 
 export function parsePercentInput(rawValue: string, label: string, required: boolean): { ok: true; value: number | null } | { ok: false; error: string } {

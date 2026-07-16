@@ -6,15 +6,20 @@ import { describe, it, before } from 'node:test';
 import ts from 'typescript';
 
 let helpers;
+let companyHelpers;
 
 before(async () => {
-  const source = fs.readFileSync('src/lib/noteMetadataHelpers.ts', 'utf8');
-  const { outputText } = ts.transpileModule(source, {
-    compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022, strict: true },
-  });
-  const file = path.join(os.tmpdir(), `noteMetadataHelpers-${process.pid}-${Date.now()}.mjs`);
-  fs.writeFileSync(file, outputText);
-  helpers = await import(file);
+  const compileHelper = async (sourcePath, name) => {
+    const source = fs.readFileSync(sourcePath, 'utf8');
+    const { outputText } = ts.transpileModule(source, {
+      compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022, strict: true },
+    });
+    const file = path.join(os.tmpdir(), `${name}-${process.pid}-${Date.now()}.mjs`);
+    fs.writeFileSync(file, outputText);
+    return import(file);
+  };
+  helpers = await compileHelper('src/lib/noteMetadataHelpers.ts', 'noteMetadataHelpers');
+  companyHelpers = await compileHelper('src/lib/publicCompanyHelpers.ts', 'publicCompanyHelpers');
 });
 
 const fullV1 = (overrides = {}) => ({
@@ -72,6 +77,39 @@ describe('structured note parsing and saving behavior', () => {
     assert.equal(helpers.hasNoteContent(helpers.parseStructuredNote('').note), false);
     assert.equal(helpers.hasNoteContent(helpers.parseStructuredNote('  \n\t  ').note), false);
     assert.equal(helpers.hasNoteContent(helpers.parseStructuredNote('{invalid legacy text').note), true);
+  });
+
+  it('builds labeled note preview fields without folding structured content into the free-text limit', () => {
+    const preview = helpers.buildNotePreview(fullV1({
+      scenario: ' MBO継続観測 ',
+      targetPrice: ' 2,500円 ',
+      exitCondition: ' 観測否定 ',
+      nextCheckDate: '2026-08-01',
+      freeText: '次回決算前に再確認',
+    }));
+    assert.deepEqual(preview, {
+      scenario: 'MBO継続観測',
+      targetPrice: '2,500円',
+      exitCondition: '観測否定',
+      nextCheckDate: '2026-08-01',
+      freeText: '次回決算前に再確認',
+      freeTextPreview: '次回決算前に再確認',
+    });
+
+    assert.deepEqual(helpers.buildNotePreview(fullV1({ scenario: '  ', targetPrice: '\n', exitCondition: '\t', nextCheckDate: ' ', freeText: '   ' })), {
+      scenario: null,
+      targetPrice: null,
+      exitCondition: null,
+      nextCheckDate: null,
+      freeText: null,
+      freeTextPreview: null,
+    });
+
+    const exactly120 = 'あ'.repeat(120);
+    const over120 = 'あ'.repeat(121);
+    assert.equal(helpers.buildNotePreview(fullV1({ freeText: exactly120 })).freeTextPreview, exactly120);
+    assert.equal(helpers.buildNotePreview(fullV1({ freeText: over120 })).freeTextPreview, `${'あ'.repeat(120)}…`);
+    assert.equal(helpers.buildNotePreview(fullV1({ scenario: '構造化だけ', freeText: over120 })).scenario, '構造化だけ');
   });
 
   it('chooses actual save body at the 1,000 character boundary', () => {
@@ -185,5 +223,76 @@ describe('large shareholding metadata behavior', () => {
       filingDate: null,
       changeType: 'increase',
     });
+  });
+});
+
+
+const rawCompany = (overrides = {}) => ({
+  id: overrides.id ?? `co-${overrides.security_code ?? '1000'}`,
+  security_code: overrides.security_code ?? '1000',
+  name_ja: overrides.name_ja ?? `企業${overrides.security_code ?? '1000'}`,
+  market: overrides.market ?? '東証',
+  industry: overrides.industry ?? '情報通信',
+  is_active: overrides.is_active ?? true,
+  created_at: overrides.created_at ?? '2026-01-01T00:00:00.000Z',
+  updated_at: overrides.updated_at ?? '2026-01-02T00:00:00.000Z',
+});
+
+const caseItem = (overrides = {}) => ({
+  id: overrides.id ?? `case-${overrides.securityCode ?? '1000'}`,
+  slug: overrides.slug ?? `case-${overrides.securityCode ?? '1000'}`,
+  title: overrides.title ?? '公開案件',
+  status: overrides.status ?? 'rumored',
+  summary: overrides.summary ?? 'summary',
+  securityCode: overrides.securityCode ?? '1000',
+  companyName: overrides.companyName ?? '企業',
+  market: overrides.market ?? '東証',
+  firstReportedAt: overrides.firstReportedAt ?? null,
+  firstSourceName: overrides.firstSourceName ?? null,
+  lastUpdatedAt: overrides.lastUpdatedAt ?? '2026-07-01T00:00:00.000Z',
+  hasFormalAnnouncement: overrides.hasFormalAnnouncement ?? false,
+  hasAcknowledgedCompanyComment: overrides.hasAcknowledgedCompanyComment ?? false,
+  sourceNames: overrides.sourceNames ?? [],
+  preReportClose: overrides.preReportClose ?? null,
+  currentClose: overrides.currentClose ?? null,
+  formalOfferPrice: overrides.formalOfferPrice ?? null,
+  dailyCloses: overrides.dailyCloses ?? [],
+  sparklineSvg: overrides.sparklineSvg ?? null,
+  latestCommentStance: overrides.latestCommentStance ?? null,
+  reportCount: overrides.reportCount ?? 1,
+  commentCount: overrides.commentCount ?? 0,
+  heatLevel: overrides.heatLevel ?? 1,
+  speculationPremium: overrides.speculationPremium ?? null,
+  tobPremium: overrides.tobPremium ?? null,
+  arbSpread: overrides.arbSpread ?? null,
+  daysSinceFirstReport: overrides.daysSinceFirstReport ?? null,
+  effectiveStatus: overrides.effectiveStatus ?? 'rumored',
+  isPreAnnouncement: overrides.isPreAnnouncement ?? true,
+});
+
+describe('public company publishing scope', () => {
+  it('includes only active companies with at least one public case and keeps security codes as strings', () => {
+    const companies = [
+      rawCompany({ security_code: '1000', is_active: true, name_ja: '公開あり' }),
+      rawCompany({ security_code: '2000', is_active: true, name_ja: '公開なし' }),
+      rawCompany({ security_code: '3000', is_active: false, name_ja: '非アクティブ公開なし' }),
+      rawCompany({ security_code: '4000', is_active: false, name_ja: '非アクティブ公開あり' }),
+      rawCompany({ security_code: '5000', is_active: true, name_ja: '下書きのみ' }),
+      rawCompany({ security_code: '6000', is_active: true, name_ja: '公開と下書き' }),
+      rawCompany({ security_code: '7000', is_active: true, name_ja: '公開1件' }),
+      rawCompany({ security_code: 'A100', is_active: true, name_ja: '英字コード' }),
+    ];
+    const publicCases = [
+      caseItem({ id: 'case-1000', securityCode: '1000', title: '公開案件' }),
+      caseItem({ id: 'case-4000', securityCode: '4000', title: '非アクティブ企業の公開案件' }),
+      caseItem({ id: 'case-6000-public', securityCode: '6000', title: '公開案件だけ表示' }),
+      caseItem({ id: 'case-7000', securityCode: '7000', title: '1件だけ公開' }),
+      caseItem({ id: 'case-A100', securityCode: 'A100', title: '英字コード公開' }),
+    ];
+    const result = companyHelpers.buildPublicCompanies(companies, publicCases);
+    assert.deepEqual(result.map((c) => c.securityCode), ['1000', '6000', '7000', 'A100']);
+    assert.equal(result.find((c) => c.securityCode === '6000').cases.length, 1);
+    assert.equal(result.find((c) => c.securityCode === '6000').cases[0].id, 'case-6000-public');
+    assert.equal(typeof result.find((c) => c.securityCode === 'A100').securityCode, 'string');
   });
 });

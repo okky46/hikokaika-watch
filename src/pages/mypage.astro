@@ -85,7 +85,7 @@ const statusMap = Object.fromEntries(
 
 <script>
   import { getSupabase, isSupabaseConfigured } from '../lib/supabaseBrowser';
-  import { hasNoteContent, parseStructuredNote } from '../lib/noteMetadataHelpers';
+  import { buildNotePreview, hasNoteContent, parseStructuredNote } from '../lib/noteMetadataHelpers';
 
   type CaseInfo = {
     id: string;
@@ -210,14 +210,19 @@ const statusMap = Object.fromEntries(
     notesContainer.innerHTML = notes
       .map((n) => {
         const info = caseIndex.get(n.case_id);
-        const freeText = n.structured.freeText ?? '';
-        const preview = freeText.length > 120 ? `${freeText.slice(0, 120)}…` : freeText;
+        const preview = buildNotePreview(n.structured);
         const due = n.structured.nextCheckDate && n.structured.nextCheckDate <= today;
+        const previewRows = [
+          preview.scenario ? `<div><span class="muted">想定シナリオ:</span> ${escapeHtml(preview.scenario)}</div>` : '',
+          preview.targetPrice ? `<div><span class="muted">目標価格:</span> ${escapeHtml(preview.targetPrice)}</div>` : '',
+          preview.exitCondition ? `<div><span class="muted">撤退条件:</span> ${escapeHtml(preview.exitCondition)}</div>` : '',
+          preview.nextCheckDate ? `<div><span class="muted">次のチェック日:</span> ${escapeHtml(preview.nextCheckDate)}</div>` : '',
+          preview.freeTextPreview ? `<div style="white-space:pre-wrap;"><span class="muted">自由メモ:</span> ${escapeHtml(preview.freeTextPreview)}</div>` : '',
+        ].filter(Boolean).join('');
         return `
         <div class="card ${due ? 'row-highlight' : ''}" style="margin-bottom:0.5rem;">
           <div>${caseLinkHtml(info, n.case_id)} ${due ? '<span class="badge badge--heat-4"><span class="badge__mark">!</span>期日到来</span>' : ''}</div>
-          <p class="small" style="margin:0.4rem 0 0;">次のチェック日: ${escapeHtml(n.structured.nextCheckDate || '—')}</p>
-          <p class="small" style="margin:0.4rem 0 0; white-space:pre-wrap;">${escapeHtml(preview)}</p>
+          <div class="small" style="margin:0.4rem 0 0;">${previewRows}</div>
         </div>`;
       })
       .join('');

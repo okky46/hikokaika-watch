@@ -17,6 +17,7 @@ import { hasFormalAnnouncement } from './caseFilters';
 import { deriveCaseFields, firstVisibleReportOccurredAt } from './derive';
 import { renderSparkline } from './sparkline';
 import { sanitizeLargeShareholdingMetadata } from './noteMetadataHelpers';
+import { buildPublicCompanies } from './publicCompanyHelpers';
 import type { SparklineMarker } from './sparkline';
 import type {
   CaseDetail,
@@ -242,21 +243,7 @@ function assemble(raw: RawData): PublicData {
 
   const cases: CaseListItem[] = details.map(({ events: _e, industry: _i, sitePublishedAt: _s, ...item }) => item);
 
-  const casesByCompany = groupBy(cases, (c) => c.securityCode);
-  const companies: PublicCompany[] = raw.companies.map((co) => {
-    const companyCases = (casesByCompany.get(co.security_code) ?? [])
-      .slice()
-      .sort((a, b) => new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime());
-    return {
-      id: co.id,
-      securityCode: co.security_code,
-      nameJa: co.name_ja,
-      market: co.market,
-      industry: co.industry,
-      cases: companyCases,
-      lastUpdatedAt: companyCases[0]?.lastUpdatedAt ?? co.updated_at ?? null,
-    };
-  });
+  const companies: PublicCompany[] = buildPublicCompanies(raw.companies, cases);
 
   const allSourceNames = [...new Set(details.flatMap((d) => d.sourceNames))].sort((a, b) =>
     a.localeCompare(b, 'ja'),
