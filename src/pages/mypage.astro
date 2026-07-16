@@ -58,7 +58,7 @@ const statusMap = Object.fromEntries(
 
     <section class="section" aria-label="案件別メモ">
       <h2 class="section-title">案件別メモ</h2>
-      <p class="small muted">各案件の詳細ページでメモを編集できます。</p>
+      <p class="small muted">各案件の詳細ページでメモを編集できます。次のチェック日が今日以前の案件を上部に表示します。</p>
       <div id="mp-notes"></div>
       <p class="empty-state" id="mp-notes-empty" hidden>案件別メモはまだありません。</p>
     </section>
@@ -128,6 +128,14 @@ const statusMap = Object.fromEntries(
     );
   }
 
+  function parseStructuredNote(body: string) {
+    try {
+      const parsed = JSON.parse(body);
+      if (parsed?.v === 1) return parsed;
+    } catch { /* 旧形式は自由メモとして扱う */ }
+    return { v: 1, scenario: '', targetPrice: '', exitCondition: '', nextCheckDate: '', freeText: body };
+  }
+
   function badgeHtml(status: string): string {
     const def = statusMap[status] ?? { label: status, mark: '・', tone: 'pause' };
     return `<span class="badge badge--${def.tone}"><span class="badge__mark" aria-hidden="true">${def.mark}</span>${escapeHtml(def.label)}</span>`;
@@ -188,15 +196,26 @@ const statusMap = Object.fromEntries(
       .from('user_case_notes')
       .select('case_id, body, updated_at')
       .order('updated_at', { ascending: false });
-    const notes = (data ?? []).filter((n) => n.body.trim().length > 0);
+    const today = new Date().toISOString().slice(0, 10);
+    const notes = (data ?? [])
+      .filter((n) => n.body.trim().length > 0)
+      .map((n) => ({ ...n, structured: parseStructuredNote(n.body) }))
+      .sort((a, b) => {
+        const ad = a.structured.nextCheckDate || '9999-12-31';
+        const bd = b.structured.nextCheckDate || '9999-12-31';
+        return ad.localeCompare(bd) || String(b.updated_at).localeCompare(String(a.updated_at));
+      });
     notesEmpty.hidden = notes.length > 0;
     notesContainer.innerHTML = notes
       .map((n) => {
         const info = caseIndex.get(n.case_id);
-        const preview = n.body.length > 120 ? `${n.body.slice(0, 120)}…` : n.body;
+        const freeText = n.structured.freeText ?? '';
+        const preview = freeText.length > 120 ? `${freeText.slice(0, 120)}…` : freeText;
+        const due = n.structured.nextCheckDate && n.structured.nextCheckDate <= today;
         return `
-        <div class="card" style="margin-bottom:0.5rem;">
-          <div>${caseLinkHtml(info, n.case_id)}</div>
+        <div class="card ${due ? 'row-highlight' : ''}" style="margin-bottom:0.5rem;">
+          <div>${caseLinkHtml(info, n.case_id)} ${due ? '<span class="badge badge--heat-4"><span class="badge__mark">!</span>期日到来</span>' : ''}</div>
+          <p class="small" style="margin:0.4rem 0 0;">次のチェック日: ${escapeHtml(n.structured.nextCheckDate || '—')}</p>
           <p class="small" style="margin:0.4rem 0 0; white-space:pre-wrap;">${escapeHtml(preview)}</p>
         </div>`;
       })

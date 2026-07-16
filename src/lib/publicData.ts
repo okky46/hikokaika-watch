@@ -15,11 +15,14 @@ import { classifyCommentStance, latestCommentStanceFromEvent } from './commentTa
 import { resolvePublicDataEnvironment } from './buildEnv';
 import { hasFormalAnnouncement } from './caseFilters';
 import { deriveCaseFields, firstVisibleReportOccurredAt } from './derive';
+import { renderSparkline } from './sparkline';
+import type { SparklineMarker } from './sparkline';
 import type {
   CaseDetail,
   CaseEventView,
   CaseListItem,
   PricePoint,
+  PublicCompany,
   PublicData,
   RawCase,
   RawCompany,
@@ -134,7 +137,10 @@ function assemble(raw: RawData): PublicData {
 
     const prices = pricesByCase.get(c.id) ?? [];
     const preReportClose = latestPrice(prices, 'pre_report_close');
-    const currentClose = latestPrice(prices, 'current_close');
+    // 現在株価は、その案件に daily_close が1件以上あれば最新の daily_close を使い、
+    // 無ければ従来どおり手動登録の current_close を使う。
+    const dailyCloses = pricesOfType(prices, 'daily_close');
+    const currentClose = dailyCloses.at(-1) ?? latestPrice(prices, 'current_close');
     const formalOfferPrice = latestPrice(prices, 'formal_offer_price');
 
     const firstReportedAt = firstVisibleReportOccurredAt(events);
@@ -173,6 +179,16 @@ function assemble(raw: RawData): PublicData {
       now,
     });
 
+    const sparklineMarkers: SparklineMarker[] = events.flatMap((e): SparklineMarker[] => {
+      if (e.event_type === 'observation_report' || e.event_type === 'follow_up_report') return [{ date: e.occurred_at, kind: 'report' as const }];
+      if (e.event_type === 'company_comment' || e.event_type === 'timely_disclosure') return [{ date: e.occurred_at, kind: 'comment' as const }];
+      if (e.event_type === 'formal_announcement') return [{ date: e.occurred_at, kind: 'announce' as const }];
+      return [];
+    });
+    const sparklineSvg = dailyCloses.length >= 2
+      ? renderSparkline({ points: dailyCloses.map((p) => ({ date: p.priceDate, price: p.price })), markers: sparklineMarkers, offerPrice: formalOfferPrice?.price, width: 640, height: 120 })
+      : null;
+
     const eventViews: CaseEventView[] = events.map((e) => ({
       id: e.id,
       eventType: e.event_type,
@@ -187,6 +203,9 @@ function assemble(raw: RawData): PublicData {
       correctionNote: e.metadata?.correction_note ?? null,
       commentStance: e.comment_stance ?? null,
       commentTags: e.comment_tags ?? [],
+      largeShareholding: e.event_type === 'large_shareholding_report' && e.metadata?.holder_name && typeof e.metadata.ratio === 'number'
+        ? { holderName: e.metadata.holder_name, ratio: e.metadata.ratio, previousRatio: e.metadata.previous_ratio ?? null, filingDate: e.metadata.filing_date ?? null, changeType: e.metadata.change_type ?? null }
+        : null,
     }));
 
     details.push({
@@ -209,6 +228,8 @@ function assemble(raw: RawData): PublicData {
       preReportClose,
       currentClose,
       formalOfferPrice,
+      dailyCloses,
+      sparklineSvg,
       latestCommentStance,
       ...derived,
       events: eventViews,
@@ -222,17 +243,41 @@ function assemble(raw: RawData): PublicData {
 
   const cases: CaseListItem[] = details.map(({ events: _e, industry: _i, sitePublishedAt: _s, ...item }) => item);
 
+  const casesByCompany = groupBy(cases, (c) => c.securityCode);
+  const companies: PublicCompany[] = raw.companies.map((co) => {
+    const companyCases = (casesByCompany.get(co.security_code) ?? [])
+      .slice()
+      .sort((a, b) => new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime());
+    return {
+      id: co.id,
+      securityCode: co.security_code,
+      nameJa: co.name_ja,
+      market: co.market,
+      industry: co.industry,
+      cases: companyCases,
+      lastUpdatedAt: companyCases[0]?.lastUpdatedAt ?? co.updated_at ?? null,
+    };
+  });
+
   const allSourceNames = [...new Set(details.flatMap((d) => d.sourceNames))].sort((a, b) =>
     a.localeCompare(b, 'ja'),
   );
 
   return {
+    companies,
     cases,
     details,
     allSourceNames,
     isSampleData: raw.isSampleData,
     generatedAt: now.toISOString(),
   };
+}
+
+function pricesOfType(prices: RawPrice[], type: RawPrice['price_type']): PricePoint[] {
+  return prices
+    .filter((p) => p.price_type === type)
+    .sort((a, b) => (a.price_date > b.price_date ? 1 : -1))
+    .map((p) => ({ price: Number(p.price), priceDate: p.price_date, sourceName: p.source_name }));
 }
 
 function latestPrice(prices: RawPrice[], type: RawPrice['price_type']): PricePoint | null {

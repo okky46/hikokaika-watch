@@ -85,3 +85,16 @@ DB変更なし。派生値はDB/JSONに永続化せず、`src/lib/derive.ts`(新
 - サンプルデータに証券コードが英字を含む案件(`130A` heat-3 / `245B` dormant / `912C` arbSpread負)を追加。
 - `tests/derive.test.mjs`(新規)で heatLevel・effectiveStatus・各プレミアムの境界値を検証。
   Node.js 22 のネイティブTS実行(`node --test`)を利用し、`src/lib/derive.ts` を直接importしてテストする。
+
+## フェーズ2: スキーマ小拡張と可視化強化(2026-07-16)
+
+DB変更は `supabase/migrations/0003_price_event_enums.sql` 1本のみで、`price_type` の `daily_close` と
+`event_type` の `large_shareholding_report` 追加だけに限定した。
+
+- `daily_close` 時系列を読み込み、案件に1件以上あれば最新の `daily_close` を現在株価として使い、無ければ従来の `current_close` を使うルールを `src/lib/publicData.ts` に明記して実装。
+- 純関数 `renderSparkline(input): string` を `src/lib/sparkline.ts` に追加し、詳細ページと一覧にビルド時生成SVGを表示。色はCSS変数参照のみ。
+- 大量保有報告イベントを `EVENT_TYPE` に追加し、管理画面のメタデータ入力欄とタイムライン表示を追加。
+- 企業単位ページ `/companies/[code]/` を追加し、案件詳細の社名・コードからリンク、sitemapにも企業URLを追加。
+- 案件別メモはテーブル変更なしで既存 `body` に v1 JSON文字列を保存。旧プレーンテキストは `freeText` として読み込む。
+- サンプルデータに `daily_close` 時系列と大量保有報告イベントを追加し、英字入り証券コードを文字列のまま扱う検証対象にした。
+- `tests/sparkline.test.mjs` を追加し、SVG・CSS変数色・欠損スキップを検証。
