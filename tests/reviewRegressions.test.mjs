@@ -512,8 +512,12 @@ describe('phase 3 analytics and advertising regressions', () => {
     }
 
     const build = (adEnv) => {
-      const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-      const result = spawnSync(npmCommand, ['run', 'build'], {
+      const npmExecPath = process.env.npm_execpath;
+      assert.ok(
+        npmExecPath,
+        'npm_execpath is required to run the nested build',
+      );
+      const result = spawnSync(process.execPath, [npmExecPath, 'run', 'build'], {
         cwd: process.cwd(),
         encoding: 'utf8',
         env: {
@@ -527,7 +531,10 @@ describe('phase 3 analytics and advertising regressions', () => {
           ...adEnv,
         },
       });
-      assert.equal(result.status, 0, result.stderr || result.stdout);
+      if (result.error) {
+        throw result.error;
+      }
+      assert.equal(result.status, 0, result.stderr || result.stdout || 'nested build failed');
     };
     const page = (slug) => fs.readFileSync(`dist/cases/${slug}/index.html`, 'utf8');
     const count = (html, value) => html.split(value).length - 1;
