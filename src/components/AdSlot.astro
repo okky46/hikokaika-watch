@@ -5,22 +5,24 @@
  * 通常コンテンツとの誤認を防ぐため「広告」ラベルを必ず表示する。
  */
 interface Props {
+  /** Internal placement name used for layout and reporting. */
+  placement: string;
+  /** AdSense-issued ad unit ID.  Keep this as a string; do not coerce it. */
   slotId: string;
 }
 
-const { slotId } = Astro.props;
+const { placement, slotId } = Astro.props;
 const adClient = import.meta.env.PUBLIC_ADSENSE_CLIENT ?? '';
 const isDev = import.meta.env.DEV;
 ---
 
-{adClient && (
-  <aside class="ad-slot" data-ad-placement={slotId} aria-label="広告">
+{adClient && slotId && (
+  <aside class="ad-slot" data-ad-placement={placement} aria-label="広告">
     <p class="ad-slot__label">広告</p>
     {isDev ? (
-      <div class="ad-slot__placeholder">AdSense slot: {slotId}</div>
+      <div class="ad-slot__placeholder">AdSense slot: {placement}</div>
     ) : (
       <>
-        <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adClient}`} crossorigin="anonymous"></script>
         <ins
           class="adsbygoogle"
           style="display:block"

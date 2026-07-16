@@ -19,6 +19,8 @@ const years = [
 ].sort((a, b) => b - a);
 
 const formUrl = import.meta.env.PUBLIC_REQUEST_FORM_URL ?? '';
+const homeAdSlot = import.meta.env.PUBLIC_ADSENSE_SLOT_HOME ?? '';
+const hasHomeAd = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT && homeAdSlot);
 
 // 発表前(rumored/commented/denied/ended/dormant)と発表後(announced/completed/withdrawn)にセクションを分ける(要件 §1-2)
 const preCases = cases
@@ -58,7 +60,7 @@ const description =
   '上場企業の非公開化・MBO・TOBに関する観測報道、会社コメント、正式発表、その後の経過と株価情報を案件単位で時系列に整理した公開データベース。';
 ---
 
-<Base title="非公開化ウォッチ" description={description} path="/">
+<Base title="非公開化ウォッチ" description={description} path="/" hasAdSlots={hasHomeAd}>
   {isSampleData && (
     <p class="notice">
       現在表示されているのは開発・デモ用の<strong>架空のサンプルデータ</strong>です。実在の企業・報道・株価とは一切関係ありません。
@@ -228,7 +230,7 @@ const description =
       <p class="empty-state" id="empty-state-pre" hidden>条件に一致する案件はありません。</p>
     </div>
 
-    <AdSlot slotId="home-between-sections" />
+    {hasHomeAd && <AdSlot placement="home-between-sections" slotId={homeAdSlot} />}
 
     <h3 class="section-title">発表後(アーカイブ)</h3>
     <p class="small muted">正式発表済みの案件です。答え合わせ用の記録として、成立・撤回まで含めて掲載します。</p>

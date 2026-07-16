@@ -8,9 +8,11 @@ interface Props {
   path?: string;
   /** 検索エンジンに登録させないページ(マイページ・管理画面) */
   noindex?: boolean;
+  /** Whether this page renders one or more configured AdSense slots. */
+  hasAdSlots?: boolean;
 }
 
-const { title, description, path, noindex = false } = Astro.props;
+const { title, description, path, noindex = false, hasAdSlots = false } = Astro.props;
 
 const site = Astro.site ?? new URL('https://hikokaika-watch.pages.dev');
 const canonical = new URL(path ?? Astro.url.pathname, site).href;
@@ -37,6 +39,9 @@ const fullTitle = title === SITE_NAME ? title : `${title} | ${SITE_NAME}`;
     <meta name="twitter:card" content="summary" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     {!noindex && <link rel="sitemap" href="/sitemap.xml" />}
+    {hasAdSlots && import.meta.env.PUBLIC_ADSENSE_CLIENT && !import.meta.env.DEV && (
+      <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${import.meta.env.PUBLIC_ADSENSE_CLIENT}`} crossorigin="anonymous"></script>
+    )}
   </head>
   <body>
     <a class="skip-link" href="#main">本文へスキップ</a>

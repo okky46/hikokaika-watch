@@ -413,3 +413,83 @@ describe('daily_close normalization behavior', () => {
     assert.equal(priceHelpers.hasDailyCloseConflict([{ id: 'existing-row' }], null), true);
   });
 });
+
+describe('phase 3 analytics and advertising regressions', () => {
+  it('uses Cloudflare adaptive Time windows and real visit metrics', () => {
+    const source = fs.readFileSync('functions/api/analytics.ts', 'utf8');
+    assert.match(source, /\$since7: Time!/);
+    assert.match(source, /datetime_geq: \$since7, datetime_lt: \$until, requestSource: "eyeball"/);
+    assert.match(source, /datetime_geq: \$since30, datetime_lt: \$until, requestSource: "eyeball"/);
+    assert.match(source, /sum \{ pageViews visits \}/);
+    assert.doesNotMatch(source, /date_geq|date_leq|sum\?\.requests/);
+    assert.match(source, /hours \* 60 \* 60 \* 1000/);
+    assert.match(source, /168/);
+    assert.match(source, /720/);
+  });
+
+  it('keeps upstream analytics failures private and detects malformed data', () => {
+    const source = fs.readFileSync('functions/api/analytics.ts', 'utf8');
+    assert.match(source, /await response\.json\(\)/);
+    assert.match(source, /Cloudflare Analytics returned non-JSON/);
+    assert.match(source, /Cloudflare Analytics returned no zone/);
+    assert.match(source, /PUBLIC_UPSTREAM_ERROR/);
+    assert.doesNotMatch(source, /details: json/);
+  });
+
+  it('returns safe statuses for mocked Cloudflare responses', async () => {
+    const source = fs.readFileSync('functions/api/analytics.ts', 'utf8');
+    const { outputText } = ts.transpileModule(source, {
+      compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 },
+    });
+    const file = path.join(os.tmpdir(), `analytics-${process.pid}-${Date.now()}.mjs`);
+    fs.writeFileSync(file, outputText);
+    const { queryCloudflare } = await import(file);
+    const originalFetch = globalThis.fetch;
+    const env = { CF_ANALYTICS_API_TOKEN: 'secret-token', CF_ZONE_TAG: 'secret-zone' };
+    try {
+      let submitted;
+      globalThis.fetch = async (_url, init) => {
+        submitted = JSON.parse(init.body);
+        return new Response(JSON.stringify({ data: { viewer: { zones: [{
+          last7: [{ sum: { pageViews: 7, visits: 3 } }],
+          last30: [{ sum: { pageViews: 30, visits: 11 } }],
+          topUrls: [{ dimensions: { clientRequestPath: '/cases/example/' }, sum: { pageViews: 5 } }],
+        }] } } }));
+      };
+      const success = await queryCloudflare(env);
+      assert.equal(success.status, 200);
+      assert.deepEqual(success.body.summary.last7Days, { pageViews: 7, visits: 3 });
+      assert.match(submitted.query, /datetime_geq: \$since7, datetime_lt: \$until/);
+      assert.ok(Date.parse(submitted.variables.until) - Date.parse(submitted.variables.since7) >= 168 * 60 * 60 * 1000 - 5);
+
+      for (const response of [
+        new Response('upstream failure', { status: 500 }),
+        new Response('<html>failure</html>', { status: 502, headers: { 'content-type': 'text/html' } }),
+        new Response(JSON.stringify({ errors: [{ message: 'private detail' }] })),
+        new Response(JSON.stringify({ data: { viewer: { zones: [] } } })),
+      ]) {
+        globalThis.fetch = async () => response;
+        const result = await queryCloudflare(env);
+        assert.equal(result.status, 502);
+        assert.equal(result.body.error, 'アクセス統計を取得できませんでした。設定と権限を確認してください。');
+        assert.doesNotMatch(JSON.stringify(result.body), /private detail|upstream failure/);
+      }
+      const missing = await queryCloudflare({});
+      assert.equal(missing.status, 503);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('separates ad placement labels from configured unit IDs and loads once in Base', () => {
+    const slot = fs.readFileSync('src/components/AdSlot.astro', 'utf8');
+    const base = fs.readFileSync('src/layouts/Base.astro', 'utf8');
+    const casePage = fs.readFileSync('src/pages/cases/[slug].astro', 'utf8');
+    assert.match(slot, /data-ad-placement=\{placement\}/);
+    assert.match(slot, /data-ad-slot=\{slotId\}/);
+    assert.doesNotMatch(slot, /pagead2\.googlesyndication\.com/);
+    assert.match(base, /pagead2\.googlesyndication\.com/);
+    assert.match(casePage, /timelineAdSlots\[slotNumber - 1\]/);
+    assert.match(casePage, /&& timelineAdSlots\[slotNumber - 1\]/);
+  });
+});

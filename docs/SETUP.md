@@ -78,10 +78,10 @@ on conflict (key) do update set value = excluded.value;
 
 ## 6. Cloudflare Access(管理画面の保護)— 必須
 
-**この設定を行うまで、本番の `/admin` を使用しないこと。**
+**この設定を行うまで、本番の `/admin` と `/api/analytics` を使用しないこと。**
 
 1. Cloudflare Dashboard → Zero Trust(無料プラン可)→ Access → Applications → Add an application → Self-hosted。
-2. Application domain: `<本番ドメイン>` / Path: `admin` (`/admin` 以下すべて)。
+2. Application domain: `<本番ドメイン>` / Path: `/admin/*` を指定する。
 3. Policy を作成:
    - Action: Allow
    - Include → Emails: **管理者本人のメールアドレス 1 件のみ**
@@ -89,8 +89,10 @@ on conflict (key) do update set value = excluded.value;
    Zero Trust → Settings → Authentication で Google をログイン方法に追加し、
    Google アカウント側の 2 段階認証を必須運用とする。
    (Access ポリシーの Require に「Authentication Method」を追加できるプランでは必須化する)
-5. 動作確認: シークレットウィンドウで `/admin` にアクセスし、Access のログイン画面に
-   リダイレクトされること、許可メール以外で拒否されることを確認する。
+5. 同じ Application で複数パスを指定できる場合は、保護対象に `/api/analytics` も追加し、同じ管理者メール限定 Policy を適用する。
+   複数パスを指定できない場合は、`/api/analytics` 用にもう一つ Self-hosted Application を作成し、手順3・4と**同じ** Policy を設定する。
+6. 動作確認: シークレットウィンドウで `/admin/` と `/api/analytics` に直接アクセスし、それぞれAccess のログイン画面へ
+   リダイレクトされるか、未認証では拒否レスポンスになること、許可メール以外で拒否されることを確認する。
 
 > 保護は多層: Access を突破されても、Supabase Auth の本人ログイン +
 > `admin_users` RLS がなければ一切の読み書きができない。
@@ -195,8 +197,10 @@ $$;
 
 ### Google AdSense
 
-- `PUBLIC_ADSENSE_CLIENT` に AdSense の client ID(`ca-pub-...`)を設定すると、仕様で定めた広告枠だけに広告タグが出力されます。
-- 未設定の場合、広告関連タグはHTMLへ一切出力されません。ローカル開発時のプレースホルダ表示も `PUBLIC_ADSENSE_CLIENT` がある場合だけ表示されます。
+- `PUBLIC_ADSENSE_CLIENT` に AdSense の client ID(`ca-pub-...`)を設定し、各 `PUBLIC_ADSENSE_SLOT_*` に AdSense 管理画面で発行された対応する広告ユニットIDを設定すると、仕様で定めた広告枠だけに広告タグが出力されます。広告ユニットIDは数値化せず文字列のまま設定します。
+- `PUBLIC_ADSENSE_SLOT_HOME` はトップの発表前・発表後セクション間、`PUBLIC_ADSENSE_SLOT_CASE_TIMELINE_1` と `PUBLIC_ADSENSE_SLOT_CASE_TIMELINE_2` は案件詳細の3件目・6件目の後に対応します。client ID または該当スロットIDが未設定の枠は出力されません。
+- AdSense 管理画面 → Ads → By ad unit で各広告ユニットを作成し、表示される `data-ad-slot` の値を上記のスロット変数へ設定します。内部配置名（例: `home-between-sections`）を設定してはいけません。
+- 未設定の場合、広告関連タグ・空の広告ラッパー・空のタイムライン行はHTMLへ一切出力されません。ローカル開発時のプレースホルダ表示も必要な client ID とスロットIDがある場合だけ表示されます。
 - `public/ads.txt` は審査・承認後に AdSense 管理画面で提示される正式な行へ差し替えてください。例:
   ```text
   google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0
@@ -215,9 +219,12 @@ $$;
 | 変数 | 種別 | 用途 |
 |---|---|---|
 | `PUBLIC_ADSENSE_CLIENT` | 公開 | AdSense client ID。未設定なら広告タグ非出力。 |
+| `PUBLIC_ADSENSE_SLOT_HOME` | 公開 | トップ用のAdSense広告ユニットID。 |
+| `PUBLIC_ADSENSE_SLOT_CASE_TIMELINE_1` | 公開 | 案件詳細の3件目後用のAdSense広告ユニットID。 |
+| `PUBLIC_ADSENSE_SLOT_CASE_TIMELINE_2` | 公開 | 案件詳細の6件目後用のAdSense広告ユニットID。 |
 | `PUBLIC_CF_ANALYTICS_TOKEN` | 公開 | Cloudflare Web Analytics ビーコントークン。未設定ならビーコン非出力。 |
 | `CF_ANALYTICS_API_TOKEN` | サーバー側 | Pages Function が Cloudflare GraphQL Analytics API を呼ぶためのトークン。 |
 | `CF_ZONE_TAG` | サーバー側 | Analytics 対象のCloudflare zoneTag。 |
 | `CF_ACCOUNT_ID` | サーバー側 | 必要に応じて運用メモ・将来拡張で利用するアカウントID。 |
 
-Pages Function は Cloudflare Access で保護された `/admin` からの利用を前提にします。`/admin` のAccess保護を外した状態で本番運用しないでください。
+Pages Function は Cloudflare Access で保護された `/admin/*` と `/api/analytics` の利用を前提にします。UI上で管理画面からだけ呼び出してもAPIの認可にはならないため、両方のAccess保護を外した状態で本番運用しないでください。
