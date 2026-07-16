@@ -85,6 +85,7 @@ const statusMap = Object.fromEntries(
 
 <script>
   import { getSupabase, isSupabaseConfigured } from '../lib/supabaseBrowser';
+  import { parseStructuredNote } from '../lib/noteMetadataHelpers';
 
   type CaseInfo = {
     id: string;
@@ -128,13 +129,6 @@ const statusMap = Object.fromEntries(
     );
   }
 
-  function parseStructuredNote(body: string) {
-    try {
-      const parsed = JSON.parse(body);
-      if (parsed?.v === 1) return parsed;
-    } catch { /* 旧形式は自由メモとして扱う */ }
-    return { v: 1, scenario: '', targetPrice: '', exitCondition: '', nextCheckDate: '', freeText: body };
-  }
 
   function badgeHtml(status: string): string {
     const def = statusMap[status] ?? { label: status, mark: '・', tone: 'pause' };
@@ -206,7 +200,7 @@ const statusMap = Object.fromEntries(
     const today = formatLocalDate(new Date());
     const notes = (data ?? [])
       .filter((n) => n.body.trim().length > 0)
-      .map((n) => ({ ...n, structured: parseStructuredNote(n.body) }))
+      .map((n) => ({ ...n, structured: parseStructuredNote(n.body).note }))
       .sort((a, b) => {
         const ad = a.structured.nextCheckDate || '9999-12-31';
         const bd = b.structured.nextCheckDate || '9999-12-31';

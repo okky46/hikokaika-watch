@@ -252,6 +252,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
 <script>
   import { getSupabase } from '../../lib/supabaseBrowser';
+  import { buildLargeShareholdingMetadata } from '../../lib/noteMetadataHelpers';
 
   const { statusDefs, eventTypeDefs, commentTagDefs, commentTagOrder, commentStanceLabels } = (window as any).__ADMIN_DEFS__ as {
     statusDefs: Record<string, { label: string; mark: string; tone: string }>;
@@ -662,36 +663,18 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     if (!error) await loadEvents();
   });
 
-  function parsePercentInput(rawValue: string, label: string, required: boolean): { ok: true; value: number | null } | { ok: false; error: string } {
-    const trimmed = rawValue.trim();
-    if (!trimmed) {
-      return required ? { ok: false, error: `${label}を入力してください` } : { ok: true, value: null };
-    }
-    const value = Number(trimmed);
-    if (!Number.isFinite(value)) return { ok: false, error: `${label}は数値で入力してください` };
-    if (value < 0 || value > 100) return { ok: false, error: `${label}は0以上100以下で入力してください` };
-    return { ok: true, value };
-  }
-
   function buildEventMetadata(corrected: boolean): { ok: true; metadata: any } | { ok: false; error: string } {
     const eventType = $<HTMLSelectElement>('ev-type').value;
     if (eventType === 'large_shareholding_report') {
-      const holderName = $<HTMLInputElement>('ev-holder-name').value.trim();
-      if (!holderName) return { ok: false, error: '保有者名を入力してください' };
-      const ratio = parsePercentInput($<HTMLInputElement>('ev-ratio').value, '保有割合', true);
-      if (!ratio.ok) return ratio;
-      const previousRatio = parsePercentInput($<HTMLInputElement>('ev-previous-ratio').value, '前回割合', false);
-      if (!previousRatio.ok) return previousRatio;
-      return {
-        ok: true,
-        metadata: {
-          holder_name: holderName,
-          ratio: ratio.value,
-          previous_ratio: previousRatio.value,
-          filing_date: $<HTMLInputElement>('ev-filing-date').value || null,
-          change_type: $<HTMLSelectElement>('ev-change-type').value,
-        },
-      };
+      return buildLargeShareholdingMetadata({
+        holderName: $<HTMLInputElement>('ev-holder-name').value,
+        ratio: $<HTMLInputElement>('ev-ratio').value,
+        previousRatio: $<HTMLInputElement>('ev-previous-ratio').value,
+        filingDate: $<HTMLInputElement>('ev-filing-date').value,
+        changeType: $<HTMLSelectElement>('ev-change-type').value,
+        corrected,
+        correctionNote: $<HTMLInputElement>('ev-correction-note').value,
+      });
     }
     return { ok: true, metadata: corrected ? { corrected: true, correction_note: $<HTMLInputElement>('ev-correction-note').value.trim() } : null };
   }

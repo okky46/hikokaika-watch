@@ -16,6 +16,7 @@ import { resolvePublicDataEnvironment } from './buildEnv';
 import { hasFormalAnnouncement } from './caseFilters';
 import { deriveCaseFields, firstVisibleReportOccurredAt } from './derive';
 import { renderSparkline } from './sparkline';
+import { sanitizeLargeShareholdingMetadata } from './noteMetadataHelpers';
 import type { SparklineMarker } from './sparkline';
 import type {
   CaseDetail,
@@ -300,24 +301,11 @@ function maxIso(isos: (string | null)[]): string {
 }
 
 
-function isValidPercent(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100;
-}
 
 function buildLargeShareholdingView(e: RawEvent): CaseEventView['largeShareholding'] {
-  if (e.event_type !== 'large_shareholding_report') return null;
-  const holderName = typeof e.metadata?.holder_name === 'string' ? e.metadata.holder_name.trim() : '';
-  const ratio = e.metadata?.ratio;
-  if (!holderName || !isValidPercent(ratio)) return null;
-  const previousRatio = isValidPercent(e.metadata?.previous_ratio) ? e.metadata.previous_ratio : null;
-  return {
-    holderName,
-    ratio,
-    previousRatio,
-    filingDate: e.metadata?.filing_date ?? null,
-    changeType: e.metadata?.change_type ?? null,
-  };
+  return sanitizeLargeShareholdingMetadata(e.event_type, e.metadata);
 }
+
 
 function groupBy<T>(items: T[], keyFn: (item: T) => string): Map<string, T[]> {
   const map = new Map<string, T[]>();
