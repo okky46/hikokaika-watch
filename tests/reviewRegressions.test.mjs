@@ -26,13 +26,27 @@ describe('review regression guards', () => {
   });
 
   it('preserves long legacy notes as raw text when JSON serialization exceeds the limit', () => {
-    assert.match(casePage, /let loadedNoteFormat: LoadedNoteFormat = 'json'/);
+    assert.match(casePage, /let loadedNoteFormat: LoadedNoteFormat = 'v1'/);
     assert.match(casePage, /format: 'legacy'/);
     assert.match(casePage, /function buildSaveNoteBody\(\): SaveNoteResult/);
-    assert.match(casePage, /if \(jsonLength <= NOTE_BODY_LIMIT\) return \{ ok: true, body: jsonBody, format: 'json'/);
+    assert.match(casePage, /if \(jsonLength <= NOTE_BODY_LIMIT\) return \{ ok: true, body: jsonBody, format: 'v1'/);
     assert.match(casePage, /loadedNoteFormat === 'legacy' && !hasStructuredNoteFields\(\) && rawLength <= NOTE_BODY_LIMIT/);
     assert.match(casePage, /body: noteBody\.value, format: 'legacy'/);
     assert.match(casePage, /自由メモを短くしてください/);
     assert.doesNotMatch(casePage, /const body = serializeNote\(\)/);
   });
+
+  it('requires the full v1 note schema before treating JSON as structured', () => {
+    assert.match(casePage, /function isStructuredNotePayload\(value: unknown\): value is NotePayload/);
+    assert.match(casePage, /typeof value !== 'object' \|\| Array\.isArray\(value\)/);
+    assert.match(casePage, /candidate\.v === 1/);
+    assert.match(casePage, /typeof candidate\.scenario === 'string'/);
+    assert.match(casePage, /typeof candidate\.targetPrice === 'string'/);
+    assert.match(casePage, /typeof candidate\.exitCondition === 'string'/);
+    assert.match(casePage, /typeof candidate\.nextCheckDate === 'string'/);
+    assert.match(casePage, /typeof candidate\.freeText === 'string'/);
+    assert.doesNotMatch(casePage, /parsed\?\.v === 1/);
+    assert.doesNotMatch(casePage, /parsed\.scenario \?\? ''/);
+  });
+
 });

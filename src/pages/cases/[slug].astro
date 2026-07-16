@@ -204,34 +204,35 @@ const elapsed = daysBetween(c.firstReportedAt, c.lastUpdatedAt);
   const noteStatus = document.getElementById('note-status') as HTMLElement;
   const caseId = favBtn?.dataset.caseId ?? '';
 
-  type LoadedNoteFormat = 'json' | 'legacy';
+  type LoadedNoteFormat = 'v1' | 'legacy';
   type NotePayload = { v: 1; scenario: string; targetPrice: string; exitCondition: string; nextCheckDate: string; freeText: string };
   type SaveNoteResult = { ok: true; body: string; format: LoadedNoteFormat; length: number } | { ok: false; message: string; length: number };
 
   const NOTE_BODY_LIMIT = 1000;
   let userId: string | null = null;
   let isFavorite = false;
-  let loadedNoteFormat: LoadedNoteFormat = 'json';
+  let loadedNoteFormat: LoadedNoteFormat = 'v1';
 
   function noteLength(value: string): number {
     return Array.from(value).length;
   }
 
+  function isStructuredNotePayload(value: unknown): value is NotePayload {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    const candidate = value as Record<string, unknown>;
+    return candidate.v === 1
+      && typeof candidate.scenario === 'string'
+      && typeof candidate.targetPrice === 'string'
+      && typeof candidate.exitCondition === 'string'
+      && typeof candidate.nextCheckDate === 'string'
+      && typeof candidate.freeText === 'string';
+  }
+
   function parseStructuredNote(body: string): { note: NotePayload; format: LoadedNoteFormat } {
     try {
       const parsed = JSON.parse(body);
-      if (parsed?.v === 1) {
-        return {
-          note: {
-            v: 1,
-            scenario: parsed.scenario ?? '',
-            targetPrice: parsed.targetPrice ?? '',
-            exitCondition: parsed.exitCondition ?? '',
-            nextCheckDate: parsed.nextCheckDate ?? '',
-            freeText: parsed.freeText ?? '',
-          },
-          format: 'json',
-        };
+      if (isStructuredNotePayload(parsed)) {
+        return { note: parsed, format: 'v1' };
       }
     } catch { /* JSON.parseに失敗する旧形式は自由メモとして扱う */ }
     return { note: { v: 1, scenario: '', targetPrice: '', exitCondition: '', nextCheckDate: '', freeText: body }, format: 'legacy' };
@@ -255,7 +256,7 @@ const elapsed = daysBetween(c.firstReportedAt, c.lastUpdatedAt);
   function buildSaveNoteBody(): SaveNoteResult {
     const jsonBody = JSON.stringify({ v: 1, scenario: noteScenario.value, targetPrice: noteTargetPrice.value, exitCondition: noteExitCondition.value, nextCheckDate: noteNextCheckDate.value, freeText: noteBody.value });
     const jsonLength = noteLength(jsonBody);
-    if (jsonLength <= NOTE_BODY_LIMIT) return { ok: true, body: jsonBody, format: 'json', length: jsonLength };
+    if (jsonLength <= NOTE_BODY_LIMIT) return { ok: true, body: jsonBody, format: 'v1', length: jsonLength };
 
     const rawLength = noteLength(noteBody.value);
     if (loadedNoteFormat === 'legacy' && !hasStructuredNoteFields() && rawLength <= NOTE_BODY_LIMIT) {
