@@ -7,6 +7,7 @@ import ts from 'typescript';
 
 let helpers;
 let companyHelpers;
+let priceHelpers;
 
 before(async () => {
   const compileHelper = async (sourcePath, name) => {
@@ -20,6 +21,7 @@ before(async () => {
   };
   helpers = await compileHelper('src/lib/noteMetadataHelpers.ts', 'noteMetadataHelpers');
   companyHelpers = await compileHelper('src/lib/publicCompanyHelpers.ts', 'publicCompanyHelpers');
+  priceHelpers = await compileHelper('src/lib/priceHelpers.ts', 'priceHelpers');
 });
 
 const fullV1 = (overrides = {}) => ({
@@ -291,8 +293,61 @@ describe('public company publishing scope', () => {
     ];
     const result = companyHelpers.buildPublicCompanies(companies, publicCases);
     assert.deepEqual(result.map((c) => c.securityCode), ['1000', '6000', '7000', 'A100']);
+    assert.equal(companyHelpers.isPublishableCompany(companies[0]), true);
+    assert.equal(companyHelpers.isPublishableCompany(companies[3]), false);
     assert.equal(result.find((c) => c.securityCode === '6000').cases.length, 1);
     assert.equal(result.find((c) => c.securityCode === '6000').cases[0].id, 'case-6000-public');
     assert.equal(typeof result.find((c) => c.securityCode === 'A100').securityCode, 'string');
+  });
+});
+
+
+const rawPrice = (overrides = {}) => ({
+  id: overrides.id ?? 'price-1',
+  case_id: overrides.case_id ?? 'case-1',
+  price_type: overrides.price_type ?? 'daily_close',
+  price: overrides.price ?? '1000',
+  price_date: overrides.price_date ?? '2026-07-01',
+  source_name: overrides.source_name ?? null,
+  created_at: overrides.created_at ?? '2026-07-01T00:00:00.000Z',
+  updated_at: overrides.updated_at ?? '2026-07-01T00:00:00.000Z',
+});
+
+describe('daily_close normalization behavior', () => {
+  it('keeps different dates, deduplicates same date deterministically, and sorts ascending', () => {
+    const older = rawPrice({ id: 'a-old', price: '1000', price_date: '2026-07-02', created_at: '2026-07-02T00:00:00.000Z', updated_at: '2026-07-02T01:00:00.000Z' });
+    const newer = rawPrice({ id: 'b-new', price: '1100', price_date: '2026-07-02', created_at: '2026-07-02T00:00:00.000Z', updated_at: '2026-07-02T02:00:00.000Z' });
+    const differentDate = rawPrice({ id: 'c-date', price: '900', price_date: '2026-07-01' });
+    const warnings = [];
+    const result = priceHelpers.normalizeDailyCloses([older, newer, differentDate], (message) => warnings.push(message));
+    assert.deepEqual(result.map((p) => [p.priceDate, p.price]), [['2026-07-01', 900], ['2026-07-02', 1100]]);
+    assert.equal(result.at(-1).price, 1100);
+    assert.equal(warnings.length, 1);
+  });
+
+  it('uses created_at then id order when updated_at is tied and is independent of input order', () => {
+    const olderCreated = rawPrice({ id: 'z-loser', price: '1000', created_at: '2026-07-01T00:00:00.000Z', updated_at: '2026-07-03T00:00:00.000Z' });
+    const newerCreated = rawPrice({ id: 'a-winner', price: '1200', created_at: '2026-07-02T00:00:00.000Z', updated_at: '2026-07-03T00:00:00.000Z' });
+    assert.equal(priceHelpers.normalizeDailyCloses([olderCreated, newerCreated], () => [])[0].price, 1200);
+    assert.equal(priceHelpers.normalizeDailyCloses([newerCreated, olderCreated], () => [])[0].price, 1200);
+
+    const idA = rawPrice({ id: 'a-winner', price: '1300', created_at: '2026-07-02T00:00:00.000Z', updated_at: '2026-07-03T00:00:00.000Z' });
+    const idB = rawPrice({ id: 'b-loser', price: '1400', created_at: '2026-07-02T00:00:00.000Z', updated_at: '2026-07-03T00:00:00.000Z' });
+    assert.equal(priceHelpers.normalizeDailyCloses([idB, idA], () => [])[0].price, 1400);
+    assert.equal(priceHelpers.normalizeDailyCloses([idA, idB], () => [])[0].price, 1400);
+  });
+
+  it('skips invalid daily_close prices and detects admin duplicates excluding the editing row', () => {
+    const warnings = [];
+    const result = priceHelpers.normalizeDailyCloses([
+      rawPrice({ id: 'bad', price: 'not-a-number', price_date: '2026-07-01' }),
+      rawPrice({ id: 'good', price: '1000', price_date: '2026-07-02' }),
+    ], (message) => warnings.push(message));
+    assert.deepEqual(result.map((p) => p.price), [1000]);
+    assert.equal(warnings.length, 1);
+
+    assert.equal(priceHelpers.hasDailyCloseConflict([{ id: 'same-row' }], 'same-row'), false);
+    assert.equal(priceHelpers.hasDailyCloseConflict([{ id: 'other-row' }], 'same-row'), true);
+    assert.equal(priceHelpers.hasDailyCloseConflict([{ id: 'existing-row' }], null), true);
   });
 });

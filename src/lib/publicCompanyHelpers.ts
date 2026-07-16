@@ -1,9 +1,13 @@
 import type { CaseListItem, PublicCompany, RawCompany } from './types';
 
+export function isPublishableCompany(company: RawCompany | undefined): company is RawCompany {
+  return company?.is_active === true;
+}
+
 export function buildPublicCompanies(rawCompanies: RawCompany[], cases: CaseListItem[]): PublicCompany[] {
   const casesByCompany = groupBy(cases, (c) => c.securityCode);
   return rawCompanies
-    .filter((co) => co.is_active === true)
+    .filter(isPublishableCompany)
     .flatMap((co): PublicCompany[] => {
       const companyCases = (casesByCompany.get(co.security_code) ?? [])
         .slice()

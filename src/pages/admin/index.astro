@@ -253,6 +253,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 <script>
   import { getSupabase } from '../../lib/supabaseBrowser';
   import { buildLargeShareholdingMetadata } from '../../lib/noteMetadataHelpers';
+  import { hasDailyCloseConflict } from '../../lib/priceHelpers';
 
   const { statusDefs, eventTypeDefs, commentTagDefs, commentTagOrder, commentStanceLabels } = (window as any).__ADMIN_DEFS__ as {
     statusDefs: Record<string, { label: string; mark: string; tone: string }>;
@@ -743,6 +744,22 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     if (!row.case_id || !row.price || !row.price_date) {
       $('pr-status').textContent = '案件・価格・基準日は必須です';
       return;
+    }
+    if (row.price_type === 'daily_close') {
+      const { data: duplicateRows, error: duplicateError } = await supabase!
+        .from('price_snapshots')
+        .select('id')
+        .eq('case_id', row.case_id)
+        .eq('price_type', 'daily_close')
+        .eq('price_date', row.price_date);
+      if (duplicateError) {
+        $('pr-status').textContent = `重複確認エラー: ${duplicateError.message}`;
+        return;
+      }
+      if (hasDailyCloseConflict(duplicateRows ?? [], id || null)) {
+        $('pr-status').textContent = 'この案件の同じ基準日の日次終値は既に登録されています。既存行を編集してください。';
+        return;
+      }
     }
     const q = id
       ? supabase!.from('price_snapshots').update(row).eq('id', id)

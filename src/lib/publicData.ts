@@ -17,7 +17,8 @@ import { hasFormalAnnouncement } from './caseFilters';
 import { deriveCaseFields, firstVisibleReportOccurredAt } from './derive';
 import { renderSparkline } from './sparkline';
 import { sanitizeLargeShareholdingMetadata } from './noteMetadataHelpers';
-import { buildPublicCompanies } from './publicCompanyHelpers';
+import { buildPublicCompanies, isPublishableCompany } from './publicCompanyHelpers';
+import { normalizeDailyCloses } from './priceHelpers';
 import type { SparklineMarker } from './sparkline';
 import type {
   CaseDetail,
@@ -128,6 +129,10 @@ function assemble(raw: RawData): PublicData {
       console.warn(`[publicData] 案件 ${c.slug} の会社(${c.company_id})が見つからないためスキップ`);
       continue;
     }
+    if (!isPublishableCompany(company)) {
+      console.warn(`[publicData] 案件 ${c.slug} の会社(${c.company_id})が非アクティブのため公開データからスキップ`);
+      continue;
+    }
 
     const events = (eventsByCase.get(c.id) ?? [])
       .slice()
@@ -141,7 +146,7 @@ function assemble(raw: RawData): PublicData {
     const preReportClose = latestPrice(prices, 'pre_report_close');
     // 現在株価は、その案件に daily_close が1件以上あれば最新の daily_close を使い、
     // 無ければ従来どおり手動登録の current_close を使う。
-    const dailyCloses = pricesOfType(prices, 'daily_close');
+    const dailyCloses = normalizeDailyCloses(prices);
     const currentClose = dailyCloses.at(-1) ?? latestPrice(prices, 'current_close');
     const formalOfferPrice = latestPrice(prices, 'formal_offer_price');
 
@@ -257,13 +262,6 @@ function assemble(raw: RawData): PublicData {
     isSampleData: raw.isSampleData,
     generatedAt: now.toISOString(),
   };
-}
-
-function pricesOfType(prices: RawPrice[], type: RawPrice['price_type']): PricePoint[] {
-  return prices
-    .filter((p) => p.price_type === type)
-    .sort((a, b) => (a.price_date > b.price_date ? 1 : -1))
-    .map((p) => ({ price: Number(p.price), priceDate: p.price_date, sourceName: p.source_name }));
 }
 
 function latestPrice(prices: RawPrice[], type: RawPrice['price_type']): PricePoint | null {
