@@ -29,6 +29,12 @@ const title = `${c.companyName}(${c.securityCode})${c.title.includes(c.companyNa
 const description = `${c.companyName}(証券コード${c.securityCode})の非公開化・MBO・TOB関連の観測報道から現在までの経過を時系列で整理。${c.summary}`.slice(0, 155);
 
 const elapsed = daysBetween(c.firstReportedAt, c.lastUpdatedAt);
+const timelineRows = c.events.flatMap((event, index) => {
+  const rows: ({ type: 'event'; event: typeof event } | { type: 'ad'; slotNumber: number })[] = [{ type: 'event', event }];
+  const slotNumber = Math.floor((index + 1) / 3);
+  if ((index + 1) % 3 === 0 && slotNumber <= 2) rows.push({ type: 'ad', slotNumber });
+  return rows;
+});
 ---
 
 <Base title={title} description={description} path={`/cases/${c.slug}/`}>
@@ -118,32 +124,36 @@ const elapsed = daysBetween(c.firstReportedAt, c.lastUpdatedAt);
       <p class="empty-state">公開されている出来事はまだありません。</p>
     ) : (
       <ol class="timeline">
-        {c.events.map((e) => (
+        {timelineRows.map((row) => row.type === 'ad' ? (
+          <li class="timeline__item timeline__item--ad">
+            <AdSlot slotId={`case-timeline-${row.slotNumber}`} />
+          </li>
+        ) : (
           <li class="timeline__item">
             <article class="event-card">
               <div class="event-card__head">
-                <EventTypeBadge type={e.eventType} />
-                <span class="event-card__date">{formatDateTime(e.occurredAt)}</span>
-                {e.corrected && (
+                <EventTypeBadge type={row.event.eventType} />
+                <span class="event-card__date">{formatDateTime(row.event.occurredAt)}</span>
+                {row.event.corrected && (
                   <span class="badge badge--stop"><span class="badge__mark" aria-hidden="true">!</span>訂正あり</span>
                 )}
               </div>
-              <h3 class="event-card__title">{e.title}</h3>
-              {e.summary && <p class="event-card__summary">{e.summary}</p>}
-              {e.largeShareholding && (
-                <p class="event-card__summary"><strong>{e.largeShareholding.holderName}</strong> — <strong>保有 {e.largeShareholding.ratio.toFixed(2)}%</strong>{e.largeShareholding.previousRatio !== null && ` (前回 ${e.largeShareholding.previousRatio.toFixed(2)}%)`}</p>
+              <h3 class="event-card__title">{row.event.title}</h3>
+              {row.event.summary && <p class="event-card__summary">{row.event.summary}</p>}
+              {row.event.largeShareholding && (
+                <p class="event-card__summary"><strong>{row.event.largeShareholding.holderName}</strong> — <strong>保有 {row.event.largeShareholding.ratio.toFixed(2)}%</strong>{row.event.largeShareholding.previousRatio !== null && ` (前回 ${row.event.largeShareholding.previousRatio.toFixed(2)}%)`}</p>
               )}
-              {e.corrected && e.correctionNote && (
-                <p class="event-card__summary" style="color:var(--tone-stop-fg)">訂正: {e.correctionNote}</p>
+              {row.event.corrected && row.event.correctionNote && (
+                <p class="event-card__summary" style="color:var(--tone-stop-fg)">訂正: {row.event.correctionNote}</p>
               )}
               <div class="event-card__meta">
-                <span>出典: {e.sourceUrl ? (
-                  <a href={e.sourceUrl} target="_blank" rel="noopener noreferrer nofollow">{e.sourceName || '元情報'}</a>
+                <span>出典: {row.event.sourceUrl ? (
+                  <a href={row.event.sourceUrl} target="_blank" rel="noopener noreferrer nofollow">{row.event.sourceName || '元情報'}</a>
                 ) : (
-                  e.sourceName || '—'
+                  row.event.sourceName || '—'
                 )}</span>
-                <span>本サイト初回掲載: {formatDateTime(e.sitePublishedAt)}</span>
-                {e.updatedAt !== e.sitePublishedAt && <span>最終修正: {formatDateTime(e.updatedAt)}</span>}
+                <span>本サイト初回掲載: {formatDateTime(row.event.sitePublishedAt)}</span>
+                {row.event.updatedAt !== row.event.sitePublishedAt && <span>最終修正: {formatDateTime(row.event.updatedAt)}</span>}
               </div>
             </article>
           </li>
@@ -175,7 +185,6 @@ const elapsed = daysBetween(c.firstReportedAt, c.lastUpdatedAt);
     </div>
   </section>
 
-  <AdSlot slotId="case-below-timeline" />
 
   {formUrl && (
     <section class="section">

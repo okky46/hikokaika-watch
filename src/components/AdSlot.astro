@@ -1,8 +1,7 @@
 ---
 /**
- * 広告枠の予約スペース(要件 §13)。
- * MVPでは広告を配信しないため hidden のまま出力する。
- * 将来 AdSense 等を導入する際は、この枠に広告タグを挿入し hidden を外す。
+ * Google AdSense 広告枠。
+ * PUBLIC_ADSENSE_CLIENT が未設定なら広告関連タグを一切出力しない。
  * 通常コンテンツとの誤認を防ぐため「広告」ラベルを必ず表示する。
  */
 interface Props {
@@ -10,9 +9,28 @@ interface Props {
 }
 
 const { slotId } = Astro.props;
+const adClient = import.meta.env.PUBLIC_ADSENSE_CLIENT ?? '';
+const isDev = import.meta.env.DEV;
 ---
 
-<aside class="ad-slot" data-ad-slot={slotId} hidden>
-  <p class="ad-slot__label">広告</p>
-  <!-- 広告タグ挿入位置: data-ad-slot="{slotId}" -->
-</aside>
+{adClient && (
+  <aside class="ad-slot" data-ad-placement={slotId} aria-label="広告">
+    <p class="ad-slot__label">広告</p>
+    {isDev ? (
+      <div class="ad-slot__placeholder">AdSense slot: {slotId}</div>
+    ) : (
+      <>
+        <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adClient}`} crossorigin="anonymous"></script>
+        <ins
+          class="adsbygoogle"
+          style="display:block"
+          data-ad-client={adClient}
+          data-ad-slot={slotId}
+          data-ad-format="auto"
+          data-full-width-responsive="true"
+        ></ins>
+        <script is:inline>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+      </>
+    )}
+  </aside>
+)}

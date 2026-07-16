@@ -98,3 +98,13 @@ DB変更は `supabase/migrations/0003_price_event_enums.sql` 1本のみで、`pr
 - 案件別メモはテーブル変更なしで既存 `body` に v1 JSON文字列を保存。旧プレーンテキストは `freeText` として読み込む。
 - サンプルデータに `daily_close` 時系列と大量保有報告イベントを追加し、英字入り証券コードを文字列のまま扱う検証対象にした。
 - `tests/sparkline.test.mjs` を追加し、SVG・CSS変数色・欠損スキップを検証。
+
+## フェーズ3: 広告収益化とアクセス統計(2026-07-16)
+
+DB変更なし。広告タグとアクセス統計は環境変数未設定時に公開HTMLへ出力しない方針で実装した。
+
+- `AdSlot.astro` を AdSense 対応にし、`PUBLIC_ADSENSE_CLIENT` 未設定時は何も出力しない。広告ラベル「広告」は維持。
+- 広告枠はトップの発表前/発表後セクション間、案件詳細タイムラインの3イベントごと(上限2枠)だけに移設し、仕様外の既存枠を撤去。
+- `Base.astro` に `PUBLIC_CF_ANALYTICS_TOKEN` がある場合だけ Cloudflare Web Analytics ビーコンを出力する条件分岐を追加。
+- `/admin` に「アクセス統計」タブを追加し、`functions/api/analytics.ts` の Pages Function 経由で Cloudflare GraphQL Analytics API から直近7日/30日とURL別PVを取得する構成にした。APIトークンは `CF_ANALYTICS_API_TOKEN` としてサーバー側にのみ置く。
+- `public/ads.txt` のプレースホルダ、プライバシーポリシーの広告/Cookie/Cloudflare Web Analytics説明、`.env.example` と `docs/SETUP.md` の新規環境変数・審査手順を追加。

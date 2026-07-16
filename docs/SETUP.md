@@ -190,3 +190,34 @@ $$;
 ```
 
 復旧後、管理者のTOTP登録・ログインを確認し、必要に応じて aal2 必須版へ再度切り替えてください。
+
+## 10. 広告収益化とアクセス統計(フェーズ3)
+
+### Google AdSense
+
+- `PUBLIC_ADSENSE_CLIENT` に AdSense の client ID(`ca-pub-...`)を設定すると、仕様で定めた広告枠だけに広告タグが出力されます。
+- 未設定の場合、広告関連タグはHTMLへ一切出力されません。ローカル開発時のプレースホルダ表示も `PUBLIC_ADSENSE_CLIENT` がある場合だけ表示されます。
+- `public/ads.txt` は審査・承認後に AdSense 管理画面で提示される正式な行へ差し替えてください。例:
+  ```text
+  google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0
+  ```
+- AdSense審査はサンプルデータ状態では通りません。実案件データを数十件投入し、免責事項・プライバシーポリシー・問い合わせ導線を整えてから申請してください。
+
+### Cloudflare Web Analytics
+
+- `PUBLIC_CF_ANALYTICS_TOKEN` に Cloudflare Web Analytics の公開トークンを設定すると、全ページにCookieレスのビーコンが出力されます。
+- 未設定の場合、Cloudflare Web Analytics のビーコンはHTMLへ出力されません。
+
+### 管理画面のアクセス統計タブ
+
+`/admin` の「アクセス統計」タブは `/api/analytics` の Cloudflare Pages Function 経由で Cloudflare GraphQL Analytics API を呼び出します。APIトークンは必ず Pages のサーバー側環境変数に設定し、`PUBLIC_` を付けないでください。
+
+| 変数 | 種別 | 用途 |
+|---|---|---|
+| `PUBLIC_ADSENSE_CLIENT` | 公開 | AdSense client ID。未設定なら広告タグ非出力。 |
+| `PUBLIC_CF_ANALYTICS_TOKEN` | 公開 | Cloudflare Web Analytics ビーコントークン。未設定ならビーコン非出力。 |
+| `CF_ANALYTICS_API_TOKEN` | サーバー側 | Pages Function が Cloudflare GraphQL Analytics API を呼ぶためのトークン。 |
+| `CF_ZONE_TAG` | サーバー側 | Analytics 対象のCloudflare zoneTag。 |
+| `CF_ACCOUNT_ID` | サーバー側 | 必要に応じて運用メモ・将来拡張で利用するアカウントID。 |
+
+Pages Function は Cloudflare Access で保護された `/admin` からの利用を前提にします。`/admin` のAccess保護を外した状態で本番運用しないでください。

@@ -15,6 +15,7 @@ const { title, description, path, noindex = false } = Astro.props;
 const site = Astro.site ?? new URL('https://hikokaika-watch.pages.dev');
 const canonical = new URL(path ?? Astro.url.pathname, site).href;
 const formUrl = import.meta.env.PUBLIC_REQUEST_FORM_URL ?? '';
+const cfAnalyticsToken = import.meta.env.PUBLIC_CF_ANALYTICS_TOKEN ?? '';
 const SITE_NAME = '非公開化ウォッチ';
 const fullTitle = title === SITE_NAME ? title : `${title} | ${SITE_NAME}`;
 ---
@@ -81,5 +82,8 @@ const fullTitle = title === SITE_NAME ? title : `${title} | ${SITE_NAME}`;
         <p class="site-footer__note">© 非公開化ウォッチ</p>
       </div>
     </footer>
+    {cfAnalyticsToken && (
+      <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon={`{\"token\": \"${cfAnalyticsToken}\"}`}></script>
+    )}
   </body>
 </html>

@@ -50,6 +50,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       <button class="btn" data-tab="prices">株価</button>
       <button class="btn" data-tab="corrections">訂正履歴</button>
       <button class="btn" data-tab="publish">公開処理</button>
+      <button class="btn" data-tab="analytics">アクセス統計</button>
       <button class="btn" data-tab="security">セキュリティ</button>
     </nav>
 
@@ -221,6 +222,21 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
         <button type="button" class="btn btn--primary" id="publish-run">公開処理を実行(サイト再ビルド)</button>
         <p class="small" id="publish-status" aria-live="polite"></p>
       </div>
+    </section>
+
+    <!-- ============ アクセス統計 ============ -->
+    <section class="section" data-panel="analytics" hidden>
+      <h2 class="section-title">アクセス統計</h2>
+      <div class="card">
+        <p class="small muted">Cloudflare GraphQL Analytics API の結果を Pages Function 経由で取得します。APIトークンはクライアントへ埋め込みません。</p>
+        <button type="button" class="btn btn--primary" id="analytics-load">統計を再読み込み</button>
+        <p class="small" id="analytics-status" aria-live="polite"></p>
+        <div id="analytics-summary" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.6rem; margin-top:0.8rem"></div>
+      </div>
+      <div class="table-wrap" style="margin-top:0.8rem"><table class="case-table" id="analytics-url-table">
+        <thead><tr><th>URL</th><th class="num">PV</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
     </section>
 
     <!-- ============ セキュリティ ============ -->
@@ -417,12 +433,38 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       btn.classList.toggle('btn--primary', btn.dataset.tab === name);
     }
     if (name === 'corrections') loadCorrections();
+    if (name === 'analytics') loadAnalytics();
   }
   document.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-tab]');
     if (btn) showTab(btn.dataset.tab ?? 'cases');
     if ((e.target as HTMLElement).closest('[data-go-case-edit]')) showTab('cases');
   });
+
+  async function loadAnalytics() {
+    const status = $('analytics-status');
+    status.textContent = '読み込み中...';
+    try {
+      const res = await fetch('/api/analytics', { credentials: 'same-origin' });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      const summary = json.summary ?? {};
+      $('analytics-summary').innerHTML = [
+        ['直近7日 PV', summary.last7Days?.pageViews],
+        ['直近7日 訪問数', summary.last7Days?.visits],
+        ['直近30日 PV', summary.last30Days?.pageViews],
+        ['直近30日 訪問数', summary.last30Days?.visits],
+      ].map(([label, value]) => `<div class="price-card"><p class="price-card__label">${esc(label)}</p><p class="price-card__value">${esc(value ?? '—')}</p></div>`).join('');
+      $('analytics-url-table').querySelector('tbody')!.innerHTML = (json.topUrls ?? [])
+        .map((row: any) => `<tr><td>${esc(row.url)}</td><td class="num">${esc(row.pageViews)}</td></tr>`)
+        .join('');
+      status.textContent = '読み込みました';
+    } catch (e) {
+      status.textContent = `読み込みエラー: ${e instanceof Error ? e.message : String(e)}`;
+    }
+  }
+
+  $('analytics-load')?.addEventListener('click', loadAnalytics);
 
   async function reloadAll() {
     await Promise.all([loadCompanies(), loadCases()]);

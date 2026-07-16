@@ -75,7 +75,6 @@ const description =
 
   <p class="small muted" style="margin-top:0.4rem">全{cases.length}件　最終更新：{formatDate(latestUpdatedAt)}</p>
 
-  <AdSlot slotId="home-below-stats" />
 
   <section class="section" aria-label="案件の検索・絞り込み">
     <h2 class="section-title">案件一覧</h2>
@@ -229,6 +228,8 @@ const description =
       <p class="empty-state" id="empty-state-pre" hidden>条件に一致する案件はありません。</p>
     </div>
 
+    <AdSlot slotId="home-between-sections" />
+
     <h3 class="section-title">発表後(アーカイブ)</h3>
     <p class="small muted">正式発表済みの案件です。答え合わせ用の記録として、成立・撤回まで含めて掲載します。</p>
     <div class="table-wrap">
@@ -314,7 +315,6 @@ const description =
     )}
   </section>
 
-  <AdSlot slotId="home-below-list" />
 
   <section class="section" aria-label="掲載基準">
     <h2 class="section-title">掲載基準(要約)</h2>
