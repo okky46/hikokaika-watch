@@ -11,9 +11,10 @@
 import { createClient } from '@supabase/supabase-js';
 import fs from 'node:fs';
 import path from 'node:path';
-import { classifyCommentStance } from './commentTags';
+import { classifyCommentStance, latestCommentStanceFromEvent } from './commentTags';
 import { resolvePublicDataEnvironment } from './buildEnv';
 import { hasFormalAnnouncement } from './caseFilters';
+import { deriveCaseFields, firstVisibleReportOccurredAt } from './derive';
 import type {
   CaseDetail,
   CaseEventView,
@@ -111,6 +112,9 @@ function assemble(raw: RawData): PublicData {
   const eventsByCase = groupBy(raw.events, (e) => e.case_id);
   const pricesByCase = groupBy(raw.prices, (p) => p.case_id);
 
+  // 派生値の計算基準時刻(=このビルドの generatedAt と同一)
+  const now = new Date();
+
   const details: CaseDetail[] = [];
 
   for (const c of raw.cases) {
@@ -133,10 +137,8 @@ function assemble(raw: RawData): PublicData {
     const currentClose = latestPrice(prices, 'current_close');
     const formalOfferPrice = latestPrice(prices, 'formal_offer_price');
 
-    const firstEvent = events[0] ?? null;
-    const firstReport =
-      events.find((e) => e.event_type === 'observation_report') ?? firstEvent;
-    const firstReportedAt = c.first_reported_at ?? firstReport?.occurred_at ?? null;
+    const firstReportedAt = firstVisibleReportOccurredAt(events);
+    const firstReport = firstReportedAt ? events.find((e) => e.occurred_at === firstReportedAt) ?? null : null;
 
     const lastUpdatedAt = maxIso([
       c.updated_at,
@@ -152,6 +154,24 @@ function assemble(raw: RawData): PublicData {
     const sourceNames = [
       ...new Set(events.map((e) => e.source_name).filter((s) => s.length > 0)),
     ];
+
+    const commentLikeEvents = events.filter(
+      (e) => e.event_type === 'company_comment' || e.event_type === 'timely_disclosure',
+    );
+    const latestCommentEvent = commentLikeEvents[commentLikeEvents.length - 1] ?? null;
+    const latestCommentStance = latestCommentStanceFromEvent(latestCommentEvent);
+
+    const lastVisibleEventOccurredAt = events[events.length - 1]?.occurred_at ?? null;
+    const derived = deriveCaseFields({
+      status: c.status,
+      eventTypes: events.map((e) => e.event_type),
+      lastVisibleEventOccurredAt,
+      firstReportedAt,
+      preReportClose,
+      currentClose,
+      formalOfferPrice,
+      now,
+    });
 
     const eventViews: CaseEventView[] = events.map((e) => ({
       id: e.id,
@@ -189,6 +209,8 @@ function assemble(raw: RawData): PublicData {
       preReportClose,
       currentClose,
       formalOfferPrice,
+      latestCommentStance,
+      ...derived,
       events: eventViews,
     });
   }
@@ -209,7 +231,7 @@ function assemble(raw: RawData): PublicData {
     details,
     allSourceNames,
     isSampleData: raw.isSampleData,
-    generatedAt: new Date().toISOString(),
+    generatedAt: now.toISOString(),
   };
 }
 

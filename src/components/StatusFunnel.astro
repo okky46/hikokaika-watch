@@ -1,0 +1,89 @@
+---
+// 案件詳細ページ用のステータスファネル(要件 §1-4)。
+// ビルド時に静的HTMLで出力し、クライアントJSは使わない。
+import { CASE_STATUS } from '../lib/status';
+import type { CaseStatus } from '../lib/types';
+
+interface Props {
+  effectiveStatus: CaseStatus;
+  reportCount: number;
+  commentCount: number;
+  heatLevel: 1 | 2 | 3 | 4;
+}
+
+const { effectiveStatus, reportCount, commentCount, heatLevel } = Astro.props;
+
+// 本線の位置(0=観測, 1=会社コメント, 2=正式発表, 3=成立・完了)
+const MAINLINE_INDEX: Partial<Record<CaseStatus, number>> = {
+  rumored: 0,
+  commented: 1,
+  announced: 2,
+  completed: 3,
+};
+
+// 分岐系の案件は、本線のどの位置の下に分岐行を出すか
+const BRANCH_AFTER_INDEX: Partial<Record<CaseStatus, number>> = {
+  denied: 1,
+  ended: 1,
+  dormant: 1,
+  withdrawn: 2,
+};
+
+const branchAfterIndex = BRANCH_AFTER_INDEX[effectiveStatus];
+const isBranch = branchAfterIndex !== undefined;
+const mainIndex = MAINLINE_INDEX[effectiveStatus];
+
+const branchTone =
+  effectiveStatus === 'denied' ? 'pre-denied' : effectiveStatus === 'withdrawn' ? 'post-withdrawn' : 'pre-dormant';
+const branchDef = isBranch ? CASE_STATUS[effectiveStatus] : null;
+
+const steps = [
+  {
+    mark: '◇',
+    label: '観測',
+    countLabel: reportCount > 0 ? `(第${reportCount}報)` : '',
+    tone: `heat-${heatLevel}`,
+  },
+  {
+    mark: '◆',
+    label: '会社コメント',
+    countLabel: commentCount > 0 ? `(${commentCount}回)` : '',
+    tone: `heat-${heatLevel}`,
+  },
+  { mark: '●', label: '正式発表', countLabel: '', tone: 'post-announced' },
+  { mark: '■', label: '成立・完了', countLabel: '', tone: 'post-completed' },
+] as const;
+
+function branchStepState(i: number): 'passed' | 'pending' {
+  if (effectiveStatus === 'withdrawn') return i <= 2 ? 'passed' : 'pending';
+  if (i === 0) return reportCount > 0 ? 'passed' : 'pending';
+  if (i === 1) return commentCount > 0 ? 'passed' : 'pending';
+  return 'pending';
+}
+
+function stepState(i: number): 'passed' | 'current' | 'pending' {
+  if (isBranch) return branchStepState(i);
+  if (mainIndex === undefined) return 'pending';
+  if (i < mainIndex) return 'passed';
+  if (i === mainIndex) return 'current';
+  return 'pending';
+}
+---
+
+<ol class="status-funnel" aria-label="案件の進捗ステータス">
+  {steps.map((step, i) => (
+    <li class={`status-funnel__step status-funnel__step--${stepState(i)}`}>
+      <span class={`badge badge--${step.tone} status-funnel__badge`}>
+        <span class="badge__mark" aria-hidden="true">{step.mark}</span>{step.label}{step.countLabel}
+      </span>
+      {isBranch && i === branchAfterIndex && branchDef && (
+        <span class="status-funnel__branch-row status-funnel__branch-row--current" aria-current="step">
+          <span class="status-funnel__arrow" aria-hidden="true">↳</span>
+          <span class={`badge badge--${branchTone} status-funnel__badge status-funnel__badge--branch-current`} title={branchDef.description}>
+            <span class="badge__mark" aria-hidden="true">{branchDef.mark}</span>{branchDef.label}
+          </span>
+        </span>
+      )}
+    </li>
+  ))}
+</ol>

@@ -112,3 +112,40 @@ export function statusDef(status: CaseStatus): StatusDef {
 export function eventTypeDef(type: EventType): EventTypeDef {
   return EVENT_TYPE[type] ?? EVENT_TYPE.other;
 }
+
+// ============================================================
+// 公開ページ専用の色トーン(要件 §1-3)。
+// 発表前 = 暖色(報道回数で熱くなる)、発表後 = 寒色(固定)。
+// admin画面は上記 StatusDef.tone / badge--{tone} をそのまま使い続けるため、
+// ここでは既存の tone フィールドには手を入れず、公開ページ(StatusBadge / StatusFunnel)
+// 専用の新しいトーン名を別途定義する。
+// ============================================================
+export type PublicStatusTone =
+  | 'heat-1'
+  | 'heat-2'
+  | 'heat-3'
+  | 'heat-4'
+  | 'pre-denied'
+  | 'pre-dormant'
+  | 'post-announced'
+  | 'post-completed'
+  | 'post-withdrawn';
+
+export function publicStatusTone(status: CaseStatus, heatLevel: 1 | 2 | 3 | 4 = 1): PublicStatusTone {
+  switch (status) {
+    case 'rumored':
+    case 'commented':
+      return `heat-${heatLevel}` as PublicStatusTone;
+    case 'denied':
+      return 'pre-denied';
+    case 'ended':
+    case 'dormant':
+      return 'pre-dormant';
+    case 'announced':
+      return 'post-announced';
+    case 'completed':
+      return 'post-completed';
+    case 'withdrawn':
+      return 'post-withdrawn';
+  }
+}

@@ -61,3 +61,27 @@ npm run preview # ローカル確認
 - メモをDB/UI双方で1,000文字に制限。
 - `revision_history` と監査トリガーを追加。
 - GitHub Actions CI と Node.js 標準テストを追加。
+
+## フェーズ1: 派生値の導出と表示刷新(2026-07-15)
+
+DB変更なし。派生値はDB/JSONに永続化せず、`src/lib/derive.ts`(新規・純関数)で
+ビルド時に計算し `src/lib/publicData.ts` がビューモデルに合成する方式で実装した。
+
+- `reportCount` / `commentCount` / `heatLevel` / `speculationPremium` / `tobPremium` /
+  `arbSpread` / `daysSinceFirstReport` / `effectiveStatus`(dormant判定含む) /
+  `isPreAnnouncement` を `CaseListItem`(`CaseDetail`が継承)に追加。DBの `status` は書き換えない。
+- トップページを「発表前(観測報道段階)」「発表後(アーカイブ)」の2テーブルに分割。
+  発表前は heatLevel 降順→最終更新日降順、発表後は最終更新日降順。
+  発表前テーブルに報道回数・コメントスタンス・思惑プレミアム・経過日数を追加。
+  発表後テーブルにTOBプレミアム・裁定スプレッドを追加し、arbSpread が負の行をハイライト。
+- 案件詳細ページにステータスファネル(`StatusFunnel.astro`・新規)を追加。クライアントJSなし。
+- 色システムを再設計: 発表前=暖色ヒートスケール(`--heat-1〜4-*`)、
+  発表後=寒色固定(`--post-announced/completed/withdrawn-*`)、
+  分岐系(denied/ended/dormant)は`--pre-denied-*` / `--pre-dormant-*`。
+  **既存の `--tone-*` 変数と `badge--{watch|comment|announce|done|stop|pause}` クラスは
+  admin画面(`src/pages/admin/index.astro`)が直接参照しているため削除せず維持し、
+  公開ページ専用の新トーン(`publicStatusTone()` / `badge--heat-N` 等)を別途追加する形にした。**
+  この判断はユーザーに確認済み(admin画面は今回変更対象外のため)。
+- サンプルデータに証券コードが英字を含む案件(`130A` heat-3 / `245B` dormant / `912C` arbSpread負)を追加。
+- `tests/derive.test.mjs`(新規)で heatLevel・effectiveStatus・各プレミアムの境界値を検証。
+  Node.js 22 のネイティブTS実行(`node --test`)を利用し、`src/lib/derive.ts` を直接importしてテストする。
