@@ -139,6 +139,13 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
           </div>
           <label class="filter-check"><input type="checkbox" id="ev-corrected" /> 訂正済み表示を付ける</label>
           <div class="form-row" id="ev-correction-row" hidden><label for="ev-correction-note">訂正内容の説明</label><input type="text" id="ev-correction-note" /></div>
+          <div id="ev-large-shareholding-row" hidden style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.6rem;">
+            <div class="form-row"><label for="ev-holder-name">保有者名 *</label><input type="text" id="ev-holder-name" /></div>
+            <div class="form-row"><label for="ev-ratio">保有割合(%) *</label><input type="number" id="ev-ratio" step="0.01" min="0" /></div>
+            <div class="form-row"><label for="ev-previous-ratio">前回割合(%)</label><input type="number" id="ev-previous-ratio" step="0.01" min="0" /></div>
+            <div class="form-row"><label for="ev-filing-date">提出日</label><input type="date" id="ev-filing-date" /></div>
+            <div class="form-row"><label for="ev-change-type">変化</label><select id="ev-change-type"><option value="new">新規</option><option value="increase">増加</option><option value="decrease">減少</option><option value="exit">退出</option></select></div>
+          </div>
           <label class="filter-check"><input type="checkbox" id="ev-visible" /> 公開する(チェックなし=非公開)</label>
           <div style="display:flex; gap:0.6rem; margin-top:0.6rem; align-items:center; flex-wrap:wrap;">
             <button type="button" class="btn btn--primary" id="ev-save">保存</button>
@@ -170,6 +177,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
               <select id="pr-type">
                 <option value="pre_report_close">観測報道前終値</option>
                 <option value="current_close">現在株価(参考値)</option>
+                <option value="daily_close">日次終値</option>
                 <option value="formal_offer_price">正式公開買付価格</option>
               </select>
             </div>
@@ -244,6 +252,8 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
 <script>
   import { getSupabase } from '../../lib/supabaseBrowser';
+  import { buildLargeShareholdingMetadata } from '../../lib/noteMetadataHelpers';
+  import { hasDailyCloseConflict } from '../../lib/priceHelpers';
 
   const { statusDefs, eventTypeDefs, commentTagDefs, commentTagOrder, commentStanceLabels } = (window as any).__ADMIN_DEFS__ as {
     statusDefs: Record<string, { label: string; mark: string; tone: string }>;
@@ -285,7 +295,9 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     updateCommentStancePreview();
   }
   function updateCommentTagVisibility() {
-    const show = $<HTMLSelectElement>('ev-type').value === 'company_comment';
+    const eventType = $<HTMLSelectElement>('ev-type').value;
+    const show = eventType === 'company_comment';
+    $('ev-large-shareholding-row').hidden = eventType !== 'large_shareholding_report';
     $('ev-comment-tags-row').hidden = !show;
     if (show && !$('ev-comment-tags').innerHTML) renderCommentTagUi();
   }
@@ -618,6 +630,11 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     const id = $<HTMLInputElement>('ev-id').value;
     const corrected = $<HTMLInputElement>('ev-corrected').checked;
     const visible = $<HTMLInputElement>('ev-visible').checked;
+    const metadataResult = buildEventMetadata(corrected);
+    if (!metadataResult.ok) {
+      $('ev-status').textContent = metadataResult.error;
+      return;
+    }
     const row: any = {
       case_id: $<HTMLSelectElement>('ev-case-select').value,
       event_type: $<HTMLSelectElement>('ev-type').value,
@@ -630,9 +647,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       is_visible: visible,
       comment_tags: $<HTMLSelectElement>('ev-type').value === 'company_comment' ? selectedCommentTags() : [],
       comment_stance: $<HTMLSelectElement>('ev-type').value === 'company_comment' ? classifyCommentStance(selectedCommentTags()) : null,
-      metadata: corrected
-        ? { corrected: true, correction_note: $<HTMLInputElement>('ev-correction-note').value.trim() }
-        : null,
+      metadata: metadataResult.metadata,
     };
     if (!row.case_id || !row.occurred_at || !row.title || !row.source_name) {
       $('ev-status').textContent = '案件・日時・見出し・媒体名は必須です';
@@ -648,6 +663,22 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     updateEventStatusSuggestion();
     if (!error) await loadEvents();
   });
+
+  function buildEventMetadata(corrected: boolean): { ok: true; metadata: any } | { ok: false; error: string } {
+    const eventType = $<HTMLSelectElement>('ev-type').value;
+    if (eventType === 'large_shareholding_report') {
+      return buildLargeShareholdingMetadata({
+        holderName: $<HTMLInputElement>('ev-holder-name').value,
+        ratio: $<HTMLInputElement>('ev-ratio').value,
+        previousRatio: $<HTMLInputElement>('ev-previous-ratio').value,
+        filingDate: $<HTMLInputElement>('ev-filing-date').value,
+        changeType: $<HTMLSelectElement>('ev-change-type').value,
+        corrected,
+        correctionNote: $<HTMLInputElement>('ev-correction-note').value,
+      });
+    }
+    return { ok: true, metadata: corrected ? { corrected: true, correction_note: $<HTMLInputElement>('ev-correction-note').value.trim() } : null };
+  }
 
   $('ev-clear')?.addEventListener('click', () => {
     $<HTMLInputElement>('ev-id').value = '';
@@ -682,6 +713,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     pre_report_close: '観測報道前終値',
     current_close: '現在株価(参考値)',
     formal_offer_price: '正式公開買付価格',
+    daily_close: '日次終値',
   };
 
   function renderPriceTable() {
@@ -712,6 +744,22 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     if (!row.case_id || !row.price || !row.price_date) {
       $('pr-status').textContent = '案件・価格・基準日は必須です';
       return;
+    }
+    if (row.price_type === 'daily_close') {
+      const { data: duplicateRows, error: duplicateError } = await supabase!
+        .from('price_snapshots')
+        .select('id')
+        .eq('case_id', row.case_id)
+        .eq('price_type', 'daily_close')
+        .eq('price_date', row.price_date);
+      if (duplicateError) {
+        $('pr-status').textContent = `重複確認エラー: ${duplicateError.message}`;
+        return;
+      }
+      if (hasDailyCloseConflict(duplicateRows ?? [], id || null)) {
+        $('pr-status').textContent = 'この案件の同じ基準日の日次終値は既に登録されています。既存行を編集してください。';
+        return;
+      }
     }
     const q = id
       ? supabase!.from('price_snapshots').update(row).eq('id', id)
@@ -778,6 +826,11 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       $<HTMLInputElement>('ev-corrected').checked = corrected;
       $('ev-correction-row').hidden = !corrected;
       $<HTMLInputElement>('ev-correction-note').value = x.metadata?.correction_note ?? '';
+      $<HTMLInputElement>('ev-holder-name').value = x.metadata?.holder_name ?? '';
+      $<HTMLInputElement>('ev-ratio').value = x.metadata?.ratio ?? '';
+      $<HTMLInputElement>('ev-previous-ratio').value = x.metadata?.previous_ratio ?? '';
+      $<HTMLInputElement>('ev-filing-date').value = x.metadata?.filing_date ?? '';
+      $<HTMLSelectElement>('ev-change-type').value = x.metadata?.change_type ?? 'new';
       return;
     }
 

@@ -416,7 +416,9 @@
     "sort_order": 0,
     "is_visible": true,
     "metadata": null,
-    "comment_tags": ["consideration_acknowledged"],
+    "comment_tags": [
+      "consideration_acknowledged"
+    ],
     "comment_stance": "acknowledged"
   },
   {
@@ -435,5 +437,28 @@
     "metadata": null,
     "comment_tags": [],
     "comment_stance": null
+  },
+  {
+    "id": "c0000001-0000-4000-8000-000000000130",
+    "case_id": "b0000001-0000-4000-8000-000000000008",
+    "event_type": "large_shareholding_report",
+    "occurred_at": "2026-07-02T15:30:00+09:00",
+    "title": "サンプル投資組合が大量保有報告を提出",
+    "summary": "サンプル投資組合による5%超の保有が確認されたという想定のデモイベント。",
+    "source_name": "EDINETサンプル",
+    "source_url": "https://example.com/large-shareholding",
+    "site_published_at": "2026-07-02T16:00:00+09:00",
+    "updated_at": "2026-07-02T16:00:00+09:00",
+    "sort_order": 0,
+    "is_visible": true,
+    "comment_stance": null,
+    "comment_tags": [],
+    "metadata": {
+      "holder_name": "サンプル投資組合",
+      "ratio": 5.12,
+      "previous_ratio": null,
+      "filing_date": "2026-07-02",
+      "change_type": "new"
+    }
   }
 ]

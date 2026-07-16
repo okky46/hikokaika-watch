@@ -15,11 +15,17 @@ import { classifyCommentStance, latestCommentStanceFromEvent } from './commentTa
 import { resolvePublicDataEnvironment } from './buildEnv';
 import { hasFormalAnnouncement } from './caseFilters';
 import { deriveCaseFields, firstVisibleReportOccurredAt } from './derive';
+import { renderSparkline } from './sparkline';
+import { sanitizeLargeShareholdingMetadata } from './noteMetadataHelpers';
+import { buildPublicCompanies, isPublishableCompany } from './publicCompanyHelpers';
+import { normalizeDailyCloses } from './priceHelpers';
+import type { SparklineMarker } from './sparkline';
 import type {
   CaseDetail,
   CaseEventView,
   CaseListItem,
   PricePoint,
+  PublicCompany,
   PublicData,
   RawCase,
   RawCompany,
@@ -123,6 +129,10 @@ function assemble(raw: RawData): PublicData {
       console.warn(`[publicData] 案件 ${c.slug} の会社(${c.company_id})が見つからないためスキップ`);
       continue;
     }
+    if (!isPublishableCompany(company)) {
+      console.warn(`[publicData] 案件 ${c.slug} の会社(${c.company_id})が非アクティブのため公開データからスキップ`);
+      continue;
+    }
 
     const events = (eventsByCase.get(c.id) ?? [])
       .slice()
@@ -134,7 +144,10 @@ function assemble(raw: RawData): PublicData {
 
     const prices = pricesByCase.get(c.id) ?? [];
     const preReportClose = latestPrice(prices, 'pre_report_close');
-    const currentClose = latestPrice(prices, 'current_close');
+    // 現在株価は、その案件に daily_close が1件以上あれば最新の daily_close を使い、
+    // 無ければ従来どおり手動登録の current_close を使う。
+    const dailyCloses = normalizeDailyCloses(prices);
+    const currentClose = dailyCloses.at(-1) ?? latestPrice(prices, 'current_close');
     const formalOfferPrice = latestPrice(prices, 'formal_offer_price');
 
     const firstReportedAt = firstVisibleReportOccurredAt(events);
@@ -173,6 +186,16 @@ function assemble(raw: RawData): PublicData {
       now,
     });
 
+    const sparklineMarkers: SparklineMarker[] = events.flatMap((e): SparklineMarker[] => {
+      if (e.event_type === 'observation_report' || e.event_type === 'follow_up_report') return [{ date: e.occurred_at, kind: 'report' as const }];
+      if (e.event_type === 'company_comment' || e.event_type === 'timely_disclosure') return [{ date: e.occurred_at, kind: 'comment' as const }];
+      if (e.event_type === 'formal_announcement') return [{ date: e.occurred_at, kind: 'announce' as const }];
+      return [];
+    });
+    const sparklineSvg = dailyCloses.length >= 2
+      ? renderSparkline({ points: dailyCloses.map((p) => ({ date: p.priceDate, price: p.price })), markers: sparklineMarkers, offerPrice: formalOfferPrice?.price, width: 640, height: 120 })
+      : null;
+
     const eventViews: CaseEventView[] = events.map((e) => ({
       id: e.id,
       eventType: e.event_type,
@@ -187,6 +210,7 @@ function assemble(raw: RawData): PublicData {
       correctionNote: e.metadata?.correction_note ?? null,
       commentStance: e.comment_stance ?? null,
       commentTags: e.comment_tags ?? [],
+      largeShareholding: buildLargeShareholdingView(e),
     }));
 
     details.push({
@@ -209,6 +233,8 @@ function assemble(raw: RawData): PublicData {
       preReportClose,
       currentClose,
       formalOfferPrice,
+      dailyCloses,
+      sparklineSvg,
       latestCommentStance,
       ...derived,
       events: eventViews,
@@ -222,11 +248,14 @@ function assemble(raw: RawData): PublicData {
 
   const cases: CaseListItem[] = details.map(({ events: _e, industry: _i, sitePublishedAt: _s, ...item }) => item);
 
+  const companies: PublicCompany[] = buildPublicCompanies(raw.companies, cases);
+
   const allSourceNames = [...new Set(details.flatMap((d) => d.sourceNames))].sort((a, b) =>
     a.localeCompare(b, 'ja'),
   );
 
   return {
+    companies,
     cases,
     details,
     allSourceNames,
@@ -255,6 +284,13 @@ function maxIso(isos: (string | null)[]): string {
   }
   return max || new Date(0).toISOString();
 }
+
+
+
+function buildLargeShareholdingView(e: RawEvent): CaseEventView['largeShareholding'] {
+  return sanitizeLargeShareholdingMetadata(e.event_type, e.metadata);
+}
+
 
 function groupBy<T>(items: T[], keyFn: (item: T) => string): Map<string, T[]> {
   const map = new Map<string, T[]>();

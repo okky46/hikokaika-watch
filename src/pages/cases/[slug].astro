@@ -44,11 +44,11 @@ const elapsed = daysBetween(c.firstReportedAt, c.lastUpdatedAt);
 
   <header class="case-head">
     <p class="case-head__company">
-      <span class="mono">{c.securityCode}</span>
+      <a class="mono" href={`/companies/${c.securityCode}/`}>{c.securityCode}</a>
       {c.market && <span> / {c.market}</span>}
       {c.industry && <span> / {c.industry}</span>}
     </p>
-    <h1>{c.companyName} — {c.title}</h1>
+    <h1><a href={`/companies/${c.securityCode}/`}>{c.companyName}</a> — {c.title}</h1>
     <div style="display:flex; align-items:center; gap:0.7rem; flex-wrap:wrap;">
       <StatusBadge
         status={c.effectiveStatus}
@@ -106,6 +106,7 @@ const elapsed = daysBetween(c.firstReportedAt, c.lastUpdatedAt);
         </div>
       )}
     </div>
+    {c.sparklineSvg && <div class="sparkline-detail" set:html={c.sparklineSvg} />}
     <p class="small muted" style="margin-top:0.4rem">
       ※ 株価は管理者が公開情報をもとに手動登録した参考値であり、リアルタイム情報ではありません。
     </p>
@@ -129,6 +130,9 @@ const elapsed = daysBetween(c.firstReportedAt, c.lastUpdatedAt);
               </div>
               <h3 class="event-card__title">{e.title}</h3>
               {e.summary && <p class="event-card__summary">{e.summary}</p>}
+              {e.largeShareholding && (
+                <p class="event-card__summary"><strong>{e.largeShareholding.holderName}</strong> — <strong>保有 {e.largeShareholding.ratio.toFixed(2)}%</strong>{e.largeShareholding.previousRatio !== null && ` (前回 ${e.largeShareholding.previousRatio.toFixed(2)}%)`}</p>
+              )}
               {e.corrected && e.correctionNote && (
                 <p class="event-card__summary" style="color:var(--tone-stop-fg)">訂正: {e.correctionNote}</p>
               )}
@@ -157,7 +161,13 @@ const elapsed = daysBetween(c.firstReportedAt, c.lastUpdatedAt);
       <p class="small muted" style="margin-bottom:0.5rem">
         このメモはあなただけが閲覧できる私的な整理用メモです。他のユーザーや管理者向けに公開されることはありません。
       </p>
-      <textarea id="note-body" maxlength="1000" placeholder="この案件についての自分用メモ(本人のみ閲覧可)"></textarea>
+      <div class="note-grid">
+        <label>想定シナリオ<input type="text" id="note-scenario" /></label>
+        <label>目標価格<input type="text" id="note-target-price" /></label>
+        <label>撤退条件<input type="text" id="note-exit-condition" /></label>
+        <label>次のチェック日<input type="date" id="note-next-check-date" /></label>
+        <label style="grid-column:1/-1">自由メモ<textarea id="note-body" maxlength="1000" placeholder="この案件についての自分用メモ(本人のみ閲覧可)"></textarea></label>
+      </div>
       <div style="display:flex; gap:0.6rem; align-items:center; margin-top:0.5rem;">
         <button type="button" class="btn btn--primary" id="note-save">メモを保存</button>
         <span class="small muted" id="note-count">0 / 1,000文字</span><span class="small muted" id="note-status" aria-live="polite"></span>
@@ -180,18 +190,44 @@ const elapsed = daysBetween(c.firstReportedAt, c.lastUpdatedAt);
 
 <script>
   import { getSupabase } from '../../lib/supabaseBrowser';
+  import { chooseNoteSaveBody, parseStructuredNote } from '../../lib/noteMetadataHelpers';
+  import type { LoadedNoteFormat, SaveNoteResult, StructuredNotePayload } from '../../lib/noteMetadataHelpers';
 
   const supabase = getSupabase();
   const favBtn = document.getElementById('fav-btn') as HTMLButtonElement;
   const intensitySel = document.getElementById('fav-intensity') as HTMLSelectElement;
   const noteSection = document.getElementById('note-section') as HTMLElement;
   const noteBody = document.getElementById('note-body') as HTMLTextAreaElement;
+  const noteScenario = document.getElementById('note-scenario') as HTMLInputElement;
+  const noteTargetPrice = document.getElementById('note-target-price') as HTMLInputElement;
+  const noteExitCondition = document.getElementById('note-exit-condition') as HTMLInputElement;
+  const noteNextCheckDate = document.getElementById('note-next-check-date') as HTMLInputElement;
   const noteSave = document.getElementById('note-save') as HTMLButtonElement;
   const noteStatus = document.getElementById('note-status') as HTMLElement;
   const caseId = favBtn?.dataset.caseId ?? '';
 
   let userId: string | null = null;
   let isFavorite = false;
+  let loadedNoteFormat: LoadedNoteFormat = 'v1';
+
+  function fillNote(body: string) {
+    const parsed = parseStructuredNote(body);
+    const n = parsed.note;
+    loadedNoteFormat = parsed.format;
+    noteScenario.value = n.scenario;
+    noteTargetPrice.value = n.targetPrice;
+    noteExitCondition.value = n.exitCondition;
+    noteNextCheckDate.value = n.nextCheckDate;
+    noteBody.value = n.freeText;
+  }
+
+  function currentNotePayload(): StructuredNotePayload {
+    return { v: 1, scenario: noteScenario.value, targetPrice: noteTargetPrice.value, exitCondition: noteExitCondition.value, nextCheckDate: noteNextCheckDate.value, freeText: noteBody.value };
+  }
+
+  function buildSaveNoteBody(): SaveNoteResult {
+    return chooseNoteSaveBody(currentNotePayload(), loadedNoteFormat);
+  }
 
   function renderFav() {
     favBtn.textContent = isFavorite ? '★ お気に入り登録済み' : '☆ お気に入りに登録';
@@ -225,7 +261,7 @@ const elapsed = daysBetween(c.firstReportedAt, c.lastUpdatedAt);
       isFavorite = true;
       intensitySel.value = String(fav.intensity);
     }
-    if (note) noteBody.value = note.body;
+    if (note) fillNote(note.body);
     renderFav();
   }
 
@@ -260,17 +296,30 @@ const elapsed = daysBetween(c.firstReportedAt, c.lastUpdatedAt);
 
   noteSave?.addEventListener('click', async () => {
     if (!supabase || !userId) return;
-    if (noteBody.value.length > 1000) { noteStatus.textContent = '1,000文字を超えるメモは保存できません'; return; }
+    const saveBody = buildSaveNoteBody();
+    if (!saveBody.ok) { noteStatus.textContent = saveBody.message; updateNoteCount(); return; }
+    const body = saveBody.body;
     noteSave.disabled = true;
     noteStatus.textContent = '保存中…';
     const { error } = await supabase
       .from('user_case_notes')
-      .upsert({ user_id: userId, case_id: caseId, body: noteBody.value });
+      .upsert({ user_id: userId, case_id: caseId, body });
+    if (!error) loadedNoteFormat = saveBody.format;
     noteStatus.textContent = error ? `保存に失敗しました: ${error.message}` : '保存しました';
     noteSave.disabled = false;
+    updateNoteCount();
   });
 
-  const updateNoteCount = () => { const el = document.getElementById('note-count'); if (el) el.textContent = `${noteBody.value.length} / 1,000文字`; };
+  const updateNoteCount = () => {
+    const el = document.getElementById('note-count');
+    if (!el) return;
+    const saveBody = buildSaveNoteBody();
+    el.textContent = `${saveBody.length} / 1,000文字${saveBody.ok ? '' : '（超過）'}`;
+  };
   noteBody?.addEventListener('input', updateNoteCount);
+  noteScenario?.addEventListener('input', updateNoteCount);
+  noteTargetPrice?.addEventListener('input', updateNoteCount);
+  noteExitCondition?.addEventListener('input', updateNoteCount);
+  noteNextCheckDate?.addEventListener('input', updateNoteCount);
   init().then(updateNoteCount);
 </script>

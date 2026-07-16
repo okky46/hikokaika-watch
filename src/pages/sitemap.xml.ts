@@ -13,9 +13,15 @@ export const GET: APIRoute = async ({ site }) => {
     lastmod: d.lastUpdatedAt,
   }));
 
+  const companyPaths = data.companies.map((c) => ({ path: `/companies/${c.securityCode}/`, lastmod: c.lastUpdatedAt ?? data.generatedAt }));
+
   const urls = [
     ...staticPaths.map((p) => `  <url><loc>${base}${p}</loc></url>`),
     ...casePaths.map(
+      (c) =>
+        `  <url><loc>${base}${c.path}</loc><lastmod>${new Date(c.lastmod).toISOString()}</lastmod></url>`,
+    ),
+    ...companyPaths.map(
       (c) =>
         `  <url><loc>${base}${c.path}</loc><lastmod>${new Date(c.lastmod).toISOString()}</lastmod></url>`,
     ),

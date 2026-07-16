@@ -102,6 +102,7 @@ export const EVENT_TYPE: Record<EventType, EventTypeDef> = {
   consideration_ended: { label: '検討終了', mark: '□', tone: 'pause' },
   withdrawal: { label: '撤回・不成立', mark: '✕', tone: 'stop' },
   correction: { label: '訂正', mark: '!', tone: 'stop' },
+  large_shareholding_report: { label: '大量保有報告', mark: '▲', tone: 'watch' },
   other: { label: 'その他', mark: '・', tone: 'pause' },
 };
 

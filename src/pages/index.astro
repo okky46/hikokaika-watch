@@ -158,6 +158,7 @@ const description =
             <th scope="col">最終更新</th>
             <th scope="col" class="num">報道前株価</th>
             <th scope="col" class="num">現在株価</th>
+            <th scope="col">推移</th>
             <th scope="col"><span class="visually-hidden">お気に入り</span>★</th>
           </tr>
         </thead>
@@ -210,6 +211,7 @@ const description =
               <td class="cell-updated nowrap" data-label="最終更新">{formatDate(c.lastUpdatedAt)}</td>
               <td class="num" data-label="報道前株価">{formatPrice(c.preReportClose?.price)}</td>
               <td class="num" data-label="現在株価">{formatPrice(c.currentClose?.price)}</td>
+              <td class="spark-cell" data-label="推移" set:html={c.dailyCloses.length >= 2 ? c.sparklineSvg?.replace('width="640" height="120"', 'width="100" height="24"').replace('viewBox="0 0 640 120"', 'viewBox="0 0 640 120"') : ''} />
               <td class="fav-cell cell-fav">
                 <button
                   type="button"
@@ -244,6 +246,7 @@ const description =
             <th scope="col" class="num">報道前株価</th>
             <th scope="col" class="num">現在株価</th>
             <th scope="col" class="num">正式買付価格</th>
+            <th scope="col">推移</th>
             <th scope="col"><span class="visually-hidden">お気に入り</span>★</th>
           </tr>
         </thead>
@@ -281,6 +284,7 @@ const description =
                 <td class="num" data-label="報道前株価">{formatPrice(c.preReportClose?.price)}</td>
                 <td class="num" data-label="現在株価">{formatPrice(c.currentClose?.price)}</td>
                 <td class="num" data-label="正式買付価格">{formatPrice(c.formalOfferPrice?.price)}</td>
+                <td class="spark-cell" data-label="推移" set:html={c.dailyCloses.length >= 2 ? c.sparklineSvg?.replace('width="640" height="120"', 'width="100" height="24"') : ''} />
                 <td class="fav-cell cell-fav">
                   <button
                     type="button"

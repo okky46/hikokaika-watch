@@ -25,6 +25,7 @@ export type EventType =
   | 'consideration_ended'
   | 'withdrawal'
   | 'correction'
+  | 'large_shareholding_report'
   | 'other';
 
 export type CommentStance = 'acknowledged' | 'neutral' | 'denied' | 'declined' | 'unclear' | 'needs_review';
@@ -40,7 +41,7 @@ export type CommentTag =
   | 'comment_declined'
   | 'other';
 
-export type PriceType = 'pre_report_close' | 'current_close' | 'formal_offer_price';
+export type PriceType = 'pre_report_close' | 'current_close' | 'formal_offer_price' | 'daily_close';
 
 export interface RawCompany {
   id: string;
@@ -82,7 +83,7 @@ export interface RawEvent {
   is_visible: boolean;
   comment_stance: CommentStance | null;
   comment_tags: CommentTag[];
-  metadata: { corrected?: boolean; correction_note?: string } | null;
+  metadata: { corrected?: boolean; correction_note?: string; holder_name?: string; ratio?: number; previous_ratio?: number | null; filing_date?: string; change_type?: 'new' | 'increase' | 'decrease' | 'exit' } | null;
 }
 
 export interface RawPrice {
@@ -123,6 +124,8 @@ export interface CaseListItem {
   preReportClose: PricePoint | null;
   currentClose: PricePoint | null;
   formalOfferPrice: PricePoint | null;
+  dailyCloses: PricePoint[];
+  sparklineSvg: string | null;
   /** 最新の会社コメント系イベント(company_comment / timely_disclosure)の comment_stance。無ければ null */
   latestCommentStance: CommentStance | null;
   /** 第N報カウント(observation_report + follow_up_report) */
@@ -159,6 +162,7 @@ export interface CaseEventView {
   correctionNote: string | null;
   commentStance: CommentStance | null;
   commentTags: CommentTag[];
+  largeShareholding: { holderName: string; ratio: number; previousRatio: number | null; filingDate: string | null; changeType: 'new' | 'increase' | 'decrease' | 'exit' | null } | null;
 }
 
 /** 案件詳細ページ用のビューモデル */
@@ -168,7 +172,18 @@ export interface CaseDetail extends CaseListItem {
   events: CaseEventView[];
 }
 
+export interface PublicCompany {
+  id: string;
+  securityCode: string;
+  nameJa: string;
+  market: string | null;
+  industry: string | null;
+  cases: CaseListItem[];
+  lastUpdatedAt: string | null;
+}
+
 export interface PublicData {
+  companies: PublicCompany[];
   cases: CaseListItem[];
   details: CaseDetail[];
   /** 絞り込み用の媒体名一覧(登場順ではなく五十音等でソート済み) */
