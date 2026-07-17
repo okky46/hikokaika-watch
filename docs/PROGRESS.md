@@ -116,5 +116,5 @@ DB変更なし。GitHub Actions から平日16:30 JST に公開中の進行案�
 - `scripts/fetch_prices/` に、取得元を `sources.py` の `fetch_close()` へ分離したPythonバッチを追加。yfinanceで `security_code` を常に文字列として `f"{security_code}.T"` に連結し、調整前終値を `Decimal` の小数2桁で扱う。
 - 対象は可視の `rumored` / `commented` / `denied` / `announced`。JST日付で日次終値を取得し、価格がない休場日・取得失敗はログしてスキップする。
 - `price_snapshots` に一意制約がない既存設計に揃え、`case_id × daily_close × price_date` をselectして既存行はupdate、なければinsertする。管理画面の重複防止と公開読み込み時の重複正規化を維持し、migrationは追加していない。
-- `.github/workflows/fetch-prices.yml` にcronと手動実行を追加。insert/updateが1件以上の場合だけDeploy Hookを呼ぶ。dry-runはDB書き込み・Deploy Hookを行わず、接続情報なしでは架空の英字入りコード`130A`を使うローカル検証モードになる。
+- `.github/workflows/fetch-prices.yml` にcronと手動実行を追加し、固定concurrency groupで重複実行は後続を待機させる。insert/updateが1件以上の場合だけDeploy Hookを呼ぶ。dry-runはDB書き込み・Deploy Hookを行わず、接続情報なしでは英字入り証券コード`130A`を使うローカル検証モードになる。
 - `docs/SETUP.md` と `.env.example` に必要なGitHub Secrets、yfinanceの利用条件、ローカルdry-run手順を追記。

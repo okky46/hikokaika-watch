@@ -132,7 +132,7 @@ Supabase 連携込みで確認する場合は `.env.example` を `.env` にコ�
 
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `CLOUDFLARE_DEPLOY_HOOK_URL`
+- `CLOUDFLARE_DEPLOY_HOOK_URL`（非dry-runでは必須。insert/updateがあれば公開サイトを再ビルドする）
 
 取得元は [yfinance](https://github.com/ranaroussi/yfinance) です。Yahoo Finance の非公式
 ライブラリのため、利用時は同プロジェクトの利用条件および Yahoo の利用規約を確認してください。
@@ -141,7 +141,7 @@ Supabase 連携込みで確認する場合は `.env.example` を `.env` にコ�
 `scripts/fetch_prices/sources.py` の `fetch_close` 関数だけを差し替えて行えます。
 
 ローカルで処理経路だけを確認する場合は、依存関係やSupabase接続情報なしでも次を実行できます。
-組み込みの架空コード `130A` を文字列ティッカーへ変換して取得を試み、失敗時は正常にスキップします。
+組み込みの英字入り証券コード `130A` を文字列ティッカーへ変換して取得を試みます。取得に成功した場合は予定価格を表示し、依存関係やネットワークの都合で取得できない場合は正常にスキップします。
 
 ```bash
 python scripts/fetch_prices/fetch_prices.py --dry-run

@@ -87,7 +87,7 @@ def write_daily_close(
         "source_name": SOURCE_NAME,
     }
     if rows:
-        # PATCHing the same predicate also repairs any legacy duplicate rows.
+        # PATCHing the predicate updates every matching existing row; it does not delete duplicates.
         updated = requests.patch(
             endpoint,
             params={key: value for key, value in params.items() if key != "select"},
@@ -113,18 +113,14 @@ def write_daily_close(
     return "inserted"
 
 
-def trigger_deploy_hook() -> None:
-    hook_url = os.getenv("CLOUDFLARE_DEPLOY_HOOK_URL")
-    if not hook_url:
-        print("[price-fetch] deploy hook is not configured; skipping rebuild trigger")
-        return
+def trigger_deploy_hook(hook_url: str) -> None:
     response = requests.post(hook_url, timeout=20)
     response.raise_for_status()
     print("[price-fetch] deploy hook triggered")
 
 
 def local_dry_run_targets() -> list[TargetCase]:
-    # This intentionally non-existent code proves the string ticker path for 130A.
+    # Use an alphanumeric security code to verify that the ticker stays a string.
     return [TargetCase(case_id="dry-run-case-130a", security_code="130A")]
 
 
@@ -134,6 +130,11 @@ def main() -> int:
     args = parser.parse_args()
     price_date = jst_today()
     base_url, service_role_key = get_config()
+    deploy_hook_url = os.getenv("CLOUDFLARE_DEPLOY_HOOK_URL")
+
+    if not args.dry_run and not deploy_hook_url:
+        print("[price-fetch] CLOUDFLARE_DEPLOY_HOOK_URL is required", file=sys.stderr)
+        return 2
 
     if args.dry_run and (not base_url or not service_role_key):
         print("[price-fetch] dry-run local validation mode: Supabase credentials are absent")
@@ -156,6 +157,7 @@ def main() -> int:
 
     print(f"[price-fetch] JST date={price_date} targets={len(targets)} dry_run={args.dry_run}")
     writes = 0
+    write_failures = 0
     for index, target in enumerate(targets):
         print(f"[price-fetch] processing case={target.case_id} security_code={target.security_code}")
         close = fetch_close(target.security_code, price_date)
@@ -169,20 +171,34 @@ def main() -> int:
                     writes += 1
                     print(f"[price-fetch] {target.security_code}: {action}")
                 except requests.RequestException as error:
-                    print(f"[price-fetch] {target.security_code}: write failed ({type(error).__name__})")
+                    write_failures += 1
+                    print(
+                        f"[price-fetch] {target.security_code}: write failed ({type(error).__name__})",
+                        file=sys.stderr,
+                    )
         if index < len(targets) - 1:
             sleep(0.25)
 
     if args.dry_run:
         print("[price-fetch] dry-run: Supabase writes and deploy hook skipped")
-    elif writes:
+        return 0
+
+    deploy_hook_failures = 0
+    if writes:
         try:
-            trigger_deploy_hook()
+            trigger_deploy_hook(deploy_hook_url)
         except requests.RequestException as error:
-            print(f"[price-fetch] deploy hook failed ({type(error).__name__})")
+            deploy_hook_failures += 1
+            print(f"[price-fetch] deploy hook failed ({type(error).__name__})", file=sys.stderr)
     else:
         print("[price-fetch] no writes; deploy hook skipped")
-    return 0
+
+    print(
+        "[price-fetch] summary "
+        f"writes={writes} write_failures={write_failures} "
+        f"deploy_hook_failures={deploy_hook_failures}"
+    )
+    return 1 if write_failures or deploy_hook_failures else 0
 
 
 if __name__ == "__main__":
