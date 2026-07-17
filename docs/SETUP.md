@@ -124,6 +124,29 @@ npm run dev   # http://localhost:4321 (サンプルデータで動作)
 
 Supabase 連携込みで確認する場合は `.env.example` を `.env` にコピーして値を設定する。
 
+## 10. 日次終値取得(GitHub Actions・フェーズ4)
+
+`.github/workflows/fetch-prices.yml` は平日16:30 JST（`30 7 * * 1-5` UTC）に、公開中かつ
+`rumored` / `commented` / `denied` / `announced` の案件の終値を取得します。GitHub の
+**Settings → Secrets and variables → Actions** に以下を Repository secrets として設定してください。
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `CLOUDFLARE_DEPLOY_HOOK_URL`
+
+取得元は [yfinance](https://github.com/ranaroussi/yfinance) です。Yahoo Finance の非公式
+ライブラリのため、利用時は同プロジェクトの利用条件および Yahoo の利用規約を確認してください。
+東証銘柄は証券コードを文字列のまま `f"{security_code}.T"`（例: `130A.T`）へ連結します。
+`auto_adjust=False` を指定し、調整後価格ではなく生の終値を保存します。取得元の変更は
+`scripts/fetch_prices/sources.py` の `fetch_close` 関数だけを差し替えて行えます。
+
+ローカルで処理経路だけを確認する場合は、依存関係やSupabase接続情報なしでも次を実行できます。
+組み込みの架空コード `130A` を文字列ティッカーへ変換して取得を試み、失敗時は正常にスキップします。
+
+```bash
+python scripts/fetch_prices/fetch_prices.py --dry-run
+```
+
 ## DATA_SOURCE と本番フェイルクローズ
 
 ビルド時の環境判定は `DEPLOY_ENV`、データ取得元は `DATA_SOURCE` で明示します。`SITE_URL` は canonical / OGP / sitemap 用であり、環境判定には使用しません。
@@ -226,5 +249,8 @@ $$;
 | `CF_ANALYTICS_API_TOKEN` | サーバー側 | Pages Function が Cloudflare GraphQL Analytics API を呼ぶためのトークン。 |
 | `CF_ZONE_TAG` | サーバー側 | Analytics 対象のCloudflare zoneTag。 |
 | `CF_ACCOUNT_ID` | サーバー側 | 必要に応じて運用メモ・将来拡張で利用するアカウントID。 |
+| `SUPABASE_URL` | GitHub Secrets | 日次終値取得ActionがPostgRESTへ接続するSupabase URL。 |
+| `SUPABASE_SERVICE_ROLE_KEY` | GitHub Secrets | 日次終値取得Actionの書き込み専用Service Role Key。ログに出力しない。 |
+| `CLOUDFLARE_DEPLOY_HOOK_URL` | GitHub Secrets | 日次終値のinsert/update時だけ呼ぶCloudflare Pages Deploy Hook URL。 |
 
 Pages Function は Cloudflare Access で保護された `/admin/*` と `/api/analytics` の利用を前提にします。UI上で管理画面からだけ呼び出してもAPIの認可にはならないため、両方のAccess保護を外した状態で本番運用しないでください。
