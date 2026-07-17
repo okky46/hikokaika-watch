@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { describe, it, before } from 'node:test';
 import ts from 'typescript';
 
@@ -411,5 +412,158 @@ describe('daily_close normalization behavior', () => {
     assert.equal(priceHelpers.hasDailyCloseConflict([{ id: 'same-row' }], 'same-row'), false);
     assert.equal(priceHelpers.hasDailyCloseConflict([{ id: 'other-row' }], 'same-row'), true);
     assert.equal(priceHelpers.hasDailyCloseConflict([{ id: 'existing-row' }], null), true);
+  });
+});
+
+describe('phase 3 analytics and advertising regressions', () => {
+  it('uses Cloudflare adaptive Time windows and real visit metrics', () => {
+    const source = fs.readFileSync('functions/api/analytics.ts', 'utf8');
+    assert.match(source, /\$since7: Time!/);
+    assert.match(source, /datetime_geq: \$since7, datetime_lt: \$until, requestSource: "eyeball"/);
+    assert.match(source, /datetime_geq: \$since30, datetime_lt: \$until, requestSource: "eyeball"/);
+    assert.match(source, /sum \{ pageViews visits \}/);
+    assert.doesNotMatch(source, /date_geq|date_leq|sum\?\.requests/);
+    assert.match(source, /hours \* 60 \* 60 \* 1000/);
+    assert.match(source, /168/);
+    assert.match(source, /720/);
+  });
+
+  it('keeps upstream analytics failures private and detects malformed data', () => {
+    const source = fs.readFileSync('functions/api/analytics.ts', 'utf8');
+    assert.match(source, /await response\.json\(\)/);
+    assert.match(source, /Cloudflare Analytics returned non-JSON/);
+    assert.match(source, /Cloudflare Analytics returned no zone/);
+    assert.match(source, /PUBLIC_UPSTREAM_ERROR/);
+    assert.doesNotMatch(source, /details: json/);
+  });
+
+  it('returns safe statuses for mocked Cloudflare responses', async () => {
+    const source = fs.readFileSync('functions/api/analytics.ts', 'utf8');
+    const { outputText } = ts.transpileModule(source, {
+      compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 },
+    });
+    const file = path.join(os.tmpdir(), `analytics-${process.pid}-${Date.now()}.mjs`);
+    fs.writeFileSync(file, outputText);
+    const { queryCloudflare } = await import(file);
+    const originalFetch = globalThis.fetch;
+    const env = { CF_ANALYTICS_API_TOKEN: 'secret-token', CF_ZONE_TAG: 'secret-zone' };
+    try {
+      let submitted;
+      globalThis.fetch = async (_url, init) => {
+        submitted = JSON.parse(init.body);
+        return new Response(JSON.stringify({ data: { viewer: { zones: [{
+          last7: [{ sum: { pageViews: 7, visits: 3 } }],
+          last30: [{ sum: { pageViews: 30, visits: 11 } }],
+          topUrls: [{ dimensions: { clientRequestPath: '/cases/example/' }, sum: { pageViews: 5 } }],
+        }] } } }));
+      };
+      const success = await queryCloudflare(env);
+      assert.equal(success.status, 200);
+      assert.deepEqual(success.body.summary.last7Days, { pageViews: 7, visits: 3 });
+      assert.match(submitted.query, /datetime_geq: \$since7, datetime_lt: \$until/);
+      assert.ok(Date.parse(submitted.variables.until) - Date.parse(submitted.variables.since7) >= 168 * 60 * 60 * 1000 - 5);
+
+      for (const response of [
+        new Response('upstream failure', { status: 500 }),
+        new Response('<html>failure</html>', { status: 502, headers: { 'content-type': 'text/html' } }),
+        new Response(JSON.stringify({ errors: [{ message: 'private detail' }] })),
+        new Response(JSON.stringify({ data: { viewer: { zones: [] } } })),
+      ]) {
+        globalThis.fetch = async () => response;
+        const result = await queryCloudflare(env);
+        assert.equal(result.status, 502);
+        assert.equal(result.body.error, 'アクセス統計を取得できませんでした。設定と権限を確認してください。');
+        assert.doesNotMatch(JSON.stringify(result.body), /private detail|upstream failure/);
+      }
+      const missing = await queryCloudflare({});
+      assert.equal(missing.status, 503);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('separates ad placement labels from configured unit IDs and loads once in Base', () => {
+    const slot = fs.readFileSync('src/components/AdSlot.astro', 'utf8');
+    const base = fs.readFileSync('src/layouts/Base.astro', 'utf8');
+    const casePage = fs.readFileSync('src/pages/cases/[slug].astro', 'utf8');
+    assert.match(slot, /data-ad-placement=\{placement\}/);
+    assert.match(slot, /data-ad-slot=\{slotId\}/);
+    assert.doesNotMatch(slot, /pagead2\.googlesyndication\.com/);
+    assert.match(base, /pagead2\.googlesyndication\.com/);
+    assert.match(casePage, /timelineAdSlots\[slotNumber - 1\]/);
+    assert.match(casePage, /&& timelineAdSlots\[slotNumber - 1\]/);
+  });
+
+  it('emits the timeline loader only when generated HTML contains an ad row', () => {
+    const eventsPath = 'data/sample/case_events.json';
+    const originalEvents = fs.readFileSync(eventsPath, 'utf8');
+    const events = JSON.parse(originalEvents);
+    const sixEventCaseId = 'b0000001-0000-4000-8000-000000000004';
+    const sourceEvents = events.filter((event) => event.case_id === sixEventCaseId);
+    assert.equal(sourceEvents.length, 3, 'fixture case must begin with three events');
+
+    for (let index = 0; index < 3; index += 1) {
+      events.push({
+        ...sourceEvents[index],
+        id: `c0000001-0000-4000-8000-0000000004${index + 4}0`,
+        title: `${sourceEvents[index].title}（追加${index + 1}）`,
+        sort_order: 10 + index,
+      });
+    }
+
+    const build = (adEnv) => {
+      const npmExecPath = process.env.npm_execpath;
+      assert.ok(
+        npmExecPath,
+        'npm_execpath is required to run the nested build',
+      );
+      const result = spawnSync(process.execPath, [npmExecPath, 'run', 'build'], {
+        cwd: process.cwd(),
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          DEPLOY_ENV: 'test',
+          DATA_SOURCE: 'sample',
+          PUBLIC_ADSENSE_CLIENT: '',
+          PUBLIC_ADSENSE_SLOT_HOME: '',
+          PUBLIC_ADSENSE_SLOT_CASE_TIMELINE_1: '',
+          PUBLIC_ADSENSE_SLOT_CASE_TIMELINE_2: '',
+          ...adEnv,
+        },
+      });
+      if (result.error) {
+        throw result.error;
+      }
+      assert.equal(result.status, 0, result.stderr || result.stdout || 'nested build failed');
+    };
+    const page = (slug) => fs.readFileSync(`dist/cases/${slug}/index.html`, 'utf8');
+    const count = (html, value) => html.split(value).length - 1;
+
+    try {
+      fs.writeFileSync(eventsPath, JSON.stringify(events, null, 2));
+
+      build({
+        PUBLIC_ADSENSE_CLIENT: 'ca-pub-test',
+        PUBLIC_ADSENSE_SLOT_CASE_TIMELINE_1: '1111111111',
+        PUBLIC_ADSENSE_SLOT_CASE_TIMELINE_2: '2222222222',
+      });
+      assert.equal(count(page('0003-kakuu-foods-hd'), '<ins class="adsbygoogle"'), 0);
+      assert.equal(count(page('0003-kakuu-foods-hd'), 'adsbygoogle.js'), 0);
+      assert.equal(count(page('0005-mihon-denshi'), '<ins class="adsbygoogle"'), 1);
+      assert.equal(count(page('0005-mihon-denshi'), 'adsbygoogle.js'), 1);
+      assert.equal(count(page('0004-demo-systems'), '<ins class="adsbygoogle"'), 2);
+      assert.equal(count(page('0004-demo-systems'), 'adsbygoogle.js'), 1);
+
+      build({
+        PUBLIC_ADSENSE_CLIENT: 'ca-pub-test',
+        PUBLIC_ADSENSE_SLOT_CASE_TIMELINE_2: '2222222222',
+      });
+      assert.equal(count(page('0004-demo-systems'), '<ins class="adsbygoogle"'), 1);
+      assert.equal(count(page('0004-demo-systems'), 'adsbygoogle.js'), 1);
+      assert.equal(count(page('0005-mihon-denshi'), '<ins class="adsbygoogle"'), 0);
+      assert.equal(count(page('0005-mihon-denshi'), 'adsbygoogle.js'), 0);
+    } finally {
+      fs.writeFileSync(eventsPath, originalEvents);
+    }
   });
 });

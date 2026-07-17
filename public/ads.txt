@@ -1,0 +1,2 @@
+# Google AdSense 審査通過後、docs/SETUP.md の手順に従って正式な行へ差し替えてください。
+# google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0
