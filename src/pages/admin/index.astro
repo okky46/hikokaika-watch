@@ -97,7 +97,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
         <form id="case-form" onsubmit="return false">
           <input type="hidden" id="ca-id" />
           <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:0.6rem;">
-            <div class="form-row"><label for="ca-company">会社 *</label><select id="ca-company" required></select></div>
+            <div class="form-row"><label for="ca-company">会社 *</label><select id="ca-company" required><option value="">会社を選択</option></select></div>
             <div class="form-row"><label for="ca-title">案件タイトル *</label><input type="text" id="ca-title" required placeholder="〇〇、MBOによる非公開化" /></div>
             <div class="form-row"><label for="ca-slug">スラッグ *(URL: /cases/スラッグ/)</label><input type="text" id="ca-slug" required placeholder="1234-company-name" pattern="[a-z0-9\-]+" /></div>
             <div class="form-row"><label for="ca-status">ステータス *</label><select id="ca-status"></select></div>
@@ -129,7 +129,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       <h2 class="section-title">出来事の追加・編集</h2>
       <div class="form-row" style="max-width:26rem">
         <label for="ev-case-select">対象案件</label>
-        <select id="ev-case-select"></select>
+        <select id="ev-case-select"><option value="">案件を選択</option></select>
       </div>
       <div class="card" style="margin-bottom:0.8rem">
         <form id="event-form" onsubmit="return false">
@@ -280,6 +280,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   import { getSupabase } from '../../lib/supabaseBrowser';
   import { buildLargeShareholdingMetadata } from '../../lib/noteMetadataHelpers';
   import { hasDailyCloseConflict } from '../../lib/priceHelpers';
+  import { normalizeHttpUrl, normalizeSecurityCode, resolveInboxCaseId, resolveInboxCompanyId } from '../../lib/inboxAdminHelpers';
 
   const { statusDefs, eventTypeDefs, commentTagDefs, commentTagOrder, commentStanceLabels } = (window as any).__ADMIN_DEFS__ as {
     statusDefs: Record<string, { label: string; mark: string; tone: string }>;
@@ -514,7 +515,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
         </div>
         <h3 style="margin:0.3rem 0">${esc(item.title)}</h3>
         <p class="small muted">証券コード: <span class="mono">${esc(item.security_code ?? '—')}</span> / 推定イベント: ${esc(item.suggested_event_type ?? '—')}</p>
-        <p class="small"><a href="${esc(item.url)}" target="_blank" rel="noopener noreferrer">元URL</a></p>
+        ${normalizeHttpUrl(item.url) ? `<p class="small"><a href="${esc(normalizeHttpUrl(item.url))}" target="_blank" rel="noopener noreferrer">元URL</a></p>` : `<p class="small muted">元URL: 不正なURLのためリンクを無効化しました</p>`}
         ${raw.metadata_draft ? `<pre class="small" style="white-space:pre-wrap">metadata draft: ${esc(JSON.stringify(raw.metadata_draft, null, 2))}</pre>` : ''}
         <div style="display:flex; gap:0.4rem; flex-wrap:wrap">
           <button type="button" class="btn" data-inbox-new-case="${esc(item.id)}">新規案件として起票</button>
@@ -526,16 +527,60 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     }).join('');
   }
 
+
+  async function updatePendingInboxStatus(id: string, status: 'approved' | 'rejected', statusElementId: string): Promise<boolean> {
+    const statusEl = $(statusElementId);
+    const { data, error } = await supabase!
+      .from('inbox_items')
+      .update({ status, reviewed_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('status', 'pending')
+      .select('id');
+    if (error) {
+      statusEl.textContent = `収集候補の${status === 'approved' ? '承認' : '破棄'}更新に失敗しました: ${error.message}`;
+      return false;
+    }
+    if ((data ?? []).length !== 1) {
+      statusEl.textContent = `収集候補の${status === 'approved' ? '承認' : '破棄'}更新に失敗しました: pending の対象行が見つかりません。`;
+      return false;
+    }
+    statusEl.textContent = status === 'approved' ? '保存しました（収集候補を承認済みに更新しました）' : '破棄しました';
+    return true;
+  }
+
+  async function approvePendingInboxItem(id: string, statusElementId: string): Promise<boolean> {
+    const approved = await updatePendingInboxStatus(id, 'approved', statusElementId);
+    if (!approved) {
+      $(statusElementId).textContent += ' 案件／イベントの保存自体は完了しました。承認更新を再試行するにはこのまま再度保存してください。';
+    }
+    return approved;
+  }
+
+  function resetEventFormForInbox() {
+    currentInboxIdForEvent = null;
+    $<HTMLInputElement>('ev-id').value = '';
+    ($('event-form') as HTMLFormElement).reset();
+    $<HTMLInputElement>('ev-corrected').checked = false;
+    $('ev-correction-row').hidden = true;
+    $<HTMLInputElement>('ev-correction-note').value = '';
+    for (const cb of document.querySelectorAll<HTMLInputElement>('[data-comment-tag]')) cb.checked = false;
+    events = [];
+    renderEventTable();
+  }
+
   function prefillEventFromInbox(item: any) {
+    currentInboxIdForCase = null;
+    currentInboxIdForEvent = null;
+    resetEventFormForInbox();
     currentInboxIdForEvent = item.id;
-    if (item.matched_case_id) $<HTMLSelectElement>('ev-case-select').value = item.matched_case_id;
+    $<HTMLSelectElement>('ev-case-select').value = resolveInboxCaseId(cases, item.matched_case_id);
     $<HTMLInputElement>('ev-id').value = '';
     $<HTMLSelectElement>('ev-type').value = item.suggested_event_type || 'observation_report';
     $<HTMLInputElement>('ev-occurred').value = isoToLocal(item.published_at || item.created_at);
     $<HTMLInputElement>('ev-title').value = item.title || '';
     $<HTMLTextAreaElement>('ev-summary').value = '';
     $<HTMLInputElement>('ev-source-name').value = item.source_kind || '';
-    $<HTMLInputElement>('ev-source-url').value = item.url || '';
+    $<HTMLInputElement>('ev-source-url').value = normalizeHttpUrl(item.url) ?? '';
     $<HTMLInputElement>('ev-visible').checked = false;
     updateCommentTagVisibility();
     for (const cb of document.querySelectorAll<HTMLInputElement>('[data-comment-tag]')) cb.checked = (item.suggested_comment_tags ?? []).includes(cb.value);
@@ -558,7 +603,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
   function renderCompanySelects() {
     const sel = $<HTMLSelectElement>('ca-company');
-    sel.innerHTML = companies
+    sel.innerHTML = '<option value="">会社を選択</option>' + companies
       .map((c) => `<option value="${c.id}">${esc(c.security_code)} ${esc(c.name_ja)}</option>`)
       .join('');
   }
@@ -624,7 +669,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   }
 
   function renderCaseSelects() {
-    const options = cases
+    const options = '<option value="">案件を選択</option>' + cases
       .map((c) => `<option value="${c.id}">${esc(caseLabel(c))}</option>`)
       .join('');
     $<HTMLSelectElement>('ev-case-select').innerHTML = options;
@@ -676,15 +721,18 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     const existing = cases.find((c) => c.id === id);
     if (visible && !existing?.site_published_at) row.site_published_at = new Date().toISOString();
     const q = id
-      ? supabase!.from('cases').update(row).eq('id', id)
-      : supabase!.from('cases').insert(row);
-    const { error } = await q;
+      ? supabase!.from('cases').update(row).eq('id', id).select('id').single()
+      : supabase!.from('cases').insert(row).select('id').single();
+    const { data: savedCase, error } = await q;
     $('ca-status-msg').textContent = error ? `保存エラー: ${error.message}` : '保存しました';
     if (!error) {
+      if (savedCase?.id) $<HTMLInputElement>('ca-id').value = savedCase.id;
       if (currentInboxIdForCase) {
-        await supabase!.from('inbox_items').update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('id', currentInboxIdForCase);
-        currentInboxIdForCase = null;
-        await loadInbox();
+        const approved = await approvePendingInboxItem(currentInboxIdForCase, 'ca-status-msg');
+        if (approved) {
+          currentInboxIdForCase = null;
+          await loadInbox();
+        }
       }
       await loadCases();
       renderCaseSelects();
@@ -695,6 +743,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   $('ca-clear')?.addEventListener('click', () => {
     $<HTMLInputElement>('ca-id').value = '';
     currentInboxIdForCase = null;
+    currentInboxIdForEvent = null;
     ($('case-form') as HTMLFormElement).reset();
   });
 
@@ -771,6 +820,11 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       comment_stance: $<HTMLSelectElement>('ev-type').value === 'company_comment' ? classifyCommentStance(selectedCommentTags()) : null,
       metadata: metadataResult.metadata,
     };
+    if (row.source_url && !normalizeHttpUrl(row.source_url)) {
+      $('ev-status').textContent = '元情報URLは http/https の絶対URLのみ保存できます';
+      return;
+    }
+    if (row.source_url) row.source_url = normalizeHttpUrl(row.source_url);
     if (!row.case_id || !row.occurred_at || !row.title || !row.source_name) {
       $('ev-status').textContent = '案件・日時・見出し・媒体名は必須です';
       return;
@@ -778,16 +832,19 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     const existing = events.find((e) => e.id === id);
     if (visible && !existing?.site_published_at) row.site_published_at = new Date().toISOString();
     const q = id
-      ? supabase!.from('case_events').update(row).eq('id', id)
-      : supabase!.from('case_events').insert(row);
-    const { error } = await q;
+      ? supabase!.from('case_events').update(row).eq('id', id).select('id').single()
+      : supabase!.from('case_events').insert(row).select('id').single();
+    const { data: savedEvent, error } = await q;
     $('ev-status').textContent = error ? `保存エラー: ${error.message}` : '保存しました';
     updateEventStatusSuggestion();
     if (!error) {
+      if (savedEvent?.id) $<HTMLInputElement>('ev-id').value = savedEvent.id;
       if (currentInboxIdForEvent) {
-        await supabase!.from('inbox_items').update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('id', currentInboxIdForEvent);
-        currentInboxIdForEvent = null;
-        await loadInbox();
+        const approved = await approvePendingInboxItem(currentInboxIdForEvent, 'ev-status');
+        if (approved) {
+          currentInboxIdForEvent = null;
+          await loadInbox();
+        }
       }
       await loadEvents();
     }
@@ -812,6 +869,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   $('ev-clear')?.addEventListener('click', () => {
     $<HTMLInputElement>('ev-id').value = '';
     currentInboxIdForEvent = null;
+    currentInboxIdForCase = null;
     ($('event-form') as HTMLFormElement).reset();
     $('ev-correction-row').hidden = true;
     $('ev-status').textContent = '';
@@ -912,11 +970,22 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     if (inboxNew) {
       const item = inboxItems.find((x) => x.id === inboxNew.dataset.inboxNewCase);
       if (!item) return;
+      currentInboxIdForEvent = null;
+      currentInboxIdForCase = null;
       $<HTMLInputElement>('ca-id').value = '';
+      ($('case-form') as HTMLFormElement).reset();
+      const companyId = resolveInboxCompanyId(companies, item.security_code);
+      if (!companyId) {
+        $<HTMLSelectElement>('ca-company').value = '';
+        $(`inbox-status-${item.id}`).textContent = '証券コードに一致する会社が見つかりません。先に会社を登録してから再度起票してください。';
+        showTab('inbox');
+        return;
+      }
+      $<HTMLSelectElement>('ca-company').value = companyId;
       $<HTMLInputElement>('ca-title').value = item.title;
-      $<HTMLInputElement>('ca-slug').value = (item.security_code ? `${item.security_code.toLowerCase()}-` : '') + 'new-case';
+      $<HTMLInputElement>('ca-slug').value = (normalizeSecurityCode(item.security_code) ? `${normalizeSecurityCode(item.security_code).toLowerCase()}-` : '') + 'new-case';
       $<HTMLSelectElement>('ca-status').value = item.suggested_event_type === 'company_comment' ? 'commented' : 'rumored';
-      $<HTMLTextAreaElement>('ca-summary').value = item.url;
+      $<HTMLTextAreaElement>('ca-summary').value = normalizeHttpUrl(item.url) ?? '';
       currentInboxIdForCase = item.id;
       showTab('cases');
       return;
@@ -930,9 +999,8 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     const inboxReject = t.closest<HTMLButtonElement>('[data-inbox-reject]');
     if (inboxReject) {
       const id = inboxReject.dataset.inboxReject!;
-      const { error } = await supabase!.from('inbox_items').update({ status: 'rejected', reviewed_at: new Date().toISOString() }).eq('id', id);
-      $(`inbox-status-${id}`).textContent = error ? `破棄エラー: ${error.message}` : '破棄しました';
-      if (!error) await loadInbox();
+      const rejected = await updatePendingInboxStatus(id, 'rejected', `inbox-status-${id}`);
+      if (rejected) await loadInbox();
       return;
     }
 
@@ -953,6 +1021,8 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     if (ca) {
       const c = cases.find((x) => x.id === ca.dataset.editCase);
       if (!c) return;
+      currentInboxIdForCase = null;
+      currentInboxIdForEvent = null;
       $<HTMLInputElement>('ca-id').value = c.id;
       $<HTMLSelectElement>('ca-company').value = c.company_id;
       $<HTMLInputElement>('ca-title').value = c.title;
@@ -968,6 +1038,8 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     if (ev) {
       const x = events.find((y) => y.id === ev.dataset.editEvent);
       if (!x) return;
+      currentInboxIdForEvent = null;
+      currentInboxIdForCase = null;
       $<HTMLInputElement>('ev-id').value = x.id;
       $<HTMLSelectElement>('ev-type').value = x.event_type;
       $<HTMLInputElement>('ev-occurred').value = isoToLocal(x.occurred_at);

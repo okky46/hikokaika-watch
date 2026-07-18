@@ -36,6 +36,14 @@ def headers(service_role_key: str, *, representation: bool = False) -> dict[str,
     return values
 
 
+def is_allowed_http_url(url: str) -> bool:
+    try:
+        parts = urlsplit(url.strip())
+    except ValueError:
+        return False
+    return parts.scheme.lower() in {"http", "https"} and bool(parts.netloc)
+
+
 def normalize_url(url: str) -> str:
     parts = urlsplit(url.strip())
     scheme = parts.scheme.lower() or "https"

@@ -7,7 +7,7 @@ from typing import Callable
 
 import requests
 
-from common import ACTIVE_STATUSES, ActiveCase, InboxCandidate, dedup_key, get_config, headers
+from common import ACTIVE_STATUSES, ActiveCase, InboxCandidate, dedup_key, get_config, headers, is_allowed_http_url
 from notify_discord import notify
 from sources import edinet, news, tdnet
 
@@ -86,7 +86,7 @@ def main() -> int:
             active_cases = []
         active_codes = {c.security_code for c in active_cases}
         candidates = run_sources([("tdnet", tdnet.collect), ("edinet", lambda: edinet.collect(active_codes)), ("news", news.collect)])
-    matched = [match_case(c, active_cases) for c in candidates if c.url]
+    matched = [match_case(c, active_cases) for c in candidates if c.url and is_allowed_http_url(c.url)]
     inserted: list[dict] = []
     for c in matched:
         payload = candidate_payload(c)

@@ -2,7 +2,7 @@ import importlib
 import unittest
 from unittest.mock import patch
 
-from common import dedup_key
+from common import dedup_key, is_allowed_http_url
 from collect import run_sources
 from sources.news import extract_security_code
 
@@ -21,6 +21,12 @@ class CollectTests(unittest.TestCase):
         self.assertEqual(extract_security_code('株式会社テスト（130A） MBO検討 9999'), '130A')
     def test_dedup_normalizes_query_and_case(self):
         self.assertEqual(dedup_key('HTTPS://Example.com/Path/?utm=x'), dedup_key('https://example.com/Path'))
+
+    def test_http_url_allowlist_rejects_unsafe_schemes(self):
+        self.assertTrue(is_allowed_http_url('https://example.com/news?q=a&b=c'))
+        self.assertTrue(is_allowed_http_url('http://example.com/path'))
+        for url in ['javascript:alert(1)', 'data:text/html,hi', 'file:///etc/passwd', '/relative', 'not a url']:
+            self.assertFalse(is_allowed_http_url(url))
 
     def test_empty_api_base_urls_fall_back_to_defaults(self):
         with patch.dict('os.environ', {'TDNET_API_BASE_URL': '', 'EDINET_API_BASE_URL': ''}):
