@@ -9,7 +9,7 @@ import requests
 
 from common import InboxCandidate, JST
 
-EDINET_API_BASE_URL = os.getenv("EDINET_API_BASE_URL", "https://disclosure.edinet-fsa.go.jp/api/v2")
+EDINET_API_BASE_URL = os.getenv("EDINET_API_BASE_URL") or "https://disclosure.edinet-fsa.go.jp/api/v2"
 DOC_TYPES = ("大量保有報告書", "変更報告書")
 RATIO_RE = re.compile(r"(保有割合|株券等保有割合)[^0-9]{0,20}([0-9]+(?:\.[0-9]+)?)")
 

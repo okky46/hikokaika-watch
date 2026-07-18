@@ -8,7 +8,7 @@ import requests
 
 from common import InboxCandidate
 
-TDNET_API_BASE_URL = os.getenv("TDNET_API_BASE_URL", "https://webapi.yanoshin.jp/webapi/tdnet/list")
+TDNET_API_BASE_URL = os.getenv("TDNET_API_BASE_URL") or "https://webapi.yanoshin.jp/webapi/tdnet/list"
 TITLE_RE = re.compile(r"一部報道|本日の(一部)?報道|報道に関する|非公開化|マネジメント・バイアウト|ＭＢＯ|MBO|公開買付|株式併合|株式の非公開化|買収提案")
 TAG_RULES = {
     "no_decision": ("決定した事実はありません", "決定している事実はありません", "決定事実はありません"),
