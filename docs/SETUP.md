@@ -254,3 +254,34 @@ $$;
 | `CLOUDFLARE_DEPLOY_HOOK_URL` | GitHub Secrets | 日次終値のinsert/update時だけ呼ぶCloudflare Pages Deploy Hook URL。 |
 
 Pages Function は Cloudflare Access で保護された `/admin/*` と `/api/analytics` の利用を前提にします。UI上で管理画面からだけ呼び出してもAPIの認可にはならないため、両方のAccess保護を外した状態で本番運用しないでください。
+
+## 11. 情報収集パイプライン(フェーズ5)
+
+`.github/workflows/collect.yml` は TDnet 系API → EDINET API → Google News RSS の順に収集し、候補を `inbox_items` に保存します。公開ページのビルドは `inbox_items` を参照せず、管理者が `/admin` の「収集候補」タブから既存フォームへプリフィルして承認・公開します。
+
+GitHub の **Settings → Secrets and variables → Actions** に以下を設定してください。
+
+| 変数 | 種別 | 用途 |
+|---|---|---|
+| `SUPABASE_URL` | Secret | PostgREST 接続先 |
+| `SUPABASE_SERVICE_ROLE_KEY` | Secret | バッチ書き込み用。RLS をバイパスするためログ出力禁止 |
+| `DISCORD_WEBHOOK_URL` | Secret | 新規 insert 候補の Discord 通知先。未設定なら通知をスキップ |
+| `EDINET_API_KEY` | Secret | EDINET API のサブスクリプションキー。必要な環境で設定 |
+| `TDNET_API_BASE_URL` | Variable | TDnet 系APIのベースURL。既定値は `https://webapi.yanoshin.jp/webapi/tdnet/list` |
+| `ADMIN_URL` | Variable | Discord embed に表示する管理画面URL |
+
+TDnet は公式APIがないため、既定では「やのしん適時開示API」系のURLを `TDNET_API_BASE_URL` に分離しています。実運用前に当該APIの提供ページで最新のURL、利用条件、レート制限、商用・継続利用可否を確認し、必要に応じて変数だけを差し替えてください。実装側はレスポンスの行抽出と候補化を `scripts/collect/sources/tdnet.py` に分離しており、API仕様変更時は同ファイルのパース関数を中心に修正します。短時間の連続アクセスを避けるため、cron は平日朝・昼・夜の3回だけです。
+
+EDINET は公式 API (`https://disclosure.edinet-fsa.go.jp/api/v2`) を利用します。大量保有報告書・変更報告書の一覧からウォッチ中案件の `security_code` に合致するものだけを候補化します。APIキーが必要な運用では `EDINET_API_KEY` を Secret として設定してください。
+
+Google News は RSS のみを利用し、個別メディアの直接スクレイピングは行いません。検索クエリは `scripts/collect/queries.json` で変更できます。
+
+ローカル検証:
+
+```bash
+pip install -r scripts/collect/requirements.txt
+python scripts/collect/collect.py --dry-run
+python -m unittest discover -s scripts/collect -p 'test_*.py'
+```
+
+`--dry-run` は Supabase 書き込みと Discord 通知をスキップします。Supabase 接続情報がない場合も、英字入り証券コード `130A` のローカル候補で経路確認できます。

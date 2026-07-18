@@ -44,6 +44,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
   <div id="ad-main" hidden>
     <nav class="section" aria-label="管理メニュー" style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+      <button class="btn" data-tab="inbox">収集候補</button>
       <button class="btn" data-tab="companies">会社</button>
       <button class="btn" data-tab="cases">案件</button>
       <button class="btn" data-tab="events">出来事</button>
@@ -53,6 +54,15 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       <button class="btn" data-tab="analytics">アクセス統計</button>
       <button class="btn" data-tab="security">セキュリティ</button>
     </nav>
+
+
+    <!-- ============ 収集候補 ============ -->
+    <section class="section" data-panel="inbox" hidden>
+      <h2 class="section-title">収集候補</h2>
+      <p class="small muted">自動収集された pending の候補です。自動掲載は行わず、既存フォームへプリフィルして管理者が保存します。</p>
+      <div id="inbox-list"></div>
+      <p class="empty-state" id="inbox-empty" hidden>収集候補はありません。</p>
+    </section>
 
     <!-- ============ 会社 ============ -->
     <section class="section" data-panel="companies" hidden>
@@ -363,6 +373,9 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   let pendingMfaFactorId: string | null = null;
   let companies: any[] = [];
   let cases: any[] = [];
+  let inboxItems: any[] = [];
+  let currentInboxIdForCase: string | null = null;
+  let currentInboxIdForEvent: string | null = null;
 
   // ---------------- 認証・管理者判定 ----------------
   async function init() {
@@ -432,6 +445,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     for (const btn of document.querySelectorAll<HTMLButtonElement>('[data-tab]')) {
       btn.classList.toggle('btn--primary', btn.dataset.tab === name);
     }
+    if (name === 'inbox') loadInbox();
     if (name === 'corrections') loadCorrections();
     if (name === 'analytics') loadAnalytics();
   }
@@ -472,7 +486,67 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     renderCaseSelects();
     renderCompanyTable();
     renderCaseTable();
-    await Promise.all([loadEvents(), loadPrices()]);
+    await Promise.all([loadEvents(), loadPrices(), loadInbox()]);
+  }
+
+
+  // ---------------- 収集候補 ----------------
+  async function loadInbox() {
+    const { data, error } = await supabase!
+      .from('inbox_items')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+    if (error) {
+      $('inbox-list').innerHTML = `<p class="notice">読込エラー: ${esc(error.message)}</p>`;
+      return;
+    }
+    inboxItems = data ?? [];
+    $('inbox-empty').hidden = inboxItems.length > 0;
+    $('inbox-list').innerHTML = inboxItems.map((item) => {
+      const matched = cases.find((c) => c.id === item.matched_case_id);
+      const raw = item.raw ?? {};
+      return `<article class="card" style="margin-bottom:0.7rem">
+        <div class="event-card__head">
+          <span class="badge badge--watch">${esc(item.source_kind)}</span>
+          <span class="small muted">収集: ${fmtDate(item.created_at)} / 公開: ${fmtDate(item.published_at)}</span>
+          ${matched ? `<span class="badge badge--comment">既存案件: ${esc(caseLabel(matched))}</span>` : ''}
+        </div>
+        <h3 style="margin:0.3rem 0">${esc(item.title)}</h3>
+        <p class="small muted">証券コード: <span class="mono">${esc(item.security_code ?? '—')}</span> / 推定イベント: ${esc(item.suggested_event_type ?? '—')}</p>
+        <p class="small"><a href="${esc(item.url)}" target="_blank" rel="noopener noreferrer">元URL</a></p>
+        ${raw.metadata_draft ? `<pre class="small" style="white-space:pre-wrap">metadata draft: ${esc(JSON.stringify(raw.metadata_draft, null, 2))}</pre>` : ''}
+        <div style="display:flex; gap:0.4rem; flex-wrap:wrap">
+          <button type="button" class="btn" data-inbox-new-case="${esc(item.id)}">新規案件として起票</button>
+          <button type="button" class="btn" data-inbox-event="${esc(item.id)}">既存案件のイベントとして追加</button>
+          <button type="button" class="btn" data-inbox-reject="${esc(item.id)}">破棄</button>
+        </div>
+        <p class="small" id="inbox-status-${esc(item.id)}" aria-live="polite"></p>
+      </article>`;
+    }).join('');
+  }
+
+  function prefillEventFromInbox(item: any) {
+    currentInboxIdForEvent = item.id;
+    if (item.matched_case_id) $<HTMLSelectElement>('ev-case-select').value = item.matched_case_id;
+    $<HTMLInputElement>('ev-id').value = '';
+    $<HTMLSelectElement>('ev-type').value = item.suggested_event_type || 'observation_report';
+    $<HTMLInputElement>('ev-occurred').value = isoToLocal(item.published_at || item.created_at);
+    $<HTMLInputElement>('ev-title').value = item.title || '';
+    $<HTMLTextAreaElement>('ev-summary').value = '';
+    $<HTMLInputElement>('ev-source-name').value = item.source_kind || '';
+    $<HTMLInputElement>('ev-source-url').value = item.url || '';
+    $<HTMLInputElement>('ev-visible').checked = false;
+    updateCommentTagVisibility();
+    for (const cb of document.querySelectorAll<HTMLInputElement>('[data-comment-tag]')) cb.checked = (item.suggested_comment_tags ?? []).includes(cb.value);
+    const draft = item.raw?.metadata_draft ?? {};
+    $<HTMLInputElement>('ev-holder-name').value = draft.holder_name ?? '';
+    $<HTMLInputElement>('ev-ratio').value = draft.ratio ?? '';
+    $<HTMLInputElement>('ev-previous-ratio').value = draft.previous_ratio ?? '';
+    $<HTMLInputElement>('ev-filing-date').value = draft.filing_date ?? '';
+    $<HTMLSelectElement>('ev-change-type').value = draft.change_type ?? 'new';
+    updateCommentStancePreview();
+    showTab('events');
   }
 
   // ---------------- 会社 ----------------
@@ -607,6 +681,11 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     const { error } = await q;
     $('ca-status-msg').textContent = error ? `保存エラー: ${error.message}` : '保存しました';
     if (!error) {
+      if (currentInboxIdForCase) {
+        await supabase!.from('inbox_items').update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('id', currentInboxIdForCase);
+        currentInboxIdForCase = null;
+        await loadInbox();
+      }
       await loadCases();
       renderCaseSelects();
       renderCaseTable();
@@ -615,6 +694,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
   $('ca-clear')?.addEventListener('click', () => {
     $<HTMLInputElement>('ca-id').value = '';
+    currentInboxIdForCase = null;
     ($('case-form') as HTMLFormElement).reset();
   });
 
@@ -703,7 +783,14 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     const { error } = await q;
     $('ev-status').textContent = error ? `保存エラー: ${error.message}` : '保存しました';
     updateEventStatusSuggestion();
-    if (!error) await loadEvents();
+    if (!error) {
+      if (currentInboxIdForEvent) {
+        await supabase!.from('inbox_items').update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('id', currentInboxIdForEvent);
+        currentInboxIdForEvent = null;
+        await loadInbox();
+      }
+      await loadEvents();
+    }
   });
 
   function buildEventMetadata(corrected: boolean): { ok: true; metadata: any } | { ok: false; error: string } {
@@ -724,6 +811,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
   $('ev-clear')?.addEventListener('click', () => {
     $<HTMLInputElement>('ev-id').value = '';
+    currentInboxIdForEvent = null;
     ($('event-form') as HTMLFormElement).reset();
     $('ev-correction-row').hidden = true;
     $('ev-status').textContent = '';
@@ -817,8 +905,36 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   });
 
   // ---------------- 編集ボタン(行 → フォーム) ----------------
-  document.addEventListener('click', (e) => {
+  document.addEventListener('click', async (e) => {
     const t = e.target as HTMLElement;
+
+    const inboxNew = t.closest<HTMLButtonElement>('[data-inbox-new-case]');
+    if (inboxNew) {
+      const item = inboxItems.find((x) => x.id === inboxNew.dataset.inboxNewCase);
+      if (!item) return;
+      $<HTMLInputElement>('ca-id').value = '';
+      $<HTMLInputElement>('ca-title').value = item.title;
+      $<HTMLInputElement>('ca-slug').value = (item.security_code ? `${item.security_code.toLowerCase()}-` : '') + 'new-case';
+      $<HTMLSelectElement>('ca-status').value = item.suggested_event_type === 'company_comment' ? 'commented' : 'rumored';
+      $<HTMLTextAreaElement>('ca-summary').value = item.url;
+      currentInboxIdForCase = item.id;
+      showTab('cases');
+      return;
+    }
+    const inboxEvent = t.closest<HTMLButtonElement>('[data-inbox-event]');
+    if (inboxEvent) {
+      const item = inboxItems.find((x) => x.id === inboxEvent.dataset.inboxEvent);
+      if (item) prefillEventFromInbox(item);
+      return;
+    }
+    const inboxReject = t.closest<HTMLButtonElement>('[data-inbox-reject]');
+    if (inboxReject) {
+      const id = inboxReject.dataset.inboxReject!;
+      const { error } = await supabase!.from('inbox_items').update({ status: 'rejected', reviewed_at: new Date().toISOString() }).eq('id', id);
+      $(`inbox-status-${id}`).textContent = error ? `破棄エラー: ${error.message}` : '破棄しました';
+      if (!error) await loadInbox();
+      return;
+    }
 
     const co = t.closest<HTMLButtonElement>('[data-edit-company]');
     if (co) {

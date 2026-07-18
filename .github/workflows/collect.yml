@@ -1,0 +1,31 @@
+name: Collect inbox candidates
+
+on:
+  schedule:
+    - cron: '0 23 * * 0-4'
+    - cron: '0 3,10 * * 1-5'
+  workflow_dispatch:
+
+concurrency:
+  group: collect-inbox-candidates
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install -r scripts/collect/requirements.txt
+      - name: Collect candidates
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          EDINET_API_KEY: ${{ secrets.EDINET_API_KEY }}
+          TDNET_API_BASE_URL: ${{ vars.TDNET_API_BASE_URL }}
+          ADMIN_URL: ${{ vars.ADMIN_URL }}
+        run: python scripts/collect/collect.py
