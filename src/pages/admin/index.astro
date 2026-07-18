@@ -280,7 +280,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   import { getSupabase } from '../../lib/supabaseBrowser';
   import { buildLargeShareholdingMetadata } from '../../lib/noteMetadataHelpers';
   import { hasDailyCloseConflict } from '../../lib/priceHelpers';
-  import { normalizeHttpUrl, normalizeSecurityCode, resolveInboxCaseId, resolveInboxCompanyId } from '../../lib/inboxAdminHelpers';
+  import { normalizeHttpUrl, normalizeSecurityCode, preserveSelectValueIfValid, resolveInboxCaseId, resolveInboxCompanyId } from '../../lib/inboxAdminHelpers';
 
   const { statusDefs, eventTypeDefs, commentTagDefs, commentTagOrder, commentStanceLabels } = (window as any).__ADMIN_DEFS__ as {
     statusDefs: Record<string, { label: string; mark: string; tone: string }>;
@@ -675,13 +675,19 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     $<HTMLSelectElement>('ev-case-select').innerHTML = options;
     $<HTMLSelectElement>('pr-case-select').innerHTML = options;
     const statusSel = $<HTMLSelectElement>('ca-status');
+    const currentStatus = statusSel.value;
     statusSel.innerHTML = Object.entries(statusDefs)
       .map(([k, v]) => `<option value="${k}">${esc(v.label)}</option>`)
       .join('');
+    const restoredStatus = preserveSelectValueIfValid(currentStatus, Object.keys(statusDefs));
+    if (restoredStatus) statusSel.value = restoredStatus;
     const evType = $<HTMLSelectElement>('ev-type');
+    const currentEventType = evType.value;
     evType.innerHTML = Object.entries(eventTypeDefs)
       .map(([k, v]) => `<option value="${k}">${esc(v.label)}</option>`)
       .join('');
+    const restoredEventType = preserveSelectValueIfValid(currentEventType, Object.keys(eventTypeDefs));
+    if (restoredEventType) evType.value = restoredEventType;
     updateCommentTagVisibility();
   }
 
@@ -978,7 +984,6 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       if (!companyId) {
         $<HTMLSelectElement>('ca-company').value = '';
         $(`inbox-status-${item.id}`).textContent = '証券コードに一致する会社が見つかりません。先に会社を登録してから再度起票してください。';
-        showTab('inbox');
         return;
       }
       $<HTMLSelectElement>('ca-company').value = companyId;

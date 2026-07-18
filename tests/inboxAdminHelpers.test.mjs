@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {
   normalizeHttpUrl,
+  preserveSelectValueIfValid,
   resolveInboxCaseId,
   resolveInboxCompanyId,
 } from '../src/lib/inboxAdminHelpers.ts';
@@ -36,6 +37,15 @@ describe('inbox admin helper regressions', () => {
       assert.equal(normalizeHttpUrl(bad), null);
     }
   });
+
+  it('有効な案件ステータス選択値だけを再描画後に復元対象にする', () => {
+    const validStatuses = ['rumored', 'commented', 'announced', 'withdrawn'];
+    assert.equal(preserveSelectValueIfValid('commented', validStatuses), 'commented');
+    assert.equal(preserveSelectValueIfValid('announced', validStatuses), 'announced');
+    assert.equal(preserveSelectValueIfValid('withdrawn', validStatuses), 'withdrawn');
+    assert.equal(preserveSelectValueIfValid('missing', validStatuses), null);
+    assert.equal(preserveSelectValueIfValid('', validStatuses), null);
+  });
 });
 
 // 管理画面のDOM密結合部分は、誤承認・重複insert防止に必要な安全レールをソース上で検証する。
@@ -60,5 +70,13 @@ describe('admin inbox approval source guards', () => {
     assert.match(source, /insert\(row\)\.select\('id'\)\.single\(\)/);
     assert.match(source, /savedCase\?\.id\) \$<HTMLInputElement>\('ca-id'\)\.value = savedCase\.id/);
     assert.match(source, /savedEvent\?\.id\) \$<HTMLInputElement>\('ev-id'\)\.value = savedEvent\.id/);
+  });
+
+  it('会社未一致時はinboxを再描画せず候補カード上のエラーを保持する', () => {
+    assert.match(source, /if \(!companyId\) \{\s*\$<HTMLSelectElement>\('ca-company'\)\.value = '';\s*\$\(`inbox-status-\$\{item\.id\}`\)\.textContent = '証券コードに一致する会社が見つかりません。先に会社を登録してから再度起票してください。';\s*return;\s*\}/);
+  });
+
+  it('案件一覧セレクト再描画後も有効な案件ステータスを復元する', () => {
+    assert.match(source, /const currentStatus = statusSel\.value;[^]*const restoredStatus = preserveSelectValueIfValid\(currentStatus, Object\.keys\(statusDefs\)\);[^]*if \(restoredStatus\) statusSel\.value = restoredStatus;/);
   });
 });

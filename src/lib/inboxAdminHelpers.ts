@@ -31,3 +31,8 @@ export function normalizeHttpUrl(value: unknown): string | null {
 export function isAllowedHttpUrl(value: unknown): boolean {
   return normalizeHttpUrl(value) !== null;
 }
+
+export function preserveSelectValueIfValid<T extends string>(currentValue: unknown, validValues: readonly T[]): T | null {
+  const value = String(currentValue ?? '');
+  return validValues.includes(value as T) ? (value as T) : null;
+}
