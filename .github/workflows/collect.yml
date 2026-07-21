@@ -20,6 +20,8 @@ jobs:
           python-version: '3.12'
       - name: Install dependencies
         run: pip install -r scripts/collect/requirements.txt
+      - name: Run Python tests
+        run: python -m unittest discover -s scripts/collect -p 'test_*.py'
       - name: Collect candidates
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -27,5 +29,9 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           EDINET_API_KEY: ${{ secrets.EDINET_API_KEY }}
           TDNET_API_BASE_URL: ${{ vars.TDNET_API_BASE_URL }}
+          TDNET_API_FORMAT: ${{ vars.TDNET_API_FORMAT }}
+          TDNET_API_LIMIT: ${{ vars.TDNET_API_LIMIT }}
+          EDINET_API_BASE_URL: ${{ vars.EDINET_API_BASE_URL }}
+          EDINET_VIEWER_URL: ${{ vars.EDINET_VIEWER_URL }}
           ADMIN_URL: ${{ vars.ADMIN_URL }}
         run: python scripts/collect/collect.py

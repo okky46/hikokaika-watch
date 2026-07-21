@@ -62,3 +62,12 @@ def now_jst_iso() -> str:
 
 def get_config() -> tuple[str | None, str | None]:
     return os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+
+
+def validate_startup_config(base_url: str | None, service_key: str | None) -> list[str]:
+    errors: list[str] = []
+    if not base_url or not is_allowed_http_url(base_url):
+        errors.append("SUPABASE_URL must be an absolute http/https URL")
+    if not service_key:
+        errors.append("SUPABASE_SERVICE_ROLE_KEY must be set")
+    return errors

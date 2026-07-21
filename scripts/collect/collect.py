@@ -7,7 +7,7 @@ from typing import Callable
 
 import requests
 
-from common import ACTIVE_STATUSES, ActiveCase, InboxCandidate, dedup_key, get_config, headers, is_allowed_http_url
+from common import ACTIVE_STATUSES, ActiveCase, InboxCandidate, dedup_key, get_config, headers, is_allowed_http_url, validate_startup_config
 from notify_discord import notify
 from sources import edinet, news, tdnet
 
@@ -75,8 +75,9 @@ def main() -> int:
         active_cases = [ActiveCase("dry-run-case-130a", "130A")]
         candidates = local_dry_run_candidates()
         print("[collect] dry-run local validation mode: Supabase credentials are absent")
-    elif not base_url or not service_key:
-        print("[collect] SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required", file=sys.stderr)
+    elif validate_startup_config(base_url, service_key):
+        for error in validate_startup_config(base_url, service_key):
+            print(f"[collect] config error: {error}", file=sys.stderr)
         return 2
     else:
         try:

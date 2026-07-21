@@ -272,7 +272,7 @@ GitHub の **Settings → Secrets and variables → Actions** に以下を設定
 
 TDnet は公式APIがないため、既定では「やのしん適時開示API」系のURLを `TDNET_API_BASE_URL` に分離しています。実運用前に当該APIの提供ページで最新のURL、利用条件、レート制限、商用・継続利用可否を確認し、必要に応じて変数だけを差し替えてください。実装側はレスポンスの行抽出と候補化を `scripts/collect/sources/tdnet.py` に分離しており、API仕様変更時は同ファイルのパース関数を中心に修正します。短時間の連続アクセスを避けるため、cron は平日朝・昼・夜の3回だけです。
 
-EDINET は公式 API (`https://disclosure.edinet-fsa.go.jp/api/v2`) を利用します。大量保有報告書・変更報告書の一覧からウォッチ中案件の `security_code` に合致するものだけを候補化します。APIキーが必要な運用では `EDINET_API_KEY` を Secret として設定してください。
+EDINET は公式 API v2 (`https://api.edinet-fsa.go.jp/api/v2`) を利用します。大量保有報告書・変更報告書の一覧からウォッチ中案件の `security_code` に合致するものだけを候補化します。APIキーが必要な運用では `EDINET_API_KEY` を Secret として設定してください。
 
 Google News は RSS のみを利用し、個別メディアの直接スクレイピングは行いません。検索クエリは `scripts/collect/queries.json` で変更できます。
 
@@ -285,3 +285,13 @@ python -m unittest discover -s scripts/collect -p 'test_*.py'
 ```
 
 `--dry-run` は Supabase 書き込みと Discord 通知をスキップします。Supabase 接続情報がない場合も、英字入り証券コード `130A` のローカル候補で経路確認できます。
+
+### Phase 5 external collection production settings (updated 2026-07-21)
+
+TDnet collection uses Yanoshin TDnet WEB-API by default because it provides unauthenticated JSON/json2 endpoints suitable for this project. `TDNET_API_BASE_URL` is a base path, not a complete fetch URL, unless it already ends in `.json` or `.json2`; the collector builds `/{YYYYmmdd}.json2?limit=300` by default. Yanoshin is an unofficial TDnet-derived service, so operators should confirm its latest terms and switch `TDNET_API_BASE_URL` if a contracted JPX/J-Quants feed is adopted.
+
+EDINET collection uses the official EDINET API v2 endpoint `https://api.edinet-fsa.go.jp/api/v2/documents.json` with `date`, `type=2`, and the `Subscription-Key` request parameter. `EDINET_API_KEY` is required to enable EDINET; when unset, only EDINET is skipped and other sources continue. EDINET inbox URLs intentionally use the official public viewer entry `https://disclosure2.edinet-fsa.go.jp/` rather than API download URLs, and `docID` is preserved under raw metadata.
+
+Manual Supabase tasks: apply `supabase/migrations/0004_inbox.sql` and verify the `inbox_items` table and RLS policies in the dashboard. Codex must not apply this to production.
+
+GitHub Repository Secrets to register manually: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `EDINET_API_KEY` (if EDINET enabled), `DISCORD_WEBHOOK_URL` (optional notification). GitHub Repository Variables to register manually: `TDNET_API_BASE_URL`, `TDNET_API_FORMAT`, `TDNET_API_LIMIT`, `EDINET_API_BASE_URL`, `EDINET_VIEWER_URL`, `ADMIN_URL`. Do not put secret values in Variables or logs.
