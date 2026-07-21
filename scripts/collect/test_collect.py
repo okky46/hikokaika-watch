@@ -1,4 +1,6 @@
+import contextlib
 import importlib
+import io
 import unittest
 from unittest.mock import patch
 
@@ -112,12 +114,40 @@ class ExternalAPIFixtureTests(unittest.TestCase):
             with self.assertRaises(TDnetConfigError):
                 tdnet_api_format(raw)
 
-    def test_tdnet_config_error_is_source_scoped(self):
+    def test_tdnet_limit_config_error_logs_safe_reason_and_continues(self):
         from sources import tdnet
-        with patch.dict('os.environ', {'TDNET_API_LIMIT': 'abc'}):
+        stderr = io.StringIO()
+        with patch.dict('os.environ', {'TDNET_API_LIMIT': 'abc'}), contextlib.redirect_stderr(stderr):
             got = run_sources([('tdnet', tdnet.collect), ('news-like', lambda: [InboxCandidate('news', 'ok', 'https://example.com')])])
+        log = stderr.getvalue()
         self.assertEqual(len(got), 1)
         self.assertEqual(got[0].source_kind, 'news')
+        self.assertIn('TDnetConfigError', log)
+        self.assertIn('TDNET_API_LIMIT', log)
+        self.assertNotIn('abc', log)
+
+    def test_tdnet_format_config_error_logs_safe_reason_and_continues(self):
+        from sources import tdnet
+        stderr = io.StringIO()
+        with patch.dict('os.environ', {'TDNET_API_FORMAT': 'xml'}), contextlib.redirect_stderr(stderr):
+            got = run_sources([('tdnet', tdnet.collect), ('news-like', lambda: [InboxCandidate('news', 'ok', 'https://example.com')])])
+        log = stderr.getvalue()
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].source_kind, 'news')
+        self.assertIn('TDnetConfigError', log)
+        self.assertIn('TDNET_API_FORMAT', log)
+        self.assertNotIn('xml', log)
+
+    def test_general_source_error_logs_type_without_message_and_continues(self):
+        stderr = io.StringIO()
+        secret_message = 'secret response body with DISCORD_WEBHOOK_URL'
+        with contextlib.redirect_stderr(stderr):
+            got = run_sources([('bad', lambda: (_ for _ in ()).throw(RuntimeError(secret_message))), ('news-like', lambda: [InboxCandidate('news', 'ok', 'https://example.com')])])
+        log = stderr.getvalue()
+        self.assertEqual(len(got), 1)
+        self.assertIn('RuntimeError', log)
+        self.assertNotIn(secret_message, log)
+        self.assertNotIn('DISCORD_WEBHOOK_URL', log)
 
     def test_edinet_official_payload_filters_and_sanitizes(self):
         from sources.edinet import parse_documents

@@ -62,7 +62,11 @@ def run_sources(source_fns: list[tuple[str, SourceFn]]) -> list[InboxCandidate]:
             all_items.extend(items)
             print(f"[collect] source={name} candidates={len(items)}")
         except Exception as error:
-            print(f"[collect] source={name} failed ({type(error).__name__}); continuing", file=sys.stderr)
+            error_name = type(error).__name__
+            if isinstance(error, tdnet.TDnetConfigError):
+                print(f"[collect] source={name} failed ({error_name}: {error}); continuing", file=sys.stderr)
+            else:
+                print(f"[collect] source={name} failed ({error_name}); continuing", file=sys.stderr)
     return all_items
 
 def local_dry_run_candidates() -> list[InboxCandidate]:
