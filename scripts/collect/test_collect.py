@@ -2,8 +2,8 @@ import importlib
 import unittest
 from unittest.mock import patch
 
-from common import dedup_key, is_allowed_http_url
-from collect import run_sources
+from common import InboxCandidate, candidate_dedup_key, dedup_key, is_allowed_http_url
+from collect import candidate_payload, run_sources, similar_exists
 from sources.news import extract_security_code
 
 class CollectTests(unittest.TestCase):
@@ -22,6 +22,28 @@ class CollectTests(unittest.TestCase):
     def test_dedup_normalizes_query_and_case(self):
         self.assertEqual(dedup_key('HTTPS://Example.com/Path/?utm=x'), dedup_key('https://example.com/Path'))
 
+
+    def test_candidate_dedup_uses_edinet_doc_identity_only_when_present(self):
+        a = InboxCandidate("edinet", "変更報告書", "https://disclosure2.edinet-fsa.go.jp/", raw={"edinet": {"docID": "S100AAA"}}, dedup_identity="edinet:S100AAA")
+        b = InboxCandidate("edinet", "変更報告書", "https://disclosure2.edinet-fsa.go.jp/", raw={"edinet": {"docID": "S100BBB"}}, dedup_identity="edinet:S100BBB")
+        a_again = InboxCandidate("edinet", "変更報告書", "https://disclosure2.edinet-fsa.go.jp/", raw={"edinet": {"docID": "S100AAA"}}, dedup_identity="edinet:S100AAA")
+        self.assertNotEqual(candidate_payload(a)["dedup_key"], candidate_payload(b)["dedup_key"])
+        self.assertEqual(candidate_payload(a)["dedup_key"], candidate_payload(a_again)["dedup_key"])
+        self.assertEqual(len(candidate_payload(a)["dedup_key"]), 64)
+
+    def test_tdnet_and_news_keep_url_based_dedup(self):
+        tdnet = InboxCandidate("tdnet", "t", "HTTPS://Example.com/Path/?utm=x")
+        news = InboxCandidate("news", "t", "https://example.com/Path")
+        self.assertEqual(candidate_dedup_key(tdnet), dedup_key(tdnet.url))
+        self.assertEqual(candidate_dedup_key(news), dedup_key(news.url))
+
+    def test_edinet_bypasses_similar_title_check(self):
+        calls = []
+        def fake_get(*args, **kwargs):
+            calls.append(args)
+        self.assertFalse(similar_exists("https://supabase.example", "key", InboxCandidate("edinet", "変更報告書" * 20, "https://disclosure2.edinet-fsa.go.jp/", security_code="130A", dedup_identity="edinet:S100AAA")))
+        self.assertEqual(calls, [])
+
     def test_http_url_allowlist_rejects_unsafe_schemes(self):
         self.assertTrue(is_allowed_http_url('https://example.com/news?q=a&b=c'))
         self.assertTrue(is_allowed_http_url('http://example.com/path'))
@@ -35,6 +57,7 @@ class CollectTests(unittest.TestCase):
             tdnet = importlib.reload(tdnet)
             edinet = importlib.reload(edinet)
             self.assertEqual(tdnet.TDNET_API_BASE_URL, 'https://webapi.yanoshin.jp/webapi/tdnet/list')
+            self.assertEqual(tdnet.tdnet_api_limit(), 300)
             self.assertEqual(edinet.EDINET_API_BASE_URL, 'https://api.edinet-fsa.go.jp/api/v2')
 
 if __name__ == '__main__':
@@ -70,6 +93,32 @@ class ExternalAPIFixtureTests(unittest.TestCase):
         self.assertIn(".json2?limit=", url)
         self.assertTrue(url.startswith("https://webapi.yanoshin.jp/webapi/tdnet/list/"))
 
+    def test_tdnet_limit_and_format_are_validated_after_import(self):
+        with patch.dict('os.environ', {'TDNET_API_LIMIT': 'abc'}):
+            import sources.tdnet as tdnet
+            tdnet = importlib.reload(tdnet)
+            with self.assertRaises(tdnet.TDnetConfigError):
+                tdnet.tdnet_api_limit()
+        from sources.tdnet import TDnetConfigError, tdnet_api_format, tdnet_api_limit
+        self.assertEqual(tdnet_api_limit(None), 300)
+        for raw, expected in [("", 300), ("300", 300), ("1", 1)]:
+            self.assertEqual(tdnet_api_limit(raw), expected)
+        for raw in ["abc", "0", "-1", "1000000"]:
+            with self.assertRaises(TDnetConfigError):
+                tdnet_api_limit(raw)
+        self.assertEqual(tdnet_api_format(None), "json2")
+        self.assertEqual(tdnet_api_format(""), "json2")
+        for raw in ["xml", "json3"]:
+            with self.assertRaises(TDnetConfigError):
+                tdnet_api_format(raw)
+
+    def test_tdnet_config_error_is_source_scoped(self):
+        from sources import tdnet
+        with patch.dict('os.environ', {'TDNET_API_LIMIT': 'abc'}):
+            got = run_sources([('tdnet', tdnet.collect), ('news-like', lambda: [InboxCandidate('news', 'ok', 'https://example.com')])])
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].source_kind, 'news')
+
     def test_edinet_official_payload_filters_and_sanitizes(self):
         from sources.edinet import parse_documents
         payload = {"statusCode": 200, "metadata": {"title": "documents"}, "results": [
@@ -90,7 +139,18 @@ class ExternalAPIFixtureTests(unittest.TestCase):
             parse_documents({"statusCode": 400, "results": []}, {"130A"})
         with self.assertRaises(EDINETAPIError):
             parse_documents({"statusCode": 200, "results": None}, {"130A"})
-        with self.assertRaises(EDINETAPIError):
-            parse_documents({"statusCode": 200, "results": [{"docDescription":"大量保有報告書", "secCode":"130A0"}]}, {"130A"})
+        self.assertEqual(parse_documents({"statusCode": 200, "results": [{"docDescription":"大量保有報告書", "secCode":"130A0"}]}, {"130A"}), [])
         with patch.dict('os.environ', {}, clear=True):
             self.assertEqual(collect({"130A"}), [])
+
+    def test_edinet_malformed_row_skips_and_keeps_valid_documents(self):
+        from sources.edinet import parse_documents
+        payload = {"statusCode": 200, "results": [
+            {"docID":"S100AAA", "docDescription":"大量保有報告書", "secCode":"130A0", "submitDateTime":"2026-07-21 10:00"},
+            {"docDescription":"変更報告書", "secCode":"130A0", "submitDateTime":"2026-07-21 11:00"},
+            {"docID":"S100BAD", "docDescription":"変更報告書", "secCode":"not-code"},
+            {"docID":"S100BBB", "docDescription":"変更報告書", "secCode":"130A0", "submitDateTime":"2026-07-21 12:00"},
+        ]}
+        got = parse_documents(payload, {"130A"})
+        self.assertEqual([c.raw["metadata_draft"]["doc_id"] for c in got], ["S100AAA", "S100BBB"])
+        self.assertNotEqual(candidate_payload(got[0])["dedup_key"], candidate_payload(got[1])["dedup_key"])

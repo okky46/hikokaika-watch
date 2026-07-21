@@ -10,8 +10,9 @@ import requests
 from common import InboxCandidate, JST, is_allowed_http_url
 
 TDNET_API_BASE_URL = os.getenv("TDNET_API_BASE_URL") or "https://webapi.yanoshin.jp/webapi/tdnet/list"
-TDNET_API_FORMAT = os.getenv("TDNET_API_FORMAT") or "json2"
-TDNET_API_LIMIT = int(os.getenv("TDNET_API_LIMIT") or "300")
+TDNET_DEFAULT_FORMAT = "json2"
+TDNET_DEFAULT_LIMIT = 300
+TDNET_MAX_LIMIT = 1000
 TITLE_RE = re.compile(r"一部報道|本日の(一部)?報道|報道に関する|非公開化|マネジメント・バイアウト|ＭＢＯ|MBO|公開買付|株式併合|株式の非公開化|買収提案")
 TAG_RULES = {
     "no_decision": ("決定した事実はありません", "決定している事実はありません", "決定事実はありません"),
@@ -29,12 +30,33 @@ TAG_RULES = {
 class TDnetParseError(ValueError):
     pass
 
+class TDnetConfigError(ValueError):
+    pass
+
+def tdnet_api_format(value: str | None = None) -> str:
+    fmt = (value if value is not None else os.getenv("TDNET_API_FORMAT") or TDNET_DEFAULT_FORMAT).strip() or TDNET_DEFAULT_FORMAT
+    if fmt not in {"json", "json2"}:
+        raise TDnetConfigError("TDNET_API_FORMAT is invalid")
+    return fmt
+
+def tdnet_api_limit(value: str | None = None) -> int:
+    raw = value if value is not None else os.getenv("TDNET_API_LIMIT")
+    if raw is None or raw.strip() == "":
+        return TDNET_DEFAULT_LIMIT
+    try:
+        limit = int(raw)
+    except ValueError as error:
+        raise TDnetConfigError("TDNET_API_LIMIT is invalid") from error
+    if limit <= 0 or limit > TDNET_MAX_LIMIT:
+        raise TDnetConfigError("TDNET_API_LIMIT is invalid")
+    return limit
+
 def tdnet_fetch_url(base_url: str | None = None) -> str:
     configured = (base_url or TDNET_API_BASE_URL).strip()
     if re.search(r"\.(json|json2)(\?|$)", configured):
         return configured
     today = datetime.now(JST).strftime("%Y%m%d")
-    return f"{configured.rstrip('/')}/{today}.{TDNET_API_FORMAT}?limit={TDNET_API_LIMIT}"
+    return f"{configured.rstrip('/')}/{today}.{tdnet_api_format()}?limit={tdnet_api_limit()}"
 
 def infer_event_type(title: str) -> str:
     if "一部報道" in title or "報道に関する" in title:

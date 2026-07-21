@@ -7,7 +7,7 @@ from typing import Callable
 
 import requests
 
-from common import ACTIVE_STATUSES, ActiveCase, InboxCandidate, dedup_key, get_config, headers, is_allowed_http_url, validate_startup_config
+from common import ACTIVE_STATUSES, ActiveCase, InboxCandidate, candidate_dedup_key, get_config, headers, is_allowed_http_url, validate_startup_config
 from notify_discord import notify
 from sources import edinet, news, tdnet
 
@@ -31,9 +31,11 @@ def match_case(candidate: InboxCandidate, active_cases: list[ActiveCase]) -> Inb
     return InboxCandidate(**{**candidate.__dict__, "matched_case_id": matched})
 
 def candidate_payload(c: InboxCandidate) -> dict:
-    return {"source_kind": c.source_kind, "title": c.title, "url": c.url, "published_at": c.published_at, "security_code": c.security_code, "matched_case_id": c.matched_case_id, "suggested_event_type": c.suggested_event_type, "suggested_comment_tags": list(c.suggested_comment_tags), "raw": c.raw, "dedup_key": dedup_key(c.url)}
+    return {"source_kind": c.source_kind, "title": c.title, "url": c.url, "published_at": c.published_at, "security_code": c.security_code, "matched_case_id": c.matched_case_id, "suggested_event_type": c.suggested_event_type, "suggested_comment_tags": list(c.suggested_comment_tags), "raw": c.raw, "dedup_key": candidate_dedup_key(c)}
 
 def similar_exists(base_url: str, service_key: str, c: InboxCandidate) -> bool:
+    if c.source_kind == "edinet":
+        return False
     if not c.security_code:
         return False
     response = requests.get(f"{base_url.rstrip('/')}/rest/v1/inbox_items", params={"select": "id", "security_code": f"eq.{c.security_code}", "title": f"like.{c.title[:30]}%", "limit": "1"}, headers=headers(service_key), timeout=20)

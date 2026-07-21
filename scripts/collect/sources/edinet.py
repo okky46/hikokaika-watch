@@ -25,6 +25,15 @@ def public_url(doc_id: Any) -> str:
     # EDINET API download URLs require auth/query params; store a stable public viewer entry instead.
     return EDINET_VIEWER_URL
 
+def _skip_row(index: int, reason: str, *, code: str | None = None, has_doc_id: bool | None = None) -> None:
+    details = [f"row={index}", f"reason={reason}"]
+    if code:
+        details.append(f"secCode={code}")
+    if has_doc_id is not None:
+        details.append(f"has_docID={has_doc_id}")
+    print(f"[collect] source=edinet skip malformed {' '.join(details)}")
+
+
 def parse_documents(payload: dict[str, Any], active_codes: set[str]) -> list[InboxCandidate]:
     status = payload.get("statusCode")
     if status not in (None, 200, "200"):
@@ -36,18 +45,26 @@ def parse_documents(payload: dict[str, Any], active_codes: set[str]) -> list[Inb
         raise EDINETAPIError("EDINET API results is not an array")
     results: list[InboxCandidate] = []
     normalized_active = {c.upper() for c in active_codes}
-    for doc in results_raw:
+    for index, doc in enumerate(results_raw):
         if not isinstance(doc, dict):
+            _skip_row(index, "row is not an object")
             continue
-        title = str(doc.get("docDescription") or "")
+        title = str(doc.get("docDescription") or "").strip()
+        if not title:
+            _skip_row(index, "docDescription missing", code=str(doc.get("secCode") or ""), has_doc_id=bool(doc.get("docID")))
+            continue
         if not any(t in title for t in DOC_TYPES):
             continue
         code = normalize_sec_code(doc.get("secCode"))
-        if not code or code not in normalized_active:
+        if not code:
+            _skip_row(index, "secCode invalid", has_doc_id=bool(doc.get("docID")))
             continue
-        doc_id = doc.get("docID")
+        if code not in normalized_active:
+            continue
+        doc_id = str(doc.get("docID") or "").strip()
         if not doc_id:
-            raise EDINETAPIError("EDINET document missing docID")
+            _skip_row(index, "docID missing", code=code, has_doc_id=False)
+            continue
         url = public_url(doc_id)
         if not is_allowed_http_url(url):
             raise EDINETAPIError("EDINET public viewer URL is invalid")
@@ -55,7 +72,7 @@ def parse_documents(payload: dict[str, Any], active_codes: set[str]) -> list[Inb
         change_type = "new" if "大量保有報告書" in title and "変更" not in title else "increase"
         metadata_draft = {"holder_name": doc.get("filerName"), "ratio": None, "previous_ratio": None, "filing_date": filing_date, "change_type": change_type, "doc_id": doc_id}
         safe_doc = {k: v for k, v in doc.items() if "key" not in k.lower() and "subscription" not in k.lower()}
-        results.append(InboxCandidate("edinet", title, url, doc.get("submitDateTime"), code, "large_shareholding_report", (), {"edinet": {**safe_doc, "docID": doc_id}, "metadata_draft": metadata_draft}))
+        results.append(InboxCandidate("edinet", title, url, doc.get("submitDateTime"), code, "large_shareholding_report", (), {"edinet": {**safe_doc, "docID": doc_id}, "metadata_draft": metadata_draft}, None, f"edinet:{doc_id}"))
     return results
 
 def collect(active_codes: set[str], *, timeout: int = 20) -> list[InboxCandidate]:

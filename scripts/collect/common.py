@@ -27,6 +27,7 @@ class InboxCandidate:
     suggested_comment_tags: tuple[str, ...] = ()
     raw: dict[str, Any] | None = None
     matched_case_id: str | None = None
+    dedup_identity: str | None = None
 
 
 def headers(service_role_key: str, *, representation: bool = False) -> dict[str, str]:
@@ -52,8 +53,18 @@ def normalize_url(url: str) -> str:
     return urlunsplit((scheme, netloc, path, "", ""))
 
 
+def sha256_key(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
 def dedup_key(url: str) -> str:
-    return hashlib.sha256(normalize_url(url).encode("utf-8")).hexdigest()
+    return sha256_key(normalize_url(url))
+
+
+def candidate_dedup_key(candidate: InboxCandidate) -> str:
+    if candidate.dedup_identity:
+        return sha256_key(candidate.dedup_identity)
+    return dedup_key(candidate.url)
 
 
 def now_jst_iso() -> str:
