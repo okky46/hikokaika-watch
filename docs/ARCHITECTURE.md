@@ -80,3 +80,21 @@
 会社コメントイベントは `case_events.comment_tags` に複数タグを保持し、TypeScript の `src/lib/commentTags.ts` で表示名・説明・分類影響を一元管理します。タグから `comment_stance` を自動算出し、公開データにも会社コメント分類を含めます。
 
 管理者操作の内部監査は `revision_history` にDBトリガーで記録します。公開画面の「訂正あり」とは分離し、対象は `companies`、`cases`、`case_events`、`price_snapshots` です。`admin_settings` は履歴対象外です。
+
+## フェーズ5: 情報収集パイプライン
+
+収集パイプラインは GitHub Actions (`.github/workflows/collect.yml`) から実行され、`scripts/collect/collect.py` が TDnet 系API、EDINET API、Google News RSS を順番に呼び出します。各ソースは独立した `try/except` で囲み、1ソースの失敗が他ソース、DB登録、Discord通知へ波及しない構成です。
+
+候補は `inbox_items` に `pending` として保存されます。`dedup_key` はクエリパラメータを除去して小文字化したURLの SHA-256 で、DB の unique 制約により重複URLを防ぎます。さらに同一証券コードかつタイトル先頭30文字一致の候補はバッチ側でスキップします。
+
+公開ページの静的ビルド (`src/lib/publicData.ts` 以下) は `inbox_items` を一切参照しません。外部収集情報は `/admin` の「収集候補」タブで人間が確認し、「新規案件として起票」または「既存案件のイベントとして追加」で既存の管理フォームへプリフィルしたうえで保存・公開処理を実行します。自動掲載は行わないため、流れは「3ソース → inbox → 人間承認 → 既存公開フロー → 静的サイト掲載」です。
+
+### Phase 5 external collection production settings (updated 2026-07-21)
+
+TDnet collection uses Yanoshin TDnet WEB-API by default because it provides unauthenticated JSON/json2 endpoints suitable for this project. `TDNET_API_BASE_URL` is a base path, not a complete fetch URL, unless it already ends in `.json` or `.json2`; the collector builds `/{YYYYmmdd}.json2?limit=300` by default. Yanoshin is an unofficial TDnet-derived service, so operators should confirm its latest terms and switch `TDNET_API_BASE_URL` if a contracted JPX/J-Quants feed is adopted.
+
+EDINET collection uses the official EDINET API v2 endpoint `https://api.edinet-fsa.go.jp/api/v2/documents.json` with `date`, `type=2`, and the `Subscription-Key` request parameter. `EDINET_API_KEY` is required to enable EDINET; when unset, only EDINET is skipped and other sources continue. EDINET inbox URLs intentionally use the official public viewer entry `https://disclosure2.edinet-fsa.go.jp/` rather than API download URLs, and `docID` is preserved under raw metadata.
+
+Manual Supabase tasks: apply `supabase/migrations/0004_inbox.sql` and verify the `inbox_items` table and RLS policies in the dashboard. Codex must not apply this to production.
+
+GitHub Repository Secrets to register manually: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `EDINET_API_KEY` (if EDINET enabled), `DISCORD_WEBHOOK_URL` (optional notification). GitHub Repository Variables to register manually: `TDNET_API_BASE_URL`, `TDNET_API_FORMAT`, `TDNET_API_LIMIT`, `EDINET_API_BASE_URL`, `EDINET_VIEWER_URL`, `ADMIN_URL`. Do not put secret values in Variables or logs.

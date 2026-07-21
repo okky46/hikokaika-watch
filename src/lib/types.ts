@@ -43,6 +43,26 @@ export type CommentTag =
 
 export type PriceType = 'pre_report_close' | 'current_close' | 'formal_offer_price' | 'daily_close';
 
+export type InboxSourceKind = 'tdnet' | 'edinet' | 'news';
+export type InboxStatus = 'pending' | 'approved' | 'rejected';
+
+export interface RawInboxItem {
+  id: string;
+  source_kind: InboxSourceKind;
+  title: string;
+  url: string;
+  published_at: string | null;
+  security_code: string | null;
+  matched_case_id: string | null;
+  suggested_event_type: EventType | string | null;
+  suggested_comment_tags: CommentTag[] | null;
+  raw: Record<string, unknown> | null;
+  dedup_key: string;
+  status: InboxStatus;
+  created_at: string;
+  reviewed_at: string | null;
+}
+
 export interface RawCompany {
   id: string;
   security_code: string;

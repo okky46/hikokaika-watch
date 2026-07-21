@@ -118,3 +118,24 @@ DB変更なし。GitHub Actions から平日16:30 JST に公開中の進行案�
 - `price_snapshots` に一意制約がない既存設計に揃え、`case_id × daily_close × price_date` をselectして既存行はupdate、なければinsertする。管理画面の重複防止と公開読み込み時の重複正規化を維持し、migrationは追加していない。
 - `.github/workflows/fetch-prices.yml` にcronと手動実行を追加し、固定concurrency groupで重複実行は後続を待機させる。insert/updateが1件以上の場合だけDeploy Hookを呼ぶ。dry-runはDB書き込み・Deploy Hookを行わず、接続情報なしでは英字入り証券コード`130A`を使うローカル検証モードになる。
 - `docs/SETUP.md` と `.env.example` に必要なGitHub Secrets、yfinanceの利用条件、ローカルdry-run手順を追記。
+
+## フェーズ5: 情報収集パイプライン(2026-07-18)
+
+DB変更は `supabase/migrations/0004_inbox.sql` 1本のみで、`inbox_items` の作成と管理者用RLSだけに限定した。既存テーブル・既存ポリシー・公開ページのデータ取得には触れていない。
+
+- `scripts/collect/` に TDnet 系API、EDINET API、Google News RSS の3ソース収集バッチを追加。PostgREST は `requests` で直叩きし、`--dry-run` ではSupabase書き込みとDiscord通知をスキップする。
+- 3ソースは順番に独立 `try/except` で実行し、1ソースの失敗が他ソースを止めない構造をユニットテストで確認した。
+- URL正規化SHA-256の `dedup_key` とDB unique制約、同一証券コード・タイトル先頭30文字一致のアプリ側チェックで重複候補を抑止する。
+- Discord Webhook 通知を追加。通知失敗はログのみでジョブ成功扱いにする。
+- 管理画面に「収集候補」タブを追加し、pending 候補から新規案件フォーム、イベントフォームへのプリフィル、破棄を行えるようにした。自動掲載はしない。
+- `.env.example`、`docs/SETUP.md`、`docs/ARCHITECTURE.md` に新規Secrets、外部API利用上の注意、収集→inbox→人間承認→掲載の構成を追記した。
+
+### Phase 5 external collection production settings (updated 2026-07-21)
+
+TDnet collection uses Yanoshin TDnet WEB-API by default because it provides unauthenticated JSON/json2 endpoints suitable for this project. `TDNET_API_BASE_URL` is a base path, not a complete fetch URL, unless it already ends in `.json` or `.json2`; the collector builds `/{YYYYmmdd}.json2?limit=300` by default. Yanoshin is an unofficial TDnet-derived service, so operators should confirm its latest terms and switch `TDNET_API_BASE_URL` if a contracted JPX/J-Quants feed is adopted.
+
+EDINET collection uses the official EDINET API v2 endpoint `https://api.edinet-fsa.go.jp/api/v2/documents.json` with `date`, `type=2`, and the `Subscription-Key` request parameter. `EDINET_API_KEY` is required to enable EDINET; when unset, only EDINET is skipped and other sources continue. EDINET inbox URLs intentionally use the official public viewer entry `https://disclosure2.edinet-fsa.go.jp/` rather than API download URLs, and `docID` is preserved under raw metadata.
+
+Manual Supabase tasks: apply `supabase/migrations/0004_inbox.sql` and verify the `inbox_items` table and RLS policies in the dashboard. Codex must not apply this to production.
+
+GitHub Repository Secrets to register manually: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `EDINET_API_KEY` (if EDINET enabled), `DISCORD_WEBHOOK_URL` (optional notification). GitHub Repository Variables to register manually: `TDNET_API_BASE_URL`, `TDNET_API_FORMAT`, `TDNET_API_LIMIT`, `EDINET_API_BASE_URL`, `EDINET_VIEWER_URL`, `ADMIN_URL`. Do not put secret values in Variables or logs.
