@@ -184,3 +184,56 @@ class ExternalAPIFixtureTests(unittest.TestCase):
         got = parse_documents(payload, {"130A"})
         self.assertEqual([c.raw["metadata_draft"]["doc_id"] for c in got], ["S100AAA", "S100BBB"])
         self.assertNotEqual(candidate_payload(got[0])["dedup_key"], candidate_payload(got[1])["dedup_key"])
+
+class GoogleNewsFilterTests(unittest.TestCase):
+    def rss(self, items):
+        body = ''.join(f"<item><title>{t}</title><link>{u}</link><pubDate>{d}</pubDate><description>{desc}</description></item>" for t,u,d,desc in items)
+        return f"<rss><channel>{body}</channel></rss>"
+
+    def test_explicit_security_code_only(self):
+        from sources.news import extract_security_code
+        self.assertIsNone(extract_security_code('2026年に非公開化を検討'))
+        self.assertIsNone(extract_security_code('売上高1234億円'))
+        self.assertEqual(extract_security_code('株式会社テスト（1234）がMBO検討'), '1234')
+        self.assertEqual(extract_security_code('株式会社テスト（130A）が非公開化を検討'), '130A')
+        self.assertEqual(extract_security_code('証券コード：7203'), '7203')
+        self.assertIsNone(extract_security_code('MBO検討 9999'))
+
+    def test_google_news_filters_code_and_keywords(self):
+        from datetime import date
+        from sources.news import parse_rss
+        xml = self.rss([
+            ('コードなしの非公開化報道', 'https://example.com/1', 'Tue, 21 Jul 2026 00:00:00 GMT', 'MBO'),
+            ('株式会社テスト（1234）が決算発表', 'https://example.com/2', 'Tue, 21 Jul 2026 00:00:00 GMT', '増配'),
+            ('株式会社テスト（1234）がMBO検討', 'https://example.com/3', 'Tue, 21 Jul 2026 00:00:00 GMT', ''),
+        ])
+        got = parse_rss(xml, '非公開化 報道', date_from=date(2026,7,21), date_to=date(2026,7,21))
+        self.assertEqual([x.url for x in got], ['https://example.com/3'])
+
+    def test_google_news_date_range_inclusive_and_excludes_unparseable(self):
+        from datetime import date
+        from sources.news import parse_rss
+        xml = self.rss([
+            ('前日（1234）MBO', 'https://example.com/0', 'Mon, 20 Jul 2026 14:59:59 GMT', ''),
+            ('開始日（1234）MBO', 'https://example.com/1', 'Mon, 20 Jul 2026 15:00:00 GMT', ''),
+            ('終了日（1234）MBO', 'https://example.com/2', 'Tue, 21 Jul 2026 15:00:00 GMT', ''),
+            ('不正日付（1234）MBO', 'https://example.com/3', 'not a date', ''),
+            ('翌日（1234）MBO', 'https://example.com/4', 'Wed, 22 Jul 2026 15:00:00 GMT', ''),
+        ])
+        got = parse_rss(xml, '非公開化 報道', date_from=date(2026,7,21), date_to=date(2026,7,22))
+        self.assertEqual([x.url for x in got], ['https://example.com/1', 'https://example.com/2'])
+
+    def test_google_news_query_dates(self):
+        from datetime import date
+        from sources.news import format_query
+        self.assertEqual(format_query('非公開化 報道', date(2026,7,19), date(2026,7,21)), '非公開化 報道 after:2026-07-19 before:2026-07-22')
+
+    def test_reject_invalid_cli_dates(self):
+        import argparse
+        from collect import resolve_news_date_range
+        with self.assertRaises(argparse.ArgumentTypeError):
+            resolve_news_date_range('bad', '2026-07-21')
+        with self.assertRaises(argparse.ArgumentTypeError):
+            resolve_news_date_range('2026-07-22', '2026-07-21')
+        with self.assertRaises(argparse.ArgumentTypeError):
+            resolve_news_date_range('2026-07-21', None)

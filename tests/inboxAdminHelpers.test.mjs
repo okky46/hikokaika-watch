@@ -2,10 +2,14 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {
+  filterInboxItems,
+  inboxItemFilterDate,
   normalizeHttpUrl,
   preserveSelectValueIfValid,
   resolveInboxCaseId,
   resolveInboxCompanyId,
+  pendingBulkRejectIds,
+  visibleSelectionIds,
 } from '../src/lib/inboxAdminHelpers.ts';
 
 describe('inbox admin helper regressions', () => {
@@ -45,6 +49,44 @@ describe('inbox admin helper regressions', () => {
     assert.equal(preserveSelectValueIfValid('withdrawn', validStatuses), 'withdrawn');
     assert.equal(preserveSelectValueIfValid('missing', validStatuses), null);
     assert.equal(preserveSelectValueIfValid('', validStatuses), null);
+  });
+});
+
+
+
+describe('inbox candidate filtering and bulk helpers', () => {
+  const items = [
+    { id: 'a', status: 'pending', title: '株式会社Alpha（130A）がMBO', security_code: '130A', source_kind: 'news', published_at: '2026-07-21T01:00:00Z', created_at: '2026-07-20T00:00:00Z', raw: { query: '非公開化 報道', description: '公開買付' } },
+    { id: 'b', status: 'pending', title: 'Beta', security_code: '7203', source_kind: 'tdnet', published_at: null, created_at: '2026-07-22T23:59:59Z', raw: { query: '', description: 'TOB' } },
+    { id: 'c', status: 'rejected', title: 'Gamma', security_code: '9999', source_kind: 'news', published_at: '2026-07-23T00:00:00Z', created_at: '2026-07-23T00:00:00Z', raw: { query: 'MBO', description: '買収提案' } },
+  ];
+
+  it('キーワード検索は対象フィールドを部分一致で検索する', () => {
+    assert.deepEqual(filterInboxItems(items, { keyword: '公開買付' }).map((x) => x.id), ['a']);
+    assert.deepEqual(filterInboxItems(items, { keyword: '7203' }).map((x) => x.id), ['b']);
+    assert.deepEqual(filterInboxItems(items, { keyword: 'tdnet' }).map((x) => x.id), ['b']);
+  });
+
+  it('キーワード検索は英字の大文字小文字を区別しない', () => {
+    assert.deepEqual(filterInboxItems(items, { keyword: 'alpha' }).map((x) => x.id), ['a']);
+  });
+
+  it('From/To/From+Toで日付絞り込みし、To当日を含む', () => {
+    assert.deepEqual(filterInboxItems(items, { dateFrom: '2026-07-22' }).map((x) => x.id), ['b', 'c']);
+    assert.deepEqual(filterInboxItems(items, { dateTo: '2026-07-22' }).map((x) => x.id), ['a', 'b']);
+    assert.deepEqual(filterInboxItems(items, { dateFrom: '2026-07-22', dateTo: '2026-07-22' }).map((x) => x.id), ['b']);
+  });
+
+  it('published_atがない場合はcreated_atへフォールバックする', () => {
+    assert.equal(inboxItemFilterDate(items[1]), '2026-07-22');
+  });
+
+  it('選択対象は表示中候補に限定される', () => {
+    assert.deepEqual(visibleSelectionIds([items[0], items[1]], ['a', 'c']), ['a']);
+  });
+
+  it('一括破棄はpending候補だけを対象にする', () => {
+    assert.deepEqual(pendingBulkRejectIds(items, ['a', 'c']), ['a']);
   });
 });
 

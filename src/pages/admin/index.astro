@@ -60,6 +60,22 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     <section class="section" data-panel="inbox" hidden>
       <h2 class="section-title">収集候補</h2>
       <p class="small muted">自動収集された pending の候補です。自動掲載は行わず、既存フォームへプリフィルして管理者が保存します。</p>
+      <div class="card" style="margin-bottom:0.8rem">
+        <div style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:end">
+          <label class="small">キーワード検索<br /><input type="search" id="inbox-filter-keyword" placeholder="タイトル・コード・収集元など" /></label>
+          <label class="small">掲載日From<br /><input type="date" id="inbox-filter-from" /></label>
+          <label class="small">掲載日To<br /><input type="date" id="inbox-filter-to" /></label>
+          <button type="button" class="btn" id="inbox-filter-clear">条件クリア</button>
+        </div>
+        <div style="display:flex; gap:0.4rem; flex-wrap:wrap; align-items:center; margin-top:0.7rem">
+          <button type="button" class="btn" id="inbox-select-visible">表示中の候補をすべて選択</button>
+          <button type="button" class="btn" id="inbox-select-clear">選択解除</button>
+          <button type="button" class="btn" id="inbox-bulk-reject">選択した候補を一括破棄</button>
+          <span class="small muted" id="inbox-filter-count">表示中 0件 / pending全体 0件</span>
+          <span class="small muted" id="inbox-selected-count">選択 0件</span>
+        </div>
+        <p class="small" id="inbox-bulk-status" aria-live="polite"></p>
+      </div>
       <div id="inbox-list"></div>
       <p class="empty-state" id="inbox-empty" hidden>収集候補はありません。</p>
     </section>
@@ -280,7 +296,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   import { getSupabase } from '../../lib/supabaseBrowser';
   import { buildLargeShareholdingMetadata } from '../../lib/noteMetadataHelpers';
   import { hasDailyCloseConflict } from '../../lib/priceHelpers';
-  import { normalizeHttpUrl, normalizeSecurityCode, preserveSelectValueIfValid, resolveInboxCaseId, resolveInboxCompanyId } from '../../lib/inboxAdminHelpers';
+  import { filterInboxItems, normalizeHttpUrl, normalizeSecurityCode, pendingBulkRejectIds, preserveSelectValueIfValid, resolveInboxCaseId, resolveInboxCompanyId, visibleSelectionIds } from '../../lib/inboxAdminHelpers';
 
   const { statusDefs, eventTypeDefs, commentTagDefs, commentTagOrder, commentStanceLabels } = (window as any).__ADMIN_DEFS__ as {
     statusDefs: Record<string, { label: string; mark: string; tone: string }>;
@@ -375,6 +391,9 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   let companies: any[] = [];
   let cases: any[] = [];
   let inboxItems: any[] = [];
+  let filteredInboxItems: any[] = [];
+  const selectedInboxIds = new Set<string>();
+  let inboxBulkRejecting = false;
   let currentInboxIdForCase: string | null = null;
   let currentInboxIdForEvent: string | null = null;
 
@@ -492,23 +511,37 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
 
   // ---------------- 収集候補 ----------------
-  async function loadInbox() {
-    const { data, error } = await supabase!
-      .from('inbox_items')
-      .select('*')
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false });
-    if (error) {
-      $('inbox-list').innerHTML = `<p class="notice">読込エラー: ${esc(error.message)}</p>`;
-      return;
-    }
-    inboxItems = data ?? [];
+  function inboxFilterOptions() {
+    return {
+      keyword: $<HTMLInputElement>('inbox-filter-keyword')?.value ?? '',
+      dateFrom: $<HTMLInputElement>('inbox-filter-from')?.value ?? '',
+      dateTo: $<HTMLInputElement>('inbox-filter-to')?.value ?? '',
+    };
+  }
+
+  function clearInboxSelection() {
+    selectedInboxIds.clear();
+    renderInbox();
+  }
+
+  function updateInboxSelectionSummary() {
+    const selectedVisible = visibleSelectionIds(filteredInboxItems, selectedInboxIds);
+    $('inbox-selected-count').textContent = `選択 ${selectedVisible.length}件`;
+    const bulkButton = $<HTMLButtonElement>('inbox-bulk-reject');
+    bulkButton.disabled = inboxBulkRejecting || selectedVisible.length === 0;
+  }
+
+  function renderInbox() {
+    filteredInboxItems = filterInboxItems(inboxItems, inboxFilterOptions());
     $('inbox-empty').hidden = inboxItems.length > 0;
-    $('inbox-list').innerHTML = inboxItems.map((item) => {
+    $('inbox-filter-count').textContent = `表示中 ${filteredInboxItems.length}件 / pending全体 ${inboxItems.length}件`;
+    $('inbox-list').innerHTML = filteredInboxItems.map((item) => {
       const matched = cases.find((c) => c.id === item.matched_case_id);
       const raw = item.raw ?? {};
+      const checked = selectedInboxIds.has(item.id) ? ' checked' : '';
       return `<article class="card" style="margin-bottom:0.7rem">
         <div class="event-card__head">
+          <label class="small"><input type="checkbox" data-inbox-select="${esc(item.id)}"${checked} /> 選択</label>
           <span class="badge badge--watch">${esc(item.source_kind)}</span>
           <span class="small muted">収集: ${fmtDate(item.created_at)} / 公開: ${fmtDate(item.published_at)}</span>
           ${matched ? `<span class="badge badge--comment">既存案件: ${esc(caseLabel(matched))}</span>` : ''}
@@ -525,8 +558,72 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
         <p class="small" id="inbox-status-${esc(item.id)}" aria-live="polite"></p>
       </article>`;
     }).join('');
+    updateInboxSelectionSummary();
   }
 
+  async function loadInbox() {
+    const { data, error } = await supabase!
+      .from('inbox_items')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+    if (error) {
+      $('inbox-list').innerHTML = `<p class="notice">読込エラー: ${esc(error.message)}</p>`;
+      return;
+    }
+    inboxItems = (data ?? []).map((item) => ({ ...item, status: item.status ?? 'pending' }));
+    selectedInboxIds.clear();
+    renderInbox();
+  }
+
+
+
+  ['inbox-filter-keyword', 'inbox-filter-from', 'inbox-filter-to'].forEach((id) => {
+    $(id)?.addEventListener('input', () => {
+      selectedInboxIds.clear();
+      renderInbox();
+    });
+  });
+  $('inbox-filter-clear')?.addEventListener('click', () => {
+    $<HTMLInputElement>('inbox-filter-keyword').value = '';
+    $<HTMLInputElement>('inbox-filter-from').value = '';
+    $<HTMLInputElement>('inbox-filter-to').value = '';
+    selectedInboxIds.clear();
+    renderInbox();
+  });
+  $('inbox-select-visible')?.addEventListener('click', () => {
+    filteredInboxItems.forEach((item) => selectedInboxIds.add(item.id));
+    renderInbox();
+  });
+  $('inbox-select-clear')?.addEventListener('click', clearInboxSelection);
+  $('inbox-bulk-reject')?.addEventListener('click', async () => {
+    const ids = pendingBulkRejectIds(filteredInboxItems, selectedInboxIds);
+    if (ids.length === 0 || inboxBulkRejecting) return;
+    if (!window.confirm(`選択した収集候補 ${ids.length}件を一括破棄します。よろしいですか？`)) return;
+    inboxBulkRejecting = true;
+    updateInboxSelectionSummary();
+    $('inbox-bulk-status').textContent = '一括破棄中です...';
+    const { data, error } = await supabase!
+      .from('inbox_items')
+      .update({ status: 'rejected', reviewed_at: new Date().toISOString() })
+      .eq('status', 'pending')
+      .in('id', ids)
+      .select('id');
+    inboxBulkRejecting = false;
+    if (error) {
+      $('inbox-bulk-status').textContent = `一括破棄に失敗しました: ${error.message}`;
+      updateInboxSelectionSummary();
+      return;
+    }
+    const updated = (data ?? []).length;
+    if (updated === ids.length) {
+      $('inbox-bulk-status').textContent = `${updated}件を破棄しました。`;
+      await loadInbox();
+      return;
+    }
+    $('inbox-bulk-status').textContent = `一括破棄は一部のみ完了しました: 成功 ${updated}件 / 未更新 ${ids.length - updated}件`;
+    await loadInbox();
+  });
 
   async function updatePendingInboxStatus(id: string, status: 'approved' | 'rejected', statusElementId: string): Promise<boolean> {
     const statusEl = $(statusElementId);
@@ -999,6 +1096,13 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     if (inboxEvent) {
       const item = inboxItems.find((x) => x.id === inboxEvent.dataset.inboxEvent);
       if (item) prefillEventFromInbox(item);
+      return;
+    }
+    const inboxSelect = t.closest<HTMLInputElement>('[data-inbox-select]');
+    if (inboxSelect) {
+      if (inboxSelect.checked) selectedInboxIds.add(inboxSelect.dataset.inboxSelect!);
+      else selectedInboxIds.delete(inboxSelect.dataset.inboxSelect!);
+      updateInboxSelectionSummary();
       return;
     }
     const inboxReject = t.closest<HTMLButtonElement>('[data-inbox-reject]');

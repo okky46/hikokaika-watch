@@ -4,6 +4,8 @@ import json
 import re
 import urllib.parse
 import xml.etree.ElementTree as ET
+from datetime import date, datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any
 
@@ -12,8 +14,11 @@ import requests
 from common import InboxCandidate
 
 RSS_URL = "https://news.google.com/rss/search?q={query}&hl=ja&gl=JP&ceid=JP:ja"
-CODE_RE = re.compile(r"[0-9][0-9A-Z]{3}")
-BRACKET_CODE_RE = re.compile(r"[（(＜<]([0-9][0-9A-Z]{3})[）)＞>]")
+SECURITY_CODE_PATTERN = r"([0-9]{4}|[0-9]{3}[A-Z])"
+BRACKET_CODE_RE = re.compile(rf"[（(＜<]{SECURITY_CODE_PATTERN}[）)＞>]", re.IGNORECASE)
+LABEL_CODE_RE = re.compile(rf"(?:証券コード|銘柄コード|コード)\s*[:：]?\s*{SECURITY_CODE_PATTERN}", re.IGNORECASE)
+RELATED_RE = re.compile(r"非公開化|MBO|TOB|公開買付|公開買い付け|買収提案", re.IGNORECASE)
+JST = timezone(timedelta(hours=9))
 
 
 def load_queries(path: str | Path | None = None) -> list[str]:
@@ -23,14 +28,54 @@ def load_queries(path: str | Path | None = None) -> list[str]:
 
 def extract_security_code(text: str) -> str | None:
     upper = text.upper()
-    bracket = BRACKET_CODE_RE.search(upper)
-    if bracket:
-        return bracket.group(1)
-    match = CODE_RE.search(upper)
-    return match.group(0) if match else None
+    for regex in (BRACKET_CODE_RE, LABEL_CODE_RE):
+        match = regex.search(upper)
+        if match:
+            return match.group(1).upper()
+    return None
 
 
-def parse_rss(xml_text: str, query: str) -> list[InboxCandidate]:
+def has_related_keyword(text: str) -> bool:
+    return RELATED_RE.search(text) is not None
+
+
+def parse_pub_date(value: str | None) -> date | None:
+    if not value:
+        return None
+    try:
+        dt = parsedate_to_datetime(value)
+    except (TypeError, ValueError):
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(JST).date()
+
+
+def default_date_range(today: date | None = None) -> tuple[date, date]:
+    end = today or datetime.now(JST).date()
+    return end - timedelta(days=2), end
+
+
+def format_query(query: str, date_from: date | None = None, date_to: date | None = None) -> str:
+    if date_from and date_to:
+        return f"{query} after:{date_from.isoformat()} before:{(date_to + timedelta(days=1)).isoformat()}"
+    return query
+
+
+def in_date_range(pub_date: str | None, date_from: date | None, date_to: date | None) -> bool:
+    if not date_from and not date_to:
+        return True
+    parsed = parse_pub_date(pub_date)
+    if parsed is None:
+        return False
+    if date_from and parsed < date_from:
+        return False
+    if date_to and parsed > date_to:
+        return False
+    return True
+
+
+def parse_rss(xml_text: str, query: str, *, date_from: date | None = None, date_to: date | None = None) -> list[InboxCandidate]:
     root = ET.fromstring(xml_text)
     items: list[InboxCandidate] = []
     for item in root.findall(".//item"):
@@ -38,9 +83,16 @@ def parse_rss(xml_text: str, query: str) -> list[InboxCandidate]:
         link = item.findtext("link") or ""
         published = item.findtext("pubDate")
         description = item.findtext("description") or ""
+        haystack = f"{title} {description}"
         if not title or not link:
             continue
-        code = extract_security_code(f"{title} {description}")
+        if not has_related_keyword(haystack):
+            continue
+        if not in_date_range(published, date_from, date_to):
+            continue
+        code = extract_security_code(haystack)
+        if not code:
+            continue
         items.append(InboxCandidate(
             source_kind="news",
             title=title,
@@ -53,11 +105,12 @@ def parse_rss(xml_text: str, query: str) -> list[InboxCandidate]:
     return items
 
 
-def collect(queries: list[str] | None = None, *, timeout: int = 20) -> list[InboxCandidate]:
+def collect(queries: list[str] | None = None, *, timeout: int = 20, date_from: date | None = None, date_to: date | None = None) -> list[InboxCandidate]:
     results: list[InboxCandidate] = []
     for query in queries or load_queries():
-        url = RSS_URL.format(query=urllib.parse.quote(query))
+        rss_query = format_query(query, date_from, date_to)
+        url = RSS_URL.format(query=urllib.parse.quote(rss_query))
         response = requests.get(url, timeout=timeout, headers={"User-Agent": "hikokaika-watch/collect"})
         response.raise_for_status()
-        results.extend(parse_rss(response.text, query))
+        results.extend(parse_rss(response.text, rss_query, date_from=date_from, date_to=date_to))
     return results

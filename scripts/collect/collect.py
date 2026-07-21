@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from datetime import date
 from typing import Callable
 
 import requests
@@ -12,6 +13,24 @@ from notify_discord import notify
 from sources import edinet, news, tdnet
 
 SourceFn = Callable[[], list[InboxCandidate]]
+
+def parse_cli_date(value: str, name: str) -> date:
+    try:
+        return date.fromisoformat(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"{name} must be YYYY-MM-DD") from exc
+
+def resolve_news_date_range(date_from_raw: str | None, date_to_raw: str | None) -> tuple[date, date]:
+    if (date_from_raw and not date_to_raw) or (date_to_raw and not date_from_raw):
+        raise argparse.ArgumentTypeError("--date-from and --date-to must be specified together")
+    if date_from_raw and date_to_raw:
+        date_from = parse_cli_date(date_from_raw, "--date-from")
+        date_to = parse_cli_date(date_to_raw, "--date-to")
+    else:
+        date_from, date_to = news.default_date_range()
+    if date_from > date_to:
+        raise argparse.ArgumentTypeError("--date-from must be on or before --date-to")
+    return date_from, date_to
 
 def fetch_active_cases(base_url: str, service_key: str) -> list[ActiveCase]:
     response = requests.get(f"{base_url.rstrip('/')}/rest/v1/cases", params={"select": "id,companies!inner(security_code)", "status": f"in.({','.join(ACTIVE_STATUSES)})"}, headers=headers(service_key), timeout=20)
@@ -75,7 +94,13 @@ def local_dry_run_candidates() -> list[InboxCandidate]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--date-from", dest="date_from")
+    parser.add_argument("--date-to", dest="date_to")
     args = parser.parse_args()
+    try:
+        news_date_from, news_date_to = resolve_news_date_range(args.date_from, args.date_to)
+    except argparse.ArgumentTypeError as error:
+        parser.error(str(error))
     base_url, service_key = get_config()
     if args.dry_run and (not base_url or not service_key):
         active_cases = [ActiveCase("dry-run-case-130a", "130A")]
@@ -92,7 +117,7 @@ def main() -> int:
             print(f"[collect] active case fetch failed ({type(error).__name__})", file=sys.stderr)
             active_cases = []
         active_codes = {c.security_code for c in active_cases}
-        candidates = run_sources([("tdnet", tdnet.collect), ("edinet", lambda: edinet.collect(active_codes)), ("news", news.collect)])
+        candidates = run_sources([("tdnet", tdnet.collect), ("edinet", lambda: edinet.collect(active_codes)), ("news", lambda: news.collect(date_from=news_date_from, date_to=news_date_to))])
     matched = [match_case(c, active_cases) for c in candidates if c.url and is_allowed_http_url(c.url)]
     inserted: list[dict] = []
     for c in matched:

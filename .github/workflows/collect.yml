@@ -5,6 +5,15 @@ on:
     - cron: '0 23 * * 0-4'
     - cron: '0 3,10 * * 1-5'
   workflow_dispatch:
+    inputs:
+      date_from:
+        description: 'Google News collection start date (YYYY-MM-DD). Specify both date_from and date_to, or leave both empty.'
+        required: false
+        type: string
+      date_to:
+        description: 'Google News collection end date (YYYY-MM-DD). Specify both date_from and date_to, or leave both empty.'
+        required: false
+        type: string
 
 concurrency:
   group: collect-inbox-candidates
@@ -34,4 +43,16 @@ jobs:
           EDINET_API_BASE_URL: ${{ vars.EDINET_API_BASE_URL }}
           EDINET_VIEWER_URL: ${{ vars.EDINET_VIEWER_URL }}
           ADMIN_URL: ${{ vars.ADMIN_URL }}
-        run: python scripts/collect/collect.py
+          INPUT_DATE_FROM: ${{ inputs.date_from }}
+          INPUT_DATE_TO: ${{ inputs.date_to }}
+        run: |
+          set -euo pipefail
+          args=()
+          if [[ -n "${INPUT_DATE_FROM:-}" || -n "${INPUT_DATE_TO:-}" ]]; then
+            if [[ -z "${INPUT_DATE_FROM:-}" || -z "${INPUT_DATE_TO:-}" ]]; then
+              echo 'date_from and date_to must be specified together.' >&2
+              exit 2
+            fi
+            args+=(--date-from "$INPUT_DATE_FROM" --date-to "$INPUT_DATE_TO")
+          fi
+          python scripts/collect/collect.py "${args[@]}"

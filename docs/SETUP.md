@@ -295,3 +295,10 @@ EDINET collection uses the official EDINET API v2 endpoint `https://api.edinet-f
 Manual Supabase tasks: apply `supabase/migrations/0004_inbox.sql` and verify the `inbox_items` table and RLS policies in the dashboard. Codex must not apply this to production.
 
 GitHub Repository Secrets to register manually: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `EDINET_API_KEY` (if EDINET enabled), `DISCORD_WEBHOOK_URL` (optional notification). GitHub Repository Variables to register manually: `TDNET_API_BASE_URL`, `TDNET_API_FORMAT`, `TDNET_API_LIMIT`, `EDINET_API_BASE_URL`, `EDINET_VIEWER_URL`, `ADMIN_URL`. Do not put secret values in Variables or logs.
+
+## 収集候補の期間指定と管理画面操作
+
+- 定期収集では、Google NewsのみAsia/Tokyo基準で本日を含む直近3日間を既定の対象期間にします。TDnet・EDINETの既存収集条件には適用しません。
+- GitHub Actionsの手動実行（`workflow_dispatch`）では、Google News用に任意の`date_from` / `date_to`（どちらも`YYYY-MM-DD`）を指定できます。片方だけ指定した場合は安全のため入力エラーとして扱います。
+- 管理画面の「収集候補」にあるキーワード検索・掲載日From/Toは、すでに保存済みのpending候補の表示絞り込みです。Google Newsの収集期間指定とは別機能です。
+- 管理画面の一括破棄はDBから物理削除せず、個別破棄と同じくpending候補の`status`を`rejected`へ更新し、`reviewed_at`へ処理時刻を保存します。
