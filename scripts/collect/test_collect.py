@@ -21,6 +21,13 @@ class CollectTests(unittest.TestCase):
         self.assertEqual(calls, ['bad', 'good1', 'good2'])
     def test_alphanumeric_code_bracket_priority(self):
         self.assertEqual(extract_security_code('株式会社テスト（130A） MBO検討 9999'), '130A')
+
+    def test_default_date_range_includes_friday_on_monday(self):
+        from datetime import date
+        from sources.news import default_date_range
+        self.assertEqual(default_date_range(date(2026, 7, 20)), (date(2026, 7, 17), date(2026, 7, 20)))
+        self.assertEqual(default_date_range(date(2026, 7, 21)), (date(2026, 7, 19), date(2026, 7, 21)))
+        self.assertEqual(default_date_range(date(2026, 7, 19)), (date(2026, 7, 17), date(2026, 7, 19)))
     def test_dedup_normalizes_query_and_case(self):
         self.assertEqual(dedup_key('HTTPS://Example.com/Path/?utm=x'), dedup_key('https://example.com/Path'))
 
@@ -194,10 +201,20 @@ class GoogleNewsFilterTests(unittest.TestCase):
         from sources.news import extract_security_code
         self.assertIsNone(extract_security_code('2026年に非公開化を検討'))
         self.assertIsNone(extract_security_code('売上高1234億円'))
-        self.assertEqual(extract_security_code('株式会社テスト（1234）がMBO検討'), '1234')
-        self.assertEqual(extract_security_code('株式会社テスト（130A）が非公開化を検討'), '130A')
-        self.assertEqual(extract_security_code('証券コード：7203'), '7203')
+        self.assertIsNone(extract_security_code('非公開化を検討（2026）', base_year=2026))
+        self.assertEqual(extract_security_code('株式会社テスト（1234）がMBO検討', base_year=2026), '1234')
+        self.assertEqual(extract_security_code('株式会社テスト（130A）が非公開化を検討', base_year=2026), '130A')
+        self.assertEqual(extract_security_code('証券コード：2026', base_year=2026), '2026')
+        self.assertEqual(extract_security_code('銘柄コード 7203', base_year=2026), '7203')
         self.assertIsNone(extract_security_code('MBO検討 9999'))
+
+    def test_google_news_year_only_article_is_not_registered(self):
+        from datetime import date
+        from sources.news import parse_rss
+        xml = self.rss([
+            ('非公開化を検討（2026）', 'https://example.com/year', 'Tue, 21 Jul 2026 00:00:00 GMT', 'MBO'),
+        ])
+        self.assertEqual(parse_rss(xml, '非公開化 報道', date_from=date(2026,7,21), date_to=date(2026,7,21)), [])
 
     def test_google_news_filters_code_and_keywords(self):
         from datetime import date

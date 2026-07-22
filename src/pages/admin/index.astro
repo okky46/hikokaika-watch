@@ -296,7 +296,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   import { getSupabase } from '../../lib/supabaseBrowser';
   import { buildLargeShareholdingMetadata } from '../../lib/noteMetadataHelpers';
   import { hasDailyCloseConflict } from '../../lib/priceHelpers';
-  import { filterInboxItems, normalizeHttpUrl, normalizeSecurityCode, pendingBulkRejectIds, preserveSelectValueIfValid, resolveInboxCaseId, resolveInboxCompanyId, visibleSelectionIds } from '../../lib/inboxAdminHelpers';
+  import { filterInboxItems, inboxEmptyState, normalizeHttpUrl, normalizeSecurityCode, pendingBulkRejectIds, preserveSelectValueIfValid, resolveInboxCaseId, resolveInboxCompanyId, visibleSelectionIds } from '../../lib/inboxAdminHelpers';
 
   const { statusDefs, eventTypeDefs, commentTagDefs, commentTagOrder, commentStanceLabels } = (window as any).__ADMIN_DEFS__ as {
     statusDefs: Record<string, { label: string; mark: string; tone: string }>;
@@ -533,7 +533,10 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
   function renderInbox() {
     filteredInboxItems = filterInboxItems(inboxItems, inboxFilterOptions());
-    $('inbox-empty').hidden = inboxItems.length > 0;
+    const emptyState = inboxEmptyState(inboxItems.length, filteredInboxItems.length);
+    const emptyEl = $('inbox-empty');
+    emptyEl.hidden = emptyState === 'none';
+    emptyEl.textContent = emptyState === 'no-filter-results' ? '条件に一致する収集候補はありません。' : '収集候補はありません。';
     $('inbox-filter-count').textContent = `表示中 ${filteredInboxItems.length}件 / pending全体 ${inboxItems.length}件`;
     $('inbox-list').innerHTML = filteredInboxItems.map((item) => {
       const matched = cases.find((c) => c.id === item.matched_case_id);

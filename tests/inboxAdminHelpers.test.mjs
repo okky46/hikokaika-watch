@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {
   filterInboxItems,
+  inboxEmptyState,
   inboxItemFilterDate,
   normalizeHttpUrl,
   preserveSelectValueIfValid,
@@ -73,12 +74,35 @@ describe('inbox candidate filtering and bulk helpers', () => {
 
   it('From/To/From+Toで日付絞り込みし、To当日を含む', () => {
     assert.deepEqual(filterInboxItems(items, { dateFrom: '2026-07-22' }).map((x) => x.id), ['b', 'c']);
-    assert.deepEqual(filterInboxItems(items, { dateTo: '2026-07-22' }).map((x) => x.id), ['a', 'b']);
-    assert.deepEqual(filterInboxItems(items, { dateFrom: '2026-07-22', dateTo: '2026-07-22' }).map((x) => x.id), ['b']);
+    assert.deepEqual(filterInboxItems(items, { dateTo: '2026-07-22' }).map((x) => x.id), ['a']);
+    assert.deepEqual(filterInboxItems(items, { dateFrom: '2026-07-22', dateTo: '2026-07-22' }).map((x) => x.id), []);
   });
 
-  it('published_atがない場合はcreated_atへフォールバックする', () => {
-    assert.equal(inboxItemFilterDate(items[1]), '2026-07-22');
+  it('掲載日フィルターはpublished_atをJST基準で判定する', () => {
+    const jstMidnightItem = { id: 'jst', published_at: '2026-07-20T15:30:00Z', created_at: '2026-07-20T00:00:00Z' };
+    assert.equal(inboxItemFilterDate(jstMidnightItem), '2026-07-21');
+    assert.deepEqual(filterInboxItems([jstMidnightItem], { dateFrom: '2026-07-21' }).map((x) => x.id), ['jst']);
+    assert.deepEqual(filterInboxItems([jstMidnightItem], { dateTo: '2026-07-21' }).map((x) => x.id), ['jst']);
+    assert.deepEqual(filterInboxItems([jstMidnightItem], { dateTo: '2026-07-20' }).map((x) => x.id), []);
+  });
+
+  it('published_atがない場合はcreated_atへJST基準でフォールバックする', () => {
+    assert.equal(inboxItemFilterDate(items[1]), '2026-07-23');
+    const createdOnlyItem = { id: 'created-only', published_at: null, created_at: '2026-07-20T15:30:00Z' };
+    assert.equal(inboxItemFilterDate(createdOnlyItem), '2026-07-21');
+    assert.deepEqual(filterInboxItems([createdOnlyItem], { dateFrom: '2026-07-21', dateTo: '2026-07-21' }).map((x) => x.id), ['created-only']);
+  });
+
+  it('不正な日時は日付不明として期間条件から安全に除外する', () => {
+    const invalidDateItem = { id: 'invalid', published_at: 'not a date', created_at: null };
+    assert.equal(inboxItemFilterDate(invalidDateItem), null);
+    assert.deepEqual(filterInboxItems([invalidDateItem], { dateFrom: '2026-07-21' }), []);
+  });
+
+  it('空表示状態はpending全体とフィルター結果を分けて返す', () => {
+    assert.equal(inboxEmptyState(0, 0), 'no-pending');
+    assert.equal(inboxEmptyState(2, 0), 'no-filter-results');
+    assert.equal(inboxEmptyState(2, 1), 'none');
   });
 
   it('選択対象は表示中候補に限定される', () => {

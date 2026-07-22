@@ -49,13 +49,25 @@ export type InboxAdminItemLike = {
 };
 
 export type InboxFilterOptions = { keyword?: string; dateFrom?: string; dateTo?: string };
+export type InboxEmptyState = 'none' | 'no-pending' | 'no-filter-results';
+
+const JST_DATE_FORMAT = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Tokyo',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
 
 function localDateKey(value: unknown): string | null {
   const raw = String(value ?? '').trim();
   if (!raw) return null;
   const parsed = new Date(raw);
   if (Number.isNaN(parsed.getTime())) return null;
-  return parsed.toISOString().slice(0, 10);
+  const parts = JST_DATE_FORMAT.formatToParts(parsed);
+  const year = parts.find((part) => part.type === 'year')?.value;
+  const month = parts.find((part) => part.type === 'month')?.value;
+  const day = parts.find((part) => part.type === 'day')?.value;
+  return year && month && day ? `${year}-${month}-${day}` : null;
 }
 
 export function inboxItemFilterDate(item: InboxAdminItemLike): string | null {
@@ -89,4 +101,9 @@ export function visibleSelectionIds(items: InboxAdminItemLike[], selectedIds: It
 export function pendingBulkRejectIds(items: InboxAdminItemLike[], selectedIds: Iterable<string>): string[] {
   const selected = new Set(selectedIds);
   return items.filter((item) => item.status === 'pending' && selected.has(item.id)).map((item) => item.id);
+}
+
+export function inboxEmptyState(pendingCount: number, filteredCount: number): InboxEmptyState {
+  if (filteredCount > 0) return 'none';
+  return pendingCount === 0 ? 'no-pending' : 'no-filter-results';
 }

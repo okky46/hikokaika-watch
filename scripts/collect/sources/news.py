@@ -26,12 +26,29 @@ def load_queries(path: str | Path | None = None) -> list[str]:
     return json.loads(query_path.read_text(encoding="utf-8"))
 
 
-def extract_security_code(text: str) -> str | None:
+def current_jst_year() -> int:
+    return datetime.now(JST).year
+
+
+def is_likely_recent_year_code(code: str, base_year: int, *, window: int = 3) -> bool:
+    if not re.fullmatch(r"[0-9]{4}", code):
+        return False
+    value = int(code)
+    return base_year - window <= value <= base_year + window
+
+
+def extract_security_code(text: str, *, base_year: int | None = None) -> str | None:
     upper = text.upper()
-    for regex in (BRACKET_CODE_RE, LABEL_CODE_RE):
-        match = regex.search(upper)
-        if match:
-            return match.group(1).upper()
+    label_match = LABEL_CODE_RE.search(upper)
+    if label_match:
+        return label_match.group(1).upper()
+    year = base_year if base_year is not None else current_jst_year()
+    bracket_match = BRACKET_CODE_RE.search(upper)
+    if bracket_match:
+        code = bracket_match.group(1).upper()
+        if is_likely_recent_year_code(code, year):
+            return None
+        return code
     return None
 
 
@@ -53,7 +70,8 @@ def parse_pub_date(value: str | None) -> date | None:
 
 def default_date_range(today: date | None = None) -> tuple[date, date]:
     end = today or datetime.now(JST).date()
-    return end - timedelta(days=2), end
+    start_delta = 3 if end.weekday() == 0 else 2
+    return end - timedelta(days=start_delta), end
 
 
 def format_query(query: str, date_from: date | None = None, date_to: date | None = None) -> str:
