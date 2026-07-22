@@ -245,6 +245,80 @@ class GoogleNewsFilterTests(unittest.TestCase):
         from sources.news import format_query
         self.assertEqual(format_query('非公開化 報道', date(2026,7,19), date(2026,7,21)), '非公開化 報道 after:2026-07-19 before:2026-07-22')
 
+
+    def test_load_queries_reads_three_google_news_queries(self):
+        from sources.news import load_queries
+        self.assertEqual(load_queries(), [
+            '非公開化 報道',
+            '非公開化 検討',
+            '非公開化 入札',
+        ])
+
+    def test_collect_builds_dated_urls_and_keeps_raw_query_original(self):
+        from datetime import date
+        from urllib.parse import parse_qs, unquote, urlsplit
+        from sources import news
+
+        requested_queries = []
+
+        class Resp:
+            def __init__(self, text):
+                self.text = text
+            def raise_for_status(self):
+                return None
+
+        def fake_get(url, **kwargs):
+            requested_query = unquote(parse_qs(urlsplit(url).query)['q'][0])
+            requested_queries.append(requested_query)
+            index = len(requested_queries)
+            return Resp(self.rss([
+                ('株式会社テスト（1234）がMBO検討', f'https://example.com/unique-{index}', 'Tue, 21 Jul 2026 00:00:00 GMT', '非公開化'),
+            ]))
+
+        with patch.object(news.requests, 'get', side_effect=fake_get):
+            got = news.collect(date_from=date(2026, 7, 19), date_to=date(2026, 7, 21))
+
+        self.assertEqual(requested_queries, [
+            '非公開化 報道 after:2026-07-19 before:2026-07-22',
+            '非公開化 検討 after:2026-07-19 before:2026-07-22',
+            '非公開化 入札 after:2026-07-19 before:2026-07-22',
+        ])
+        self.assertEqual([item.raw['query'] for item in got], ['非公開化 報道', '非公開化 検討', '非公開化 入札'])
+
+    def test_collect_deduplicates_same_normalized_url_across_queries(self):
+        from datetime import date
+        from sources import news
+
+        feeds = [
+            self.rss([('株式会社テスト（1234）がMBO検討', 'https://example.com/article?utm=x', 'Tue, 21 Jul 2026 00:00:00 GMT', '非公開化')]),
+            self.rss([('株式会社テスト（1234）がMBO検討 続報', 'https://example.com/article', 'Tue, 21 Jul 2026 00:00:00 GMT', '非公開化')]),
+            self.rss([('株式会社テスト（1234）がMBO検討 別記事', 'https://example.com/other', 'Tue, 21 Jul 2026 00:00:00 GMT', '非公開化')]),
+        ]
+
+        class Resp:
+            def __init__(self, text):
+                self.text = text
+            def raise_for_status(self):
+                return None
+
+        with patch.object(news.requests, 'get', side_effect=[Resp(feed) for feed in feeds]):
+            got = news.collect(queries=['q1', 'q2', 'q3'], date_from=date(2026, 7, 21), date_to=date(2026, 7, 21))
+
+        self.assertEqual([item.url for item in got], ['https://example.com/article?utm=x', 'https://example.com/other'])
+        self.assertEqual([item.security_code for item in got], ['1234', '1234'])
+        self.assertEqual([item.raw['query'] for item in got], ['q1', 'q3'])
+
+    def test_parse_rss_deduplicates_with_existing_db_key_normalization(self):
+        from datetime import date
+        from sources.news import parse_rss
+        xml = self.rss([
+            ('株式会社テスト（1234）がMBO検討', 'HTTPS://Example.com/Path/?utm=x', 'Tue, 21 Jul 2026 00:00:00 GMT', '非公開化'),
+            ('株式会社テスト（1234）がMBO検討 続報', 'https://example.com/Path', 'Tue, 21 Jul 2026 00:00:00 GMT', '非公開化'),
+        ])
+        got = parse_rss(xml, '非公開化 検討', date_from=date(2026, 7, 21), date_to=date(2026, 7, 21))
+        self.assertEqual(len(got), 1)
+        self.assertEqual(candidate_payload(got[0])['dedup_key'], dedup_key('https://example.com/Path'))
+
     def test_reject_invalid_cli_dates(self):
         import argparse
         from collect import resolve_news_date_range

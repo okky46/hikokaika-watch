@@ -11,7 +11,7 @@ from typing import Any
 
 import requests
 
-from common import InboxCandidate
+from common import InboxCandidate, normalize_url
 
 RSS_URL = "https://news.google.com/rss/search?q={query}&hl=ja&gl=JP&ceid=JP:ja"
 SECURITY_CODE_PATTERN = r"([0-9]{4}|[0-9]{3}[A-Z])"
@@ -93,6 +93,18 @@ def in_date_range(pub_date: str | None, date_from: date | None, date_to: date | 
     return True
 
 
+def dedupe_candidates(candidates: list[InboxCandidate]) -> list[InboxCandidate]:
+    seen: set[str] = set()
+    unique: list[InboxCandidate] = []
+    for candidate in candidates:
+        key = normalize_url(candidate.url)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(candidate)
+    return unique
+
+
 def parse_rss(xml_text: str, query: str, *, date_from: date | None = None, date_to: date | None = None) -> list[InboxCandidate]:
     root = ET.fromstring(xml_text)
     items: list[InboxCandidate] = []
@@ -120,7 +132,7 @@ def parse_rss(xml_text: str, query: str, *, date_from: date | None = None, date_
             suggested_event_type="observation_report",
             raw={"query": query, "description": description},
         ))
-    return items
+    return dedupe_candidates(items)
 
 
 def collect(queries: list[str] | None = None, *, timeout: int = 20, date_from: date | None = None, date_to: date | None = None) -> list[InboxCandidate]:
@@ -130,5 +142,5 @@ def collect(queries: list[str] | None = None, *, timeout: int = 20, date_from: d
         url = RSS_URL.format(query=urllib.parse.quote(rss_query))
         response = requests.get(url, timeout=timeout, headers={"User-Agent": "hikokaika-watch/collect"})
         response.raise_for_status()
-        results.extend(parse_rss(response.text, rss_query, date_from=date_from, date_to=date_to))
-    return results
+        results.extend(parse_rss(response.text, query, date_from=date_from, date_to=date_to))
+    return dedupe_candidates(results)
