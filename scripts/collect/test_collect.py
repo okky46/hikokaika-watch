@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from common import InboxCandidate, candidate_dedup_key, dedup_key, is_allowed_http_url
 from collect import candidate_payload, run_sources, similar_exists
-from sources.news import extract_security_code
+from sources.news import dedupe_candidates, extract_security_code
 
 class CollectTests(unittest.TestCase):
     def test_sources_continue_after_exception(self):
@@ -21,6 +21,13 @@ class CollectTests(unittest.TestCase):
         self.assertEqual(calls, ['bad', 'good1', 'good2'])
     def test_alphanumeric_code_bracket_priority(self):
         self.assertEqual(extract_security_code('株式会社テスト（130A） MBO検討 9999'), '130A')
+
+    def test_default_date_range_includes_friday_on_monday(self):
+        from datetime import date
+        from sources.news import default_date_range
+        self.assertEqual(default_date_range(date(2026, 7, 20)), (date(2026, 7, 17), date(2026, 7, 20)))
+        self.assertEqual(default_date_range(date(2026, 7, 21)), (date(2026, 7, 19), date(2026, 7, 21)))
+        self.assertEqual(default_date_range(date(2026, 7, 19)), (date(2026, 7, 17), date(2026, 7, 19)))
     def test_dedup_normalizes_query_and_case(self):
         self.assertEqual(dedup_key('HTTPS://Example.com/Path/?utm=x'), dedup_key('https://example.com/Path'))
 
@@ -184,3 +191,165 @@ class ExternalAPIFixtureTests(unittest.TestCase):
         got = parse_documents(payload, {"130A"})
         self.assertEqual([c.raw["metadata_draft"]["doc_id"] for c in got], ["S100AAA", "S100BBB"])
         self.assertNotEqual(candidate_payload(got[0])["dedup_key"], candidate_payload(got[1])["dedup_key"])
+
+class GoogleNewsFilterTests(unittest.TestCase):
+    def rss(self, items):
+        body = ''.join(f"<item><title>{t}</title><link>{u}</link><pubDate>{d}</pubDate><description>{desc}</description></item>" for t,u,d,desc in items)
+        return f"<rss><channel>{body}</channel></rss>"
+
+    def test_explicit_security_code_only(self):
+        from sources.news import dedupe_candidates, extract_security_code
+        self.assertIsNone(extract_security_code('2026年に非公開化を検討'))
+        self.assertIsNone(extract_security_code('売上高1234億円'))
+        self.assertIsNone(extract_security_code('非公開化を検討（2026）', base_year=2026))
+        self.assertIsNone(extract_security_code('非公開化の方針（2026）', base_year=2026))
+        self.assertEqual(extract_security_code('方針（2026）。テスト社（1234）がMBO検討', base_year=2026), '1234')
+        self.assertEqual(extract_security_code('見通し（2026）、テスト社（130A）が非公開化を検討', base_year=2026), '130A')
+        self.assertEqual(extract_security_code('方針（2025）（2026）（7203）がTOBを検討', base_year=2026), '7203')
+        self.assertEqual(extract_security_code('株式会社テスト（1234）がMBO検討', base_year=2026), '1234')
+        self.assertEqual(extract_security_code('株式会社テスト（130A）が非公開化を検討', base_year=2026), '130A')
+        self.assertEqual(extract_security_code('証券コード：2026、非公開化を検討', base_year=2026), '2026')
+        self.assertEqual(extract_security_code('証券コード：2026', base_year=2026), '2026')
+        self.assertEqual(extract_security_code('銘柄コード 7203', base_year=2026), '7203')
+        self.assertIsNone(extract_security_code('MBO検討 9999'))
+
+    def test_google_news_year_only_article_is_not_registered(self):
+        from datetime import date
+        from sources.news import parse_rss
+        xml = self.rss([
+            ('非公開化を検討（2026）', 'https://example.com/year', 'Tue, 21 Jul 2026 00:00:00 GMT', 'MBO'),
+        ])
+        self.assertEqual(parse_rss(xml, '非公開化 報道', date_from=date(2026,7,21), date_to=date(2026,7,21)), [])
+
+    def test_google_news_filters_code_and_keywords(self):
+        from datetime import date
+        from sources.news import parse_rss
+        xml = self.rss([
+            ('コードなしの非公開化報道', 'https://example.com/1', 'Tue, 21 Jul 2026 00:00:00 GMT', 'MBO'),
+            ('株式会社テスト（1234）が決算発表', 'https://example.com/2', 'Tue, 21 Jul 2026 00:00:00 GMT', '増配'),
+            ('株式会社テスト（1234）がMBO検討', 'https://example.com/3', 'Tue, 21 Jul 2026 00:00:00 GMT', ''),
+        ])
+        got = parse_rss(xml, '非公開化 報道', date_from=date(2026,7,21), date_to=date(2026,7,21))
+        self.assertEqual([x.url for x in got], ['https://example.com/3'])
+
+    def test_google_news_date_range_inclusive_and_excludes_unparseable(self):
+        from datetime import date
+        from sources.news import parse_rss
+        xml = self.rss([
+            ('前日（1234）MBO', 'https://example.com/0', 'Mon, 20 Jul 2026 14:59:59 GMT', ''),
+            ('開始日（1234）MBO', 'https://example.com/1', 'Mon, 20 Jul 2026 15:00:00 GMT', ''),
+            ('終了日（1234）MBO', 'https://example.com/2', 'Tue, 21 Jul 2026 15:00:00 GMT', ''),
+            ('不正日付（1234）MBO', 'https://example.com/3', 'not a date', ''),
+            ('翌日（1234）MBO', 'https://example.com/4', 'Wed, 22 Jul 2026 15:00:00 GMT', ''),
+        ])
+        got = parse_rss(xml, '非公開化 報道', date_from=date(2026,7,21), date_to=date(2026,7,22))
+        self.assertEqual([x.url for x in got], ['https://example.com/1', 'https://example.com/2'])
+
+    def test_google_news_query_dates(self):
+        from datetime import date
+        from sources.news import format_query
+        self.assertEqual(format_query('非公開化 報道', date(2026,7,19), date(2026,7,21)), '非公開化 報道 after:2026-07-19 before:2026-07-22')
+
+
+    def test_load_queries_reads_three_google_news_queries(self):
+        from sources.news import load_queries
+        self.assertEqual(load_queries(), [
+            '非公開化 報道',
+            '非公開化 検討',
+            '非公開化 入札',
+        ])
+
+    def test_collect_builds_dated_urls_and_keeps_raw_query_original(self):
+        from datetime import date
+        from urllib.parse import parse_qs, unquote, urlsplit
+        from sources import news
+
+        requested_queries = []
+
+        class Resp:
+            def __init__(self, text):
+                self.text = text
+            def raise_for_status(self):
+                return None
+
+        def fake_get(url, **kwargs):
+            requested_query = unquote(parse_qs(urlsplit(url).query)['q'][0])
+            requested_queries.append(requested_query)
+            index = len(requested_queries)
+            return Resp(self.rss([
+                ('株式会社テスト（1234）がMBO検討', f'https://example.com/unique-{index}', 'Tue, 21 Jul 2026 00:00:00 GMT', '非公開化'),
+            ]))
+
+        with patch.object(news.requests, 'get', side_effect=fake_get):
+            got = news.collect(date_from=date(2026, 7, 19), date_to=date(2026, 7, 21))
+
+        self.assertEqual(requested_queries, [
+            '非公開化 報道 after:2026-07-19 before:2026-07-22',
+            '非公開化 検討 after:2026-07-19 before:2026-07-22',
+            '非公開化 入札 after:2026-07-19 before:2026-07-22',
+        ])
+        self.assertEqual([item.raw['query'] for item in got], ['非公開化 報道', '非公開化 検討', '非公開化 入札'])
+
+    def test_collect_deduplicates_same_normalized_url_across_queries(self):
+        from datetime import date
+        from sources import news
+
+        feeds = [
+            self.rss([('株式会社テスト（1234）がMBO検討', 'https://example.com/article?utm=x', 'Tue, 21 Jul 2026 00:00:00 GMT', '非公開化')]),
+            self.rss([('株式会社テスト（1234）がMBO検討 続報', 'https://example.com/article', 'Tue, 21 Jul 2026 00:00:00 GMT', '非公開化')]),
+            self.rss([('株式会社テスト（1234）がMBO検討 別記事', 'https://example.com/other', 'Tue, 21 Jul 2026 00:00:00 GMT', '非公開化')]),
+        ]
+
+        class Resp:
+            def __init__(self, text):
+                self.text = text
+            def raise_for_status(self):
+                return None
+
+        with patch.object(news.requests, 'get', side_effect=[Resp(feed) for feed in feeds]):
+            got = news.collect(queries=['q1', 'q2', 'q3'], date_from=date(2026, 7, 21), date_to=date(2026, 7, 21))
+
+        self.assertEqual([item.url for item in got], ['https://example.com/article?utm=x', 'https://example.com/other'])
+        self.assertEqual([item.security_code for item in got], ['1234', '1234'])
+        self.assertEqual([item.raw['query'] for item in got], ['q1', 'q3'])
+
+
+    def test_dedup_skips_invalid_urls_and_keeps_valid_candidates(self):
+        invalid = InboxCandidate('news', 'invalid', 'http://[', raw={'query': 'q1'})
+        valid = InboxCandidate('news', 'valid', 'https://example.com/valid', raw={'query': 'q2'})
+        got = dedupe_candidates([invalid, valid])
+        self.assertEqual([item.url for item in got], ['https://example.com/valid'])
+
+    def test_dedup_returns_empty_for_only_invalid_urls(self):
+        got = dedupe_candidates([InboxCandidate('news', 'invalid', 'http://[', raw={'query': 'q1'})])
+        self.assertEqual(got, [])
+
+    def test_dedup_normalizes_url_query_and_case(self):
+        got = dedupe_candidates([
+            InboxCandidate('news', 'first', 'https://example.com/article?query=1', raw={'query': 'q1'}),
+            InboxCandidate('news', 'second', 'HTTPS://EXAMPLE.COM/article?query=2', raw={'query': 'q2'}),
+        ])
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].url, 'https://example.com/article?query=1')
+        self.assertEqual(got[0].raw['query'], 'q1')
+
+    def test_parse_rss_deduplicates_with_existing_db_key_normalization(self):
+        from datetime import date
+        from sources.news import parse_rss
+        xml = self.rss([
+            ('株式会社テスト（1234）がMBO検討', 'HTTPS://Example.com/Path/?utm=x', 'Tue, 21 Jul 2026 00:00:00 GMT', '非公開化'),
+            ('株式会社テスト（1234）がMBO検討 続報', 'https://example.com/Path', 'Tue, 21 Jul 2026 00:00:00 GMT', '非公開化'),
+        ])
+        got = parse_rss(xml, '非公開化 検討', date_from=date(2026, 7, 21), date_to=date(2026, 7, 21))
+        self.assertEqual(len(got), 1)
+        self.assertEqual(candidate_payload(got[0])['dedup_key'], dedup_key('https://example.com/Path'))
+
+    def test_reject_invalid_cli_dates(self):
+        import argparse
+        from collect import resolve_news_date_range
+        with self.assertRaises(argparse.ArgumentTypeError):
+            resolve_news_date_range('bad', '2026-07-21')
+        with self.assertRaises(argparse.ArgumentTypeError):
+            resolve_news_date_range('2026-07-22', '2026-07-21')
+        with self.assertRaises(argparse.ArgumentTypeError):
+            resolve_news_date_range('2026-07-21', None)
