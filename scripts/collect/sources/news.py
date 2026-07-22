@@ -11,7 +11,7 @@ from typing import Any
 
 import requests
 
-from common import InboxCandidate, normalize_url
+from common import InboxCandidate, is_allowed_http_url, normalize_url
 
 RSS_URL = "https://news.google.com/rss/search?q={query}&hl=ja&gl=JP&ceid=JP:ja"
 SECURITY_CODE_PATTERN = r"([0-9]{4}|[0-9]{3}[A-Z])"
@@ -43,11 +43,10 @@ def extract_security_code(text: str, *, base_year: int | None = None) -> str | N
     if label_match:
         return label_match.group(1).upper()
     year = base_year if base_year is not None else current_jst_year()
-    bracket_match = BRACKET_CODE_RE.search(upper)
-    if bracket_match:
+    for bracket_match in BRACKET_CODE_RE.finditer(upper):
         code = bracket_match.group(1).upper()
         if is_likely_recent_year_code(code, year):
-            return None
+            continue
         return code
     return None
 
@@ -97,7 +96,12 @@ def dedupe_candidates(candidates: list[InboxCandidate]) -> list[InboxCandidate]:
     seen: set[str] = set()
     unique: list[InboxCandidate] = []
     for candidate in candidates:
-        key = normalize_url(candidate.url)
+        if not is_allowed_http_url(candidate.url):
+            continue
+        try:
+            key = normalize_url(candidate.url)
+        except ValueError:
+            continue
         if key in seen:
             continue
         seen.add(key)

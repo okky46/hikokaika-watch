@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from common import InboxCandidate, candidate_dedup_key, dedup_key, is_allowed_http_url
 from collect import candidate_payload, run_sources, similar_exists
-from sources.news import extract_security_code
+from sources.news import dedupe_candidates, extract_security_code
 
 class CollectTests(unittest.TestCase):
     def test_sources_continue_after_exception(self):
@@ -198,12 +198,17 @@ class GoogleNewsFilterTests(unittest.TestCase):
         return f"<rss><channel>{body}</channel></rss>"
 
     def test_explicit_security_code_only(self):
-        from sources.news import extract_security_code
+        from sources.news import dedupe_candidates, extract_security_code
         self.assertIsNone(extract_security_code('2026年に非公開化を検討'))
         self.assertIsNone(extract_security_code('売上高1234億円'))
         self.assertIsNone(extract_security_code('非公開化を検討（2026）', base_year=2026))
+        self.assertIsNone(extract_security_code('非公開化の方針（2026）', base_year=2026))
+        self.assertEqual(extract_security_code('方針（2026）。テスト社（1234）がMBO検討', base_year=2026), '1234')
+        self.assertEqual(extract_security_code('見通し（2026）、テスト社（130A）が非公開化を検討', base_year=2026), '130A')
+        self.assertEqual(extract_security_code('方針（2025）（2026）（7203）がTOBを検討', base_year=2026), '7203')
         self.assertEqual(extract_security_code('株式会社テスト（1234）がMBO検討', base_year=2026), '1234')
         self.assertEqual(extract_security_code('株式会社テスト（130A）が非公開化を検討', base_year=2026), '130A')
+        self.assertEqual(extract_security_code('証券コード：2026、非公開化を検討', base_year=2026), '2026')
         self.assertEqual(extract_security_code('証券コード：2026', base_year=2026), '2026')
         self.assertEqual(extract_security_code('銘柄コード 7203', base_year=2026), '7203')
         self.assertIsNone(extract_security_code('MBO検討 9999'))
@@ -307,6 +312,26 @@ class GoogleNewsFilterTests(unittest.TestCase):
         self.assertEqual([item.url for item in got], ['https://example.com/article?utm=x', 'https://example.com/other'])
         self.assertEqual([item.security_code for item in got], ['1234', '1234'])
         self.assertEqual([item.raw['query'] for item in got], ['q1', 'q3'])
+
+
+    def test_dedup_skips_invalid_urls_and_keeps_valid_candidates(self):
+        invalid = InboxCandidate('news', 'invalid', 'http://[', raw={'query': 'q1'})
+        valid = InboxCandidate('news', 'valid', 'https://example.com/valid', raw={'query': 'q2'})
+        got = dedupe_candidates([invalid, valid])
+        self.assertEqual([item.url for item in got], ['https://example.com/valid'])
+
+    def test_dedup_returns_empty_for_only_invalid_urls(self):
+        got = dedupe_candidates([InboxCandidate('news', 'invalid', 'http://[', raw={'query': 'q1'})])
+        self.assertEqual(got, [])
+
+    def test_dedup_normalizes_url_query_and_case(self):
+        got = dedupe_candidates([
+            InboxCandidate('news', 'first', 'https://example.com/article?query=1', raw={'query': 'q1'}),
+            InboxCandidate('news', 'second', 'HTTPS://EXAMPLE.COM/article?query=2', raw={'query': 'q2'}),
+        ])
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0].url, 'https://example.com/article?query=1')
+        self.assertEqual(got[0].raw['query'], 'q1')
 
     def test_parse_rss_deduplicates_with_existing_db_key_normalization(self):
         from datetime import date
