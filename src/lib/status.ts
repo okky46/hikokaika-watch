@@ -2,7 +2,7 @@
 // ステータス・出来事種別の表示定義(ラベル/記号/色トーン)を集約する。
 // 色だけに依存せず、ラベルと記号でも状態を区別する(要件 §12)。
 // ============================================================
-import type { CaseStatus, EventType } from './types';
+import type { LegacyCaseStatus, EventType } from './types';
 
 export interface StatusDef {
   label: string;
@@ -15,7 +15,7 @@ export interface StatusDef {
   description: string;
 }
 
-export const CASE_STATUS: Record<CaseStatus, StatusDef> = {
+export const CASE_STATUS: Record<LegacyCaseStatus, StatusDef> = {
   rumored: {
     label: '観測報道段階',
     mark: '◇',
@@ -74,7 +74,7 @@ export const CASE_STATUS: Record<CaseStatus, StatusDef> = {
   },
 };
 
-export const STATUS_ORDER: CaseStatus[] = [
+export const STATUS_ORDER: LegacyCaseStatus[] = [
   'rumored',
   'commented',
   'denied',
@@ -106,7 +106,7 @@ export const EVENT_TYPE: Record<EventType, EventTypeDef> = {
   other: { label: 'その他', mark: '・', tone: 'pause' },
 };
 
-export function statusDef(status: CaseStatus): StatusDef {
+export function statusDef(status: LegacyCaseStatus): StatusDef {
   return CASE_STATUS[status] ?? CASE_STATUS.rumored;
 }
 
@@ -132,7 +132,7 @@ export type PublicStatusTone =
   | 'post-completed'
   | 'post-withdrawn';
 
-export function publicStatusTone(status: CaseStatus, heatLevel: 1 | 2 | 3 | 4 = 1): PublicStatusTone {
+export function publicStatusTone(status: LegacyCaseStatus, heatLevel: 1 | 2 | 3 | 4 = 1): PublicStatusTone {
   switch (status) {
     case 'rumored':
     case 'commented':

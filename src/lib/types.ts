@@ -4,7 +4,10 @@
 // CaseListItem / CaseDetail はページ生成用に組み立てたビューモデル。
 // ============================================================
 
-export type CaseStatus =
+export type CaseStatus = 'tracking' | 'announced' | 'closed';
+
+/** PR4 まで旧画面・旧管理フォームのために保持する。 */
+export type LegacyCaseStatus =
   | 'rumored'
   | 'commented'
   | 'denied'
@@ -27,6 +30,12 @@ export type EventType =
   | 'correction'
   | 'large_shareholding_report'
   | 'other';
+
+export type EventCategory = 'media_report' | 'company_disclosure' | 'formal_announcement' | 'post_announcement_update' | 'related_information' | 'correction';
+export type ReportRole = 'initial' | 'follow_up' | 'related' | 'market_reaction';
+export type CompanyStance = 'private_consideration' | 'capital_policy' | 'denied';
+export type EventTagKind = 'source' | 'content';
+export type DatePrecision = 'datetime' | 'date' | 'issue' | 'unknown';
 
 export type CommentStance = 'acknowledged' | 'neutral' | 'denied' | 'declined' | 'unclear' | 'needs_review';
 export type CommentTag =
@@ -79,7 +88,8 @@ export interface RawCase {
   company_id: string;
   title: string;
   slug: string;
-  status: CaseStatus;
+  status: LegacyCaseStatus;
+  canonical_status?: CaseStatus | null;
   summary: string;
   first_reported_at: string | null;
   site_published_at: string | null;
@@ -92,7 +102,15 @@ export interface RawEvent {
   id: string;
   case_id: string;
   event_type: EventType;
-  occurred_at: string;
+  occurred_at: string | null;
+  event_category?: EventCategory | null;
+  report_role?: ReportRole | null;
+  company_stance?: CompanyStance | null;
+  date_precision?: DatePrecision;
+  issue_label?: string | null;
+  issue_year_month?: string | null;
+  market_trigger_date?: string | null;
+  sort_at?: string | null;
   title: string;
   summary: string;
   source_name: string;
@@ -113,6 +131,7 @@ export interface RawPrice {
   price: string | number; // Supabase の numeric は文字列で返る
   price_date: string;
   source_name: string | null;
+  basis_note?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -122,6 +141,16 @@ export interface PricePoint {
   price: number;
   priceDate: string;
   sourceName: string | null;
+  basisNote?: string | null;
+}
+
+export interface EventTagView {
+  id: string;
+  kind: EventTagKind;
+  slug: string;
+  label: string;
+  isActive: boolean;
+  sortOrder: number;
 }
 
 /** 一覧・検索用のビューモデル(トップページに JSON 埋め込みされる) */
@@ -129,7 +158,7 @@ export interface CaseListItem {
   id: string;
   slug: string;
   title: string;
-  status: CaseStatus;
+  status: LegacyCaseStatus;
   summary: string;
   securityCode: string;
   companyName: string;
@@ -162,7 +191,7 @@ export interface CaseListItem {
   /** 最初の観測報道からの経過日数(今日基準) */
   daysSinceFirstReport: number | null;
   /** 表示用ステータス(dormant 判定を含む。DBのstatusは変更しない) */
-  effectiveStatus: CaseStatus;
+  effectiveStatus: LegacyCaseStatus;
   /** effectiveStatus が発表前系(rumored/commented/denied/ended/dormant)かどうか */
   isPreAnnouncement: boolean;
 }
@@ -171,7 +200,7 @@ export interface CaseListItem {
 export interface CaseEventView {
   id: string;
   eventType: EventType;
-  occurredAt: string;
+  occurredAt: string | null;
   title: string;
   summary: string;
   sourceName: string;

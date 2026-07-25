@@ -2,10 +2,10 @@
 // 案件詳細ページ用のステータスファネル(要件 §1-4)。
 // ビルド時に静的HTMLで出力し、クライアントJSは使わない。
 import { CASE_STATUS } from '../lib/status';
-import type { CaseStatus } from '../lib/types';
+import type { LegacyCaseStatus } from '../lib/types';
 
 interface Props {
-  effectiveStatus: CaseStatus;
+  effectiveStatus: LegacyCaseStatus;
   reportCount: number;
   commentCount: number;
   heatLevel: 1 | 2 | 3 | 4;
@@ -14,7 +14,7 @@ interface Props {
 const { effectiveStatus, reportCount, commentCount, heatLevel } = Astro.props;
 
 // 本線の位置(0=観測, 1=会社コメント, 2=正式発表, 3=成立・完了)
-const MAINLINE_INDEX: Partial<Record<CaseStatus, number>> = {
+const MAINLINE_INDEX: Partial<Record<LegacyCaseStatus, number>> = {
   rumored: 0,
   commented: 1,
   announced: 2,
@@ -22,7 +22,7 @@ const MAINLINE_INDEX: Partial<Record<CaseStatus, number>> = {
 };
 
 // 分岐系の案件は、本線のどの位置の下に分岐行を出すか
-const BRANCH_AFTER_INDEX: Partial<Record<CaseStatus, number>> = {
+const BRANCH_AFTER_INDEX: Partial<Record<LegacyCaseStatus, number>> = {
   denied: 1,
   ended: 1,
   dormant: 1,

@@ -138,7 +138,8 @@ function assemble(raw: RawData): PublicData {
       .slice()
       .sort(
         (a, b) =>
-          new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime() ||
+          new Date(a.sort_at ?? a.occurred_at ?? a.site_published_at ?? a.updated_at).getTime() -
+            new Date(b.sort_at ?? b.occurred_at ?? b.site_published_at ?? b.updated_at).getTime() ||
           a.sort_order - b.sort_order,
       );
 
@@ -187,6 +188,7 @@ function assemble(raw: RawData): PublicData {
     });
 
     const sparklineMarkers: SparklineMarker[] = events.flatMap((e): SparklineMarker[] => {
+      if (!e.occurred_at) return [];
       if (e.event_type === 'observation_report' || e.event_type === 'follow_up_report') return [{ date: e.occurred_at, kind: 'report' as const }];
       if (e.event_type === 'company_comment' || e.event_type === 'timely_disclosure') return [{ date: e.occurred_at, kind: 'comment' as const }];
       if (e.event_type === 'formal_announcement') return [{ date: e.occurred_at, kind: 'announce' as const }];
@@ -274,6 +276,7 @@ function latestPrice(prices: RawPrice[], type: RawPrice['price_type']): PricePoi
     price: Number(latest.price),
     priceDate: latest.price_date,
     sourceName: latest.source_name,
+    basisNote: latest.basis_note ?? null,
   };
 }
 
