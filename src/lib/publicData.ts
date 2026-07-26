@@ -11,15 +11,25 @@
 import { createClient } from '@supabase/supabase-js';
 import fs from 'node:fs';
 import path from 'node:path';
-import { classifyCommentStance, latestCommentStanceFromEvent } from './commentTags';
-import { resolvePublicDataEnvironment } from './buildEnv';
-import { hasFormalAnnouncement } from './caseFilters';
-import { deriveCaseFields, firstVisibleReportOccurredAt } from './derive';
-import { renderSparkline } from './sparkline';
-import { sanitizeLargeShareholdingMetadata } from './noteMetadataHelpers';
-import { buildPublicCompanies, isPublishableCompany } from './publicCompanyHelpers';
-import { normalizeDailyCloses } from './priceHelpers';
-import type { SparklineMarker } from './sparkline';
+import { classifyCommentStance, latestCommentStanceFromEvent } from './commentTags.ts';
+import {
+  aggregateEventTags,
+  baselineReturn as calculateBaselineReturn,
+  canonicalCaseStatus,
+  classifyEvent,
+  firstReport as selectFirstReport,
+  latestCompanyStance as selectLatestCompanyStance,
+  latestEvent as selectLatestEvent,
+  reportCount as calculateReportCount,
+} from './classification.ts';
+import { resolvePublicDataEnvironment } from './buildEnv.ts';
+import { hasFormalAnnouncement } from './caseFilters.ts';
+import { deriveCaseFields } from './derive.ts';
+import { renderSparkline } from './sparkline.ts';
+import { sanitizeLargeShareholdingMetadata } from './noteMetadataHelpers.ts';
+import { buildPublicCompanies, isPublishableCompany } from './publicCompanyHelpers.ts';
+import { normalizeDailyCloses } from './priceHelpers.ts';
+import type { SparklineMarker } from './sparkline.ts';
 import type {
   CaseDetail,
   CaseEventView,
@@ -30,14 +40,18 @@ import type {
   RawCase,
   RawCompany,
   RawEvent,
+  RawEventTag,
+  RawCaseEventTag,
   RawPrice,
-} from './types';
+} from './types.ts';
 
 interface RawData {
   companies: RawCompany[];
   cases: RawCase[];
   events: RawEvent[];
   prices: RawPrice[];
+  eventTags: RawEventTag[];
+  caseEventTags: RawCaseEventTag[];
   isSampleData: boolean;
 }
 
@@ -74,14 +88,16 @@ async function loadRaw(): Promise<RawData> {
 async function loadFromSupabase(url: string, key: string): Promise<RawData> {
   const supabase = createClient(url, key, { auth: { persistSession: false } });
 
-  const [companies, cases, events, prices] = await Promise.all([
+  const [companies, cases, events, prices, eventTags, caseEventTags] = await Promise.all([
     supabase.from('companies').select('*'),
     supabase.from('cases').select('*').eq('is_visible', true),
     supabase.from('case_events').select('*').eq('is_visible', true),
     supabase.from('price_snapshots').select('*'),
+    supabase.from('event_tags').select('*'),
+    supabase.from('case_event_tags').select('*'),
   ]);
 
-  for (const [name, res] of Object.entries({ companies, cases, case_events: events, price_snapshots: prices })) {
+  for (const [name, res] of Object.entries({ companies, cases, case_events: events, price_snapshots: prices, event_tags: eventTags, case_event_tags: caseEventTags })) {
     if (res.error) {
       throw new Error(`[publicData] ${name} の取得に失敗: ${res.error.message}`);
     }
@@ -92,6 +108,8 @@ async function loadFromSupabase(url: string, key: string): Promise<RawData> {
     cases: (cases.data ?? []) as RawCase[],
     events: (events.data ?? []) as RawEvent[],
     prices: (prices.data ?? []) as RawPrice[],
+    eventTags: (eventTags.data ?? []) as RawEventTag[],
+    caseEventTags: (caseEventTags.data ?? []) as RawCaseEventTag[],
     isSampleData: false,
   };
 }
@@ -106,6 +124,8 @@ function loadFromSample(): RawData {
     cases: read<RawCase[]>('cases.json').filter((c) => c.is_visible),
     events: read<RawEvent[]>('case_events.json').filter((e) => e.is_visible),
     prices: read<RawPrice[]>('price_snapshots.json'),
+    eventTags: read<RawEventTag[]>('event_tags.json'),
+    caseEventTags: read<RawCaseEventTag[]>('case_event_tags.json'),
     isSampleData: true,
   };
 }
@@ -113,10 +133,12 @@ function loadFromSample(): RawData {
 // ------------------------------------------------------------
 // 組み立て
 // ------------------------------------------------------------
-function assemble(raw: RawData): PublicData {
+export function assemblePublicData(raw: RawData): PublicData {
   const companyById = new Map(raw.companies.map((c) => [c.id, c]));
   const eventsByCase = groupBy(raw.events, (e) => e.case_id);
   const pricesByCase = groupBy(raw.prices, (p) => p.case_id);
+  const tagById = new Map(raw.eventTags.map((tag) => [tag.id, tag]));
+  const tagIdsByEvent = groupBy(raw.caseEventTags, (link) => link.event_id);
 
   // 派生値の計算基準時刻(=このビルドの generatedAt と同一)
   const now = new Date();
@@ -138,7 +160,8 @@ function assemble(raw: RawData): PublicData {
       .slice()
       .sort(
         (a, b) =>
-          new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime() ||
+          new Date(a.sort_at ?? a.occurred_at ?? a.site_published_at ?? a.updated_at).getTime() -
+            new Date(b.sort_at ?? b.occurred_at ?? b.site_published_at ?? b.updated_at).getTime() ||
           a.sort_order - b.sort_order,
       );
 
@@ -150,8 +173,20 @@ function assemble(raw: RawData): PublicData {
     const currentClose = dailyCloses.at(-1) ?? latestPrice(prices, 'current_close');
     const formalOfferPrice = latestPrice(prices, 'formal_offer_price');
 
-    const firstReportedAt = firstVisibleReportOccurredAt(events);
-    const firstReport = firstReportedAt ? events.find((e) => e.occurred_at === firstReportedAt) ?? null : null;
+    const classifiedEvents = events.map((event) => classifyEvent({
+      ...event,
+      tags: (tagIdsByEvent.get(event.id) ?? []).flatMap((link) => {
+        const tag = tagById.get(link.tag_id);
+        return tag ? [{ id: tag.id, kind: tag.kind, slug: tag.slug, label: tag.label, isActive: tag.is_active, sortOrder: tag.sort_order }] : [];
+      }),
+    }));
+    const selectedFirstReport = selectFirstReport(classifiedEvents);
+    const firstReportRow = selectedFirstReport?.id ? events.find((event) => event.id === selectedFirstReport.id) ?? null : null;
+    // 公開用の正確な日時。sort_at / issue_year_month を代入して日付を捏造しない。
+    const firstReportedAt = firstReportRow?.occurred_at ?? null;
+    const selectedLatestEvent = selectLatestEvent(classifiedEvents);
+    const latestEventRow = selectedLatestEvent?.id ? events.find((event) => event.id === selectedLatestEvent.id) ?? null : null;
+    const aggregatedTags = aggregateEventTags(classifiedEvents);
 
     const lastUpdatedAt = maxIso([
       c.updated_at,
@@ -174,7 +209,8 @@ function assemble(raw: RawData): PublicData {
     const latestCommentEvent = commentLikeEvents[commentLikeEvents.length - 1] ?? null;
     const latestCommentStance = latestCommentStanceFromEvent(latestCommentEvent);
 
-    const lastVisibleEventOccurredAt = events[events.length - 1]?.occurred_at ?? null;
+    // 互換期間の経過計算にも、タイムラインの並び替えと同じ内部キーを使う。
+    const lastVisibleEventOccurredAt = events.at(-1)?.sort_at ?? events.at(-1)?.occurred_at ?? events.at(-1)?.site_published_at ?? null;
     const derived = deriveCaseFields({
       status: c.status,
       eventTypes: events.map((e) => e.event_type),
@@ -187,6 +223,7 @@ function assemble(raw: RawData): PublicData {
     });
 
     const sparklineMarkers: SparklineMarker[] = events.flatMap((e): SparklineMarker[] => {
+      if (!e.occurred_at) return [];
       if (e.event_type === 'observation_report' || e.event_type === 'follow_up_report') return [{ date: e.occurred_at, kind: 'report' as const }];
       if (e.event_type === 'company_comment' || e.event_type === 'timely_disclosure') return [{ date: e.occurred_at, kind: 'comment' as const }];
       if (e.event_type === 'formal_announcement') return [{ date: e.occurred_at, kind: 'announce' as const }];
@@ -218,18 +255,32 @@ function assemble(raw: RawData): PublicData {
       slug: c.slug,
       title: c.title,
       status: c.status,
+      canonicalStatus: c.canonical_status ?? canonicalCaseStatus(c.status),
       summary: c.summary,
       securityCode: company.security_code,
       companyName: company.name_ja,
       market: company.market,
       industry: company.industry,
       firstReportedAt,
-      firstSourceName: firstReport?.source_name || null,
+      firstSourceName: firstReportRow?.source_name || null,
+      firstReportSortAt: selectedFirstReport?.sort_at ?? selectedFirstReport?.occurred_at ?? null,
+      firstReport: firstReportRow ? {
+        id: firstReportRow.id, occurredAt: firstReportRow.occurred_at,
+        sortAt: selectedFirstReport?.sort_at ?? null, issueLabel: firstReportRow.issue_label ?? null,
+        sourceName: firstReportRow.source_name, title: firstReportRow.title,
+      } : null,
+      latestEvent: latestEventRow ? {
+        id: latestEventRow.id, occurredAt: latestEventRow.occurred_at,
+        sortAt: selectedLatestEvent?.sort_at ?? null, issueLabel: latestEventRow.issue_label ?? null,
+        title: latestEventRow.title,
+      } : null,
       lastUpdatedAt,
       sitePublishedAt: c.site_published_at,
       hasFormalAnnouncement: caseHasFormalAnnouncement,
       hasAcknowledgedCompanyComment,
       sourceNames,
+      sourceTags: aggregatedTags.sourceTags,
+      contentTags: aggregatedTags.contentTags,
       preReportClose,
       currentClose,
       formalOfferPrice,
@@ -237,6 +288,9 @@ function assemble(raw: RawData): PublicData {
       sparklineSvg,
       latestCommentStance,
       ...derived,
+      reportCount: calculateReportCount(classifiedEvents),
+      latestCompanyStance: selectLatestCompanyStance(classifiedEvents),
+      baselineReturn: calculateBaselineReturn(currentClose?.price, preReportClose?.price),
       events: eventViews,
     });
   }
@@ -264,6 +318,8 @@ function assemble(raw: RawData): PublicData {
   };
 }
 
+const assemble = assemblePublicData;
+
 function latestPrice(prices: RawPrice[], type: RawPrice['price_type']): PricePoint | null {
   const filtered = prices
     .filter((p) => p.price_type === type)
@@ -274,6 +330,7 @@ function latestPrice(prices: RawPrice[], type: RawPrice['price_type']): PricePoi
     price: Number(latest.price),
     priceDate: latest.price_date,
     sourceName: latest.source_name,
+    basisNote: latest.basis_note ?? null,
   };
 }
 

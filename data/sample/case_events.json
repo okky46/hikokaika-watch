@@ -14,7 +14,15 @@
     "is_visible": true,
     "metadata": null,
     "comment_tags": [],
-    "comment_stance": null
+    "comment_stance": null,
+    "event_category": "media_report",
+    "report_role": "initial",
+    "company_stance": null,
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2026-05-12T06:00:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000102",
@@ -35,7 +43,15 @@
       "not_company_announcement",
       "no_decision"
     ],
-    "comment_stance": "acknowledged"
+    "comment_stance": "acknowledged",
+    "event_category": "company_disclosure",
+    "report_role": null,
+    "company_stance": "private_consideration",
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2026-05-12T15:30:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000103",
@@ -52,7 +68,15 @@
     "is_visible": true,
     "metadata": null,
     "comment_tags": [],
-    "comment_stance": null
+    "comment_stance": null,
+    "event_category": "media_report",
+    "report_role": "follow_up",
+    "company_stance": null,
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2026-05-20T06:00:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000104",
@@ -69,7 +93,15 @@
     "is_visible": true,
     "metadata": null,
     "comment_tags": [],
-    "comment_stance": null
+    "comment_stance": null,
+    "event_category": "formal_announcement",
+    "report_role": null,
+    "company_stance": null,
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2026-06-10T15:00:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000201",
@@ -86,7 +118,15 @@
     "is_visible": true,
     "metadata": null,
     "comment_tags": [],
-    "comment_stance": null
+    "comment_stance": null,
+    "event_category": "media_report",
+    "report_role": "initial",
+    "company_stance": null,
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2026-06-28T05:30:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000301",
@@ -103,7 +143,15 @@
     "is_visible": true,
     "metadata": null,
     "comment_tags": [],
-    "comment_stance": null
+    "comment_stance": null,
+    "event_category": "media_report",
+    "report_role": "initial",
+    "company_stance": null,
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2026-04-03T06:00:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000302",
@@ -123,7 +171,15 @@
       "not_company_announcement",
       "no_decision"
     ],
-    "comment_stance": "neutral"
+    "comment_stance": "neutral",
+    "event_category": "company_disclosure",
+    "report_role": null,
+    "company_stance": null,
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2026-04-04T09:00:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000401",
@@ -140,7 +196,15 @@
     "is_visible": true,
     "metadata": null,
     "comment_tags": [],
-    "comment_stance": null
+    "comment_stance": null,
+    "event_category": "media_report",
+    "report_role": "initial",
+    "company_stance": null,
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2025-09-18T06:00:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000402",
@@ -157,7 +221,15 @@
     "is_visible": true,
     "metadata": null,
     "comment_tags": [],
-    "comment_stance": null
+    "comment_stance": null,
+    "event_category": "formal_announcement",
+    "report_role": null,
+    "company_stance": null,
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2025-11-05T15:00:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000403",
@@ -174,7 +246,15 @@
     "is_visible": true,
     "metadata": null,
     "comment_tags": [],
-    "comment_stance": null
+    "comment_stance": null,
+    "event_category": "post_announcement_update",
+    "report_role": null,
+    "company_stance": null,
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2025-12-20T15:00:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000501",
@@ -191,7 +271,15 @@
     "is_visible": true,
     "metadata": null,
     "comment_tags": [],
-    "comment_stance": null
+    "comment_stance": null,
+    "event_category": "media_report",
+    "report_role": "initial",
+    "company_stance": null,
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2025-06-10T06:00:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000502",
@@ -208,7 +296,15 @@
     "is_visible": true,
     "metadata": null,
     "comment_tags": [],
-    "comment_stance": null
+    "comment_stance": null,
+    "event_category": "formal_announcement",
+    "report_role": null,
+    "company_stance": null,
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2025-08-01T15:00:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000503",
@@ -225,7 +321,15 @@
     "is_visible": true,
     "metadata": null,
     "comment_tags": [],
-    "comment_stance": null
+    "comment_stance": null,
+    "event_category": "post_announcement_update",
+    "report_role": null,
+    "company_stance": null,
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2025-10-15T15:00:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000601",
@@ -242,7 +346,15 @@
     "is_visible": true,
     "metadata": null,
     "comment_tags": [],
-    "comment_stance": null
+    "comment_stance": null,
+    "event_category": "media_report",
+    "report_role": "initial",
+    "company_stance": null,
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2025-03-05T06:00:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000602",
@@ -261,7 +373,15 @@
     "comment_tags": [
       "consideration_acknowledged"
     ],
-    "comment_stance": "acknowledged"
+    "comment_stance": "acknowledged",
+    "event_category": "company_disclosure",
+    "report_role": null,
+    "company_stance": "private_consideration",
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2025-03-06T09:00:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000603",
@@ -278,7 +398,15 @@
     "is_visible": true,
     "metadata": null,
     "comment_tags": [],
-    "comment_stance": null
+    "comment_stance": null,
+    "event_category": "company_disclosure",
+    "report_role": null,
+    "company_stance": null,
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2025-07-30T15:00:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000701",
@@ -298,7 +426,15 @@
       "correction_note": "買付価格に関する記述が媒体側で訂正されたため、本カードの説明を修正しました(2026/07/03)。"
     },
     "comment_tags": [],
-    "comment_stance": null
+    "comment_stance": null,
+    "event_category": "media_report",
+    "report_role": "initial",
+    "company_stance": null,
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2026-07-01T06:00:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000702",
@@ -315,7 +451,15 @@
     "is_visible": true,
     "metadata": null,
     "comment_tags": [],
-    "comment_stance": null
+    "comment_stance": null,
+    "event_category": "correction",
+    "report_role": null,
+    "company_stance": null,
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2026-07-03T10:00:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000801",
@@ -332,7 +476,15 @@
     "is_visible": true,
     "metadata": null,
     "comment_tags": [],
-    "comment_stance": null
+    "comment_stance": null,
+    "event_category": "media_report",
+    "report_role": "initial",
+    "company_stance": null,
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2026-06-25T06:00:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000802",
@@ -349,7 +501,15 @@
     "is_visible": true,
     "metadata": null,
     "comment_tags": [],
-    "comment_stance": null
+    "comment_stance": null,
+    "event_category": "media_report",
+    "report_role": "follow_up",
+    "company_stance": null,
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2026-07-02T06:00:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000803",
@@ -366,7 +526,15 @@
     "is_visible": true,
     "metadata": null,
     "comment_tags": [],
-    "comment_stance": null
+    "comment_stance": null,
+    "event_category": "media_report",
+    "report_role": "follow_up",
+    "company_stance": null,
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2026-07-10T06:00:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000901",
@@ -383,7 +551,15 @@
     "is_visible": true,
     "metadata": null,
     "comment_tags": [],
-    "comment_stance": null
+    "comment_stance": null,
+    "event_category": "media_report",
+    "report_role": "initial",
+    "company_stance": null,
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2025-05-05T06:00:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000001001",
@@ -400,7 +576,15 @@
     "is_visible": true,
     "metadata": null,
     "comment_tags": [],
-    "comment_stance": null
+    "comment_stance": null,
+    "event_category": "media_report",
+    "report_role": "initial",
+    "company_stance": null,
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2026-03-01T06:00:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000001002",
@@ -419,7 +603,15 @@
     "comment_tags": [
       "consideration_acknowledged"
     ],
-    "comment_stance": "acknowledged"
+    "comment_stance": "acknowledged",
+    "event_category": "company_disclosure",
+    "report_role": null,
+    "company_stance": "private_consideration",
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2026-03-05T09:00:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000001003",
@@ -436,7 +628,15 @@
     "is_visible": true,
     "metadata": null,
     "comment_tags": [],
-    "comment_stance": null
+    "comment_stance": null,
+    "event_category": "formal_announcement",
+    "report_role": null,
+    "company_stance": null,
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2026-03-20T15:00:00+09:00"
   },
   {
     "id": "c0000001-0000-4000-8000-000000000130",
@@ -459,6 +659,14 @@
       "previous_ratio": null,
       "filing_date": "2026-07-02",
       "change_type": "new"
-    }
+    },
+    "event_category": "related_information",
+    "report_role": null,
+    "company_stance": null,
+    "date_precision": "datetime",
+    "issue_label": null,
+    "issue_year_month": null,
+    "market_trigger_date": null,
+    "sort_at": "2026-07-02T15:30:00+09:00"
   }
 ]

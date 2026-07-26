@@ -10,7 +10,8 @@
     "site_published_at": "2026-05-12T21:00:00+09:00",
     "updated_at": "2026-07-08T20:00:00+09:00",
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "canonical_status": "announced"
   },
   {
     "id": "b0000001-0000-4000-8000-000000000002",
@@ -23,7 +24,8 @@
     "site_published_at": "2026-06-28T22:00:00+09:00",
     "updated_at": "2026-07-08T21:00:00+09:00",
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "canonical_status": "tracking"
   },
   {
     "id": "b0000001-0000-4000-8000-000000000003",
@@ -36,7 +38,8 @@
     "site_published_at": "2026-04-03T21:30:00+09:00",
     "updated_at": "2026-07-01T19:00:00+09:00",
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "canonical_status": "tracking"
   },
   {
     "id": "b0000001-0000-4000-8000-000000000004",
@@ -49,7 +52,8 @@
     "site_published_at": "2025-09-18T21:00:00+09:00",
     "updated_at": "2026-01-10T18:00:00+09:00",
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "canonical_status": "announced"
   },
   {
     "id": "b0000001-0000-4000-8000-000000000005",
@@ -62,7 +66,8 @@
     "site_published_at": "2025-06-10T22:00:00+09:00",
     "updated_at": "2025-10-16T19:00:00+09:00",
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "canonical_status": "announced"
   },
   {
     "id": "b0000001-0000-4000-8000-000000000006",
@@ -75,7 +80,8 @@
     "site_published_at": "2025-03-05T21:00:00+09:00",
     "updated_at": "2025-07-31T19:00:00+09:00",
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "canonical_status": "closed"
   },
   {
     "id": "b0000001-0000-4000-8000-000000000007",
@@ -88,7 +94,8 @@
     "site_published_at": "2026-07-01T21:00:00+09:00",
     "updated_at": "2026-07-10T20:00:00+09:00",
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "canonical_status": "tracking"
   },
   {
     "id": "b0000001-0000-4000-8000-000000000008",
@@ -101,7 +108,8 @@
     "site_published_at": "2026-06-25T21:00:00+09:00",
     "updated_at": "2026-07-10T20:00:00+09:00",
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "canonical_status": "tracking"
   },
   {
     "id": "b0000001-0000-4000-8000-000000000009",
@@ -114,7 +122,8 @@
     "site_published_at": "2025-05-05T21:00:00+09:00",
     "updated_at": "2025-05-05T21:00:00+09:00",
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "canonical_status": "tracking"
   },
   {
     "id": "b0000001-0000-4000-8000-000000000010",
@@ -127,6 +136,7 @@
     "site_published_at": "2026-03-01T21:00:00+09:00",
     "updated_at": "2026-07-10T19:00:00+09:00",
     "is_visible": true,
-    "metadata": null
+    "metadata": null,
+    "canonical_status": "announced"
   }
 ]

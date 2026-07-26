@@ -1,10 +1,10 @@
 ---
 import { statusDef, publicStatusTone } from '../lib/status';
-import type { CaseStatus } from '../lib/types';
+import type { LegacyCaseStatus } from '../lib/types';
 
 interface Props {
   /** 表示用ステータス(effectiveStatus)を渡す */
-  status: CaseStatus;
+  status: LegacyCaseStatus;
   /** rumored 表示用: 第N報カウント */
   reportCount?: number;
   /** commented 表示用: コメント回数 */

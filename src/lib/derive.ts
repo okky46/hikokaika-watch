@@ -6,15 +6,15 @@
 // ビルド時に計算する(指示書 §C-3, §1-5)。
 // ============================================================
 import { daysBetween } from './format.ts';
-import type { CaseStatus, EventType, PricePoint } from './types';
+import type { LegacyCaseStatus, EventType, PricePoint } from './types';
 
 export type HeatLevel = 1 | 2 | 3 | 4;
 
 const REPORT_EVENT_TYPES: readonly EventType[] = ['observation_report', 'follow_up_report'];
 const COMMENT_EVENT_TYPES: readonly EventType[] = ['company_comment', 'timely_disclosure'];
-const TOB_PREMIUM_STATUSES: readonly CaseStatus[] = ['announced', 'completed', 'withdrawn'];
-const DORMANT_SOURCE_STATUSES: readonly CaseStatus[] = ['rumored', 'commented', 'denied'];
-const PRE_ANNOUNCEMENT_EFFECTIVE_STATUSES: readonly CaseStatus[] = [
+const TOB_PREMIUM_STATUSES: readonly LegacyCaseStatus[] = ['announced', 'completed', 'withdrawn'];
+const DORMANT_SOURCE_STATUSES: readonly LegacyCaseStatus[] = ['rumored', 'commented', 'denied'];
+const PRE_ANNOUNCEMENT_EFFECTIVE_STATUSES: readonly LegacyCaseStatus[] = [
   'rumored',
   'commented',
   'denied',
@@ -30,7 +30,7 @@ function isPositiveFinitePrice(point: PricePoint | null): point is PricePoint {
 }
 
 export interface DeriveCaseInput {
-  status: CaseStatus;
+  status: LegacyCaseStatus;
   /** 可視イベントの種別一覧(順不同でよい) */
   eventTypes: EventType[];
   /** 最終可視イベントの occurred_at(可視イベントが無ければ null) */
@@ -51,7 +51,7 @@ export interface DerivedCaseFields {
   tobPremium: number | null;
   arbSpread: number | null;
   daysSinceFirstReport: number | null;
-  effectiveStatus: CaseStatus;
+  effectiveStatus: LegacyCaseStatus;
   isPreAnnouncement: boolean;
 }
 
@@ -90,7 +90,7 @@ export function deriveCaseFields(input: DeriveCaseInput): DerivedCaseFields {
 
   const daysSinceFirstReport = daysBetween(input.firstReportedAt, nowIso);
 
-  const effectiveStatus: CaseStatus =
+  const effectiveStatus: LegacyCaseStatus =
     DORMANT_SOURCE_STATUSES.includes(input.status) &&
     daysSinceLastVisibleEvent !== null &&
     daysSinceLastVisibleEvent >= DORMANT_THRESHOLD_DAYS
@@ -113,10 +113,10 @@ export function deriveCaseFields(input: DeriveCaseInput): DerivedCaseFields {
 }
 
 export function firstVisibleReportOccurredAt(
-  events: readonly { event_type: EventType; occurred_at: string; is_visible: boolean }[],
+  events: readonly { event_type: EventType; occurred_at: string | null; is_visible: boolean }[],
 ): string | null {
   const firstReport = events
-    .filter((e) => e.is_visible && REPORT_EVENT_TYPES.includes(e.event_type))
+    .filter((e): e is typeof e & { occurred_at: string } => e.is_visible && e.occurred_at !== null && REPORT_EVENT_TYPES.includes(e.event_type))
     .sort((a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime())[0];
 
   return firstReport?.occurred_at ?? null;

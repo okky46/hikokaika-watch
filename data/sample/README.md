@@ -8,3 +8,7 @@ Supabase の環境変数(`SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY`)が未設�
 媒体名も「デモ経済新聞」等の架空名称を使用している。
 
 サンプルデータでビルドされたページには、画面上部に「サンプルデータ」の注意書きが表示される。
+
+## PR1 互換データ
+
+`cases.canonical_status` とイベントの新分類・日付精度、`price_snapshots.basis_note` を旧項目と併記しています。旧項目は PR4 まで削除せず、既存画面のビルド確認にも使用します。`event_tags.json` と `case_event_tags.json` は公開データ組み立て時のタグ取得・集約を検証するためのサンプルです。
