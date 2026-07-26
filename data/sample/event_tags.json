@@ -1,0 +1,6 @@
+[
+  {"id":"e1000000-0000-4000-8000-000000000001","kind":"source","slug":"news-organization","label":"報道機関","is_active":true,"sort_order":10},
+  {"id":"e1000000-0000-4000-8000-000000000002","kind":"source","slug":"target-company","label":"対象会社","is_active":true,"sort_order":20},
+  {"id":"e1000000-0000-4000-8000-000000000003","kind":"content","slug":"mbo","label":"MBO","is_active":true,"sort_order":40},
+  {"id":"e1000000-0000-4000-8000-000000000004","kind":"content","slug":"price-terms","label":"価格・条件","is_active":true,"sort_order":120}
+]

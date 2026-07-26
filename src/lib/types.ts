@@ -124,6 +124,23 @@ export interface RawEvent {
   metadata: { corrected?: boolean; correction_note?: string; holder_name?: string; ratio?: number; previous_ratio?: number | null; filing_date?: string; change_type?: 'new' | 'increase' | 'decrease' | 'exit' } | null;
 }
 
+export interface RawEventTag {
+  id: string;
+  kind: EventTagKind;
+  slug: string;
+  label: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface RawCaseEventTag {
+  event_id: string;
+  tag_id: string;
+  created_at?: string;
+}
+
 export interface RawPrice {
   id: string;
   case_id: string;
@@ -153,23 +170,46 @@ export interface EventTagView {
   sortOrder: number;
 }
 
+export interface FirstReportView {
+  id: string;
+  occurredAt: string | null;
+  sortAt: string | null;
+  issueLabel: string | null;
+  sourceName: string;
+  title: string;
+}
+
+export interface LatestEventView {
+  id: string;
+  occurredAt: string | null;
+  sortAt: string | null;
+  issueLabel: string | null;
+  title: string;
+}
+
 /** 一覧・検索用のビューモデル(トップページに JSON 埋め込みされる) */
 export interface CaseListItem {
   id: string;
   slug: string;
   title: string;
   status: LegacyCaseStatus;
+  canonicalStatus: CaseStatus;
   summary: string;
   securityCode: string;
   companyName: string;
   market: string | null;
   firstReportedAt: string | null;
   firstSourceName: string | null;
+  firstReportSortAt: string | null;
+  firstReport: FirstReportView | null;
+  latestEvent: LatestEventView | null;
   lastUpdatedAt: string;
   hasFormalAnnouncement: boolean;
   hasAcknowledgedCompanyComment: boolean;
   /** この案件の可視イベントに登場する媒体名(絞り込み用) */
   sourceNames: string[];
+  sourceTags: EventTagView[];
+  contentTags: EventTagView[];
   preReportClose: PricePoint | null;
   currentClose: PricePoint | null;
   formalOfferPrice: PricePoint | null;
@@ -184,6 +224,8 @@ export interface CaseListItem {
   heatLevel: 1 | 2 | 3 | 4;
   /** 思惑プレミアム((現在値 - 報道前終値) / 報道前終値) */
   speculationPremium: number | null;
+  baselineReturn: number | null;
+  latestCompanyStance: CompanyStance | null;
   /** TOBプレミアム((TOB価格 - 報道前終値) / 報道前終値) */
   tobPremium: number | null;
   /** 裁定スプレッド((TOB価格 - 現在値) / 現在値) */

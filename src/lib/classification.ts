@@ -8,6 +8,7 @@ import type {
   EventType,
   LegacyCaseStatus,
   ReportRole,
+  RawEvent,
 } from './types';
 
 export function canonicalCaseStatus(status: LegacyCaseStatus | CaseStatus): CaseStatus {
@@ -60,6 +61,29 @@ export interface ClassifiedEvent {
   tags?: readonly EventTagView[];
 }
 
+/** 新カラムを優先し、移行前の行だけ旧 event_type/comment_tags から補完する。 */
+export function classifyEvent(event: Pick<RawEvent,
+  'id' | 'event_type' | 'event_category' | 'report_role' | 'company_stance' | 'comment_tags' |
+  'occurred_at' | 'sort_at' | 'sort_order' | 'site_published_at' | 'updated_at' | 'is_visible'
+> & { tags?: readonly EventTagView[] }): ClassifiedEvent {
+  const legacy = legacyEventClassification(event.event_type);
+  const eventCategory = event.event_category ?? legacy.eventCategory;
+  return {
+    id: event.id,
+    is_visible: event.is_visible,
+    event_category: eventCategory,
+    report_role: event.report_role ?? (eventCategory === 'media_report' ? legacy.reportRole : null),
+    company_stance: event.company_stance ?? (eventCategory === 'company_disclosure'
+      ? companyStanceFromLegacyTags(event.comment_tags ?? []) : null),
+    occurred_at: event.occurred_at,
+    sort_at: event.sort_at,
+    sort_order: event.sort_order,
+    site_published_at: event.site_published_at,
+    updated_at: event.updated_at,
+    tags: event.tags,
+  };
+}
+
 const time = (value?: string | null): number => value ? new Date(value).getTime() : Number.NEGATIVE_INFINITY;
 const chronological = (a: ClassifiedEvent, b: ClassifiedEvent) =>
   time(a.sort_at ?? a.occurred_at) - time(b.sort_at ?? b.occurred_at) ||
@@ -83,7 +107,8 @@ export function aggregateEventTags(events: readonly ClassifiedEvent[]): { source
 }
 
 export function firstReport(events: readonly ClassifiedEvent[]): ClassifiedEvent | null {
-  return events.find((e) => e.is_visible && e.event_category === 'media_report' && e.report_role === 'initial') ?? null;
+  return events.filter((e) => e.is_visible && e.event_category === 'media_report' && e.report_role === 'initial')
+    .sort(chronological)[0] ?? null;
 }
 
 export function latestEvent(events: readonly ClassifiedEvent[]): ClassifiedEvent | null {
@@ -112,10 +137,13 @@ export function baselineReturn(current: number | null | undefined, baseline: num
   return Number.isFinite(current) && Number.isFinite(baseline) && current! > 0 && baseline! > 0 ? (current! - baseline!) / baseline! : null;
 }
 
-export function classificationErrors(events: readonly ClassifiedEvent[]): string[] {
+export function classificationErrors(events: readonly ClassifiedEvent[], options: { caseIsVisible?: boolean } = {}): string[] {
   const errors: string[] = [];
   const visibleInitials = events.filter((e) => e.is_visible && e.event_category === 'media_report' && e.report_role === 'initial');
   if (visibleInitials.length > 1) errors.push('公開済み初報は1案件につき1件までです');
+  const visibleFollowUps = events.filter((e) => e.is_visible && e.event_category === 'media_report' && e.report_role === 'follow_up');
+  if (visibleFollowUps.length > 0 && visibleInitials.length !== 1) errors.push('公開済み続報には公開済み初報が1件必要です');
+  if (options.caseIsVisible && visibleInitials.length !== 1) errors.push('公開案件には公開済み初報が1件必要です');
   for (const event of events) {
     if (event.event_category === 'media_report' && event.report_role === null) errors.push('メディア報道には報道上の役割が必要です');
     if (event.event_category !== 'media_report' && event.report_role !== null) errors.push('メディア報道以外には報道上の役割を設定できません');

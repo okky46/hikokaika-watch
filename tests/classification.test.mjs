@@ -4,6 +4,7 @@ import {
   aggregateEventTags, baselineReturn, canonicalCaseStatus, classificationErrors,
   companyStanceFromLegacyTags, deriveSortAt, eventDateParts, firstReport,
   latestCompanyStance, latestEvent, legacyEventClassification, reportCount,
+  classifyEvent,
 } from '../src/lib/classification.ts';
 
 const event = (overrides = {}) => ({
@@ -23,6 +24,15 @@ describe('PR1 compatibility mappings', () => {
     assert.deepEqual(legacyEventClassification('observation_report'), { eventCategory: 'media_report', reportRole: 'initial' });
     assert.deepEqual(legacyEventClassification('follow_up_report'), { eventCategory: 'media_report', reportRole: 'follow_up' });
     assert.equal(legacyEventClassification('large_shareholding_report').eventCategory, 'related_information');
+  });
+  it('prefers new classification and falls back only when it is absent', () => {
+    const raw = {
+      id: 'x', event_type: 'observation_report', event_category: 'media_report', report_role: 'related',
+      company_stance: null, comment_tags: [], occurred_at: null, sort_at: '2026-01-01T00:00:00Z',
+      sort_order: 0, site_published_at: null, updated_at: '2026-01-02T00:00:00Z', is_visible: true,
+    };
+    assert.equal(classifyEvent(raw).report_role, 'related');
+    assert.equal(classifyEvent({ ...raw, event_category: null, report_role: null }).report_role, 'initial');
   });
   it('does not guess a stance when old tags conflict', () => {
     assert.equal(companyStanceFromLegacyTags(['proposal_received']), 'private_consideration');
@@ -49,6 +59,11 @@ describe('event derivation', () => {
   it('uses only an explicitly classified initial report', () => {
     assert.equal(firstReport([event({ report_role: 'follow_up' }), event({ id: 'initial' })])?.id, 'initial');
   });
+  it('keeps an issue-only initial report without inventing an occurred_at', () => {
+    const selected = firstReport([event({ occurred_at: null, sort_at: '2026-01-01T00:00:00Z' })]);
+    assert.equal(selected?.occurred_at, null);
+    assert.equal(selected?.sort_at, '2026-01-01T00:00:00Z');
+  });
   it('excludes corrections from latest movement unless they are the only events', () => {
     const normal = event({ id: 'normal' });
     const correction = event({ id: 'fix', event_category: 'correction', report_role: null, sort_at: '2026-03-01T00:00:00Z' });
@@ -57,7 +72,12 @@ describe('event derivation', () => {
   });
   it('rejects duplicate initials and category-specific values', () => {
     assert.ok(classificationErrors([event(), event()]).some((x) => x.includes('1案件につき1件')));
-    assert.ok(classificationErrors([event({ event_category: 'correction' })]).some((x) => x.includes('報道上の役割')));
+    assert.ok(classificationErrors([event({ event_category: 'correction', report_role: 'initial' })]).some((x) => x.includes('報道上の役割')));
+  });
+  it('requires one published initial for follow-ups and visible cases but ignores drafts', () => {
+    assert.ok(classificationErrors([event({ report_role: 'follow_up' })]).some((x) => x.includes('続報')));
+    assert.ok(classificationErrors([event({ is_visible: false })], { caseIsVisible: true }).some((x) => x.includes('公開案件')));
+    assert.deepEqual(classificationErrors([event(), event({ report_role: 'follow_up', is_visible: false })], { caseIsVisible: true }), []);
   });
 });
 
