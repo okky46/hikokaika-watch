@@ -17,11 +17,11 @@ export interface StatusDef {
 
 export const CASE_STATUS: Record<CaseStatus, StatusDef> = {
   rumored: {
-    label: '観測報道段階',
+    label: '追跡中（未確定）',
     mark: '◇',
     tone: 'watch',
     preAnnouncement: true,
-    description: '観測報道が存在するが、会社の正式発表はない状態',
+    description: '噂・市場観測などをきっかけに追跡中。報道の存在や非公開化の裏付けを示すものではありません',
   },
   commented: {
     label: '会社コメントあり',

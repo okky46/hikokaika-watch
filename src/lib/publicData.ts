@@ -11,15 +11,16 @@
 import { createClient } from '@supabase/supabase-js';
 import fs from 'node:fs';
 import path from 'node:path';
-import { classifyCommentStance, latestCommentStanceFromEvent } from './commentTags';
-import { resolvePublicDataEnvironment } from './buildEnv';
-import { hasFormalAnnouncement } from './caseFilters';
-import { deriveCaseFields, firstVisibleReportOccurredAt } from './derive';
-import { renderSparkline } from './sparkline';
-import { sanitizeLargeShareholdingMetadata } from './noteMetadataHelpers';
-import { buildPublicCompanies, isPublishableCompany } from './publicCompanyHelpers';
-import { normalizeDailyCloses } from './priceHelpers';
-import type { SparklineMarker } from './sparkline';
+import { assembleArticles } from './articles.ts';
+import type { RawArticle, ArticleLink } from './articles.ts';
+import { classifyCommentStance, latestCommentStanceFromEvent } from './commentTags.ts';
+import { resolvePublicDataEnvironment } from './buildEnv.ts';
+import { hasFormalAnnouncement } from './caseFilters.ts';
+import { deriveCaseFields, firstVisibleReportOccurredAt } from './derive.ts';
+import { eventSortKey, eventDateLabel, safeHttpUrl } from './tracking.ts';
+import { sanitizeLargeShareholdingMetadata } from './noteMetadataHelpers.ts';
+import { buildPublicCompanies, isPublishableCompany } from './publicCompanyHelpers.ts';
+import { normalizeDailyCloses } from './priceHelpers.ts';
 import type {
   CaseDetail,
   CaseEventView,
@@ -31,9 +32,11 @@ import type {
   RawCompany,
   RawEvent,
   RawPrice,
-} from './types';
+} from './types.ts';
 
 interface RawData {
+  articles?: RawArticle[];
+  articleLinks?: ArticleLink[];
   companies: RawCompany[];
   cases: RawCase[];
   events: RawEvent[];
@@ -74,20 +77,23 @@ async function loadRaw(): Promise<RawData> {
 async function loadFromSupabase(url: string, key: string): Promise<RawData> {
   const supabase = createClient(url, key, { auth: { persistSession: false } });
 
-  const [companies, cases, events, prices] = await Promise.all([
+  const [companies, cases, events, prices, publications] = await Promise.all([
     supabase.from('companies').select('*'),
     supabase.from('cases').select('*').eq('is_visible', true),
     supabase.from('case_events').select('*').eq('is_visible', true),
     supabase.from('price_snapshots').select('*'),
+    supabase.rpc('read_published_articles'),
   ]);
 
-  for (const [name, res] of Object.entries({ companies, cases, case_events: events, price_snapshots: prices })) {
+  for (const [name, res] of Object.entries({ companies, cases, case_events: events, price_snapshots: prices, publications })) {
     if (res.error) {
-      throw new Error(`[publicData] ${name} の取得に失敗: ${res.error.message}`);
+      throw new Error(`[publicData] ${name} の取得に失敗: ${res.error.message}。0007適用状況を確認してください（記事を黙って省略しません）。`);
     }
   }
 
   return {
+    articles: publications.data.articles,
+    articleLinks: publications.data.links,
     companies: (companies.data ?? []) as RawCompany[],
     cases: (cases.data ?? []) as RawCase[],
     events: (events.data ?? []) as RawEvent[],
@@ -102,6 +108,8 @@ function loadFromSample(): RawData {
     JSON.parse(fs.readFileSync(path.join(dir, file), 'utf-8')) as T;
 
   return {
+    articles: read<RawArticle[]>('articles.json'),
+    articleLinks: read<ArticleLink[]>('article_companies.json'),
     companies: read<RawCompany[]>('companies.json'),
     cases: read<RawCase[]>('cases.json').filter((c) => c.is_visible),
     events: read<RawEvent[]>('case_events.json').filter((e) => e.is_visible),
@@ -113,7 +121,7 @@ function loadFromSample(): RawData {
 // ------------------------------------------------------------
 // 組み立て
 // ------------------------------------------------------------
-function assemble(raw: RawData): PublicData {
+export function assemble(raw: RawData): PublicData {
   const companyById = new Map(raw.companies.map((c) => [c.id, c]));
   const eventsByCase = groupBy(raw.events, (e) => e.case_id);
   const pricesByCase = groupBy(raw.prices, (p) => p.case_id);
@@ -123,7 +131,7 @@ function assemble(raw: RawData): PublicData {
 
   const details: CaseDetail[] = [];
 
-  for (const c of raw.cases) {
+  for (const c of raw.cases.filter(c => c.is_visible)) {
     const company = companyById.get(c.company_id);
     if (!company) {
       console.warn(`[publicData] 案件 ${c.slug} の会社(${c.company_id})が見つからないためスキップ`);
@@ -134,11 +142,11 @@ function assemble(raw: RawData): PublicData {
       continue;
     }
 
-    const events = (eventsByCase.get(c.id) ?? [])
+    const events = (eventsByCase.get(c.id) ?? []).filter(e => e.is_visible)
       .slice()
       .sort(
         (a, b) =>
-          new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime() ||
+          new Date(eventSortKey(a)).getTime() - new Date(eventSortKey(b)).getTime() ||
           a.sort_order - b.sort_order,
       );
 
@@ -150,13 +158,12 @@ function assemble(raw: RawData): PublicData {
     const currentClose = dailyCloses.at(-1) ?? latestPrice(prices, 'current_close');
     const formalOfferPrice = latestPrice(prices, 'formal_offer_price');
 
-    const firstReportedAt = firstVisibleReportOccurredAt(events);
+    const firstReportedAt = firstVisibleReportOccurredAt(events.filter(e => e.date_precision !== 'issue' && e.date_precision !== 'unknown'));
     const firstReport = firstReportedAt ? events.find((e) => e.occurred_at === firstReportedAt) ?? null : null;
 
     const lastUpdatedAt = maxIso([
       c.updated_at,
       ...events.map((e) => e.updated_at),
-      ...prices.map((p) => p.updated_at),
     ]);
 
     const caseHasFormalAnnouncement = hasFormalAnnouncement(c.status, events);
@@ -186,24 +193,17 @@ function assemble(raw: RawData): PublicData {
       now,
     });
 
-    const sparklineMarkers: SparklineMarker[] = events.flatMap((e): SparklineMarker[] => {
-      if (e.event_type === 'observation_report' || e.event_type === 'follow_up_report') return [{ date: e.occurred_at, kind: 'report' as const }];
-      if (e.event_type === 'company_comment' || e.event_type === 'timely_disclosure') return [{ date: e.occurred_at, kind: 'comment' as const }];
-      if (e.event_type === 'formal_announcement') return [{ date: e.occurred_at, kind: 'announce' as const }];
-      return [];
-    });
-    const sparklineSvg = dailyCloses.length >= 2
-      ? renderSparkline({ points: dailyCloses.map((p) => ({ date: p.priceDate, price: p.price })), markers: sparklineMarkers, offerPrice: formalOfferPrice?.price, width: 640, height: 120 })
-      : null;
+    const sparklineSvg = null; // チャートは当面表示しない。保存済み価格は保持する。
 
     const eventViews: CaseEventView[] = events.map((e) => ({
       id: e.id,
       eventType: e.event_type,
       occurredAt: e.occurred_at,
+      dateLabel: eventDateLabel(e),
       title: e.title,
       summary: e.summary,
       sourceName: e.source_name,
-      sourceUrl: e.source_url,
+      sourceUrl: safeHttpUrl(e.source_url) ?? '',
       sitePublishedAt: e.site_published_at,
       updatedAt: e.updated_at,
       corrected: e.metadata?.corrected === true,
@@ -219,6 +219,12 @@ function assemble(raw: RawData): PublicData {
       title: c.title,
       status: c.status,
       summary: c.summary,
+      companyId: c.company_id,
+      trackingReason: c.tracking_reason || c.summary,
+      trackingStartedOn: c.tracking_started_on ?? null,
+      lastCheckedOn: c.last_checked_on ?? null,
+      verificationNote: c.verification_note ?? '',
+      latestEvent: events.length ? { id: events.at(-1)!.id, title: events.at(-1)!.title, dateLabel: eventDateLabel(events.at(-1)!) } : null,
       securityCode: company.security_code,
       companyName: company.name_ja,
       market: company.market,
@@ -237,6 +243,7 @@ function assemble(raw: RawData): PublicData {
       sparklineSvg,
       latestCommentStance,
       ...derived,
+      effectiveStatus: c.status, // 経過日数だけで管理者の確認状況を書き換えない。
       events: eventViews,
     });
   }
@@ -249,12 +256,19 @@ function assemble(raw: RawData): PublicData {
   const cases: CaseListItem[] = details.map(({ events: _e, industry: _i, sitePublishedAt: _s, ...item }) => item);
 
   const companies: PublicCompany[] = buildPublicCompanies(raw.companies, cases);
+  const publishedIds = new Set((raw.articles ?? []).filter(a => a.published !== null).map(a => a.id));
+  const linkedCompanyIds = new Set((raw.articleLinks ?? []).filter(l => l.edition === 'published' && publishedIds.has(l.article_id)).map(l => l.company_id));
+  for (const company of raw.companies.filter(c => c.is_active && linkedCompanyIds.has(c.id))) {
+    if (!companies.some(c => c.id === company.id)) companies.push({ id:company.id, securityCode:company.security_code, nameJa:company.name_ja, market:company.market, industry:company.industry, cases:[], lastUpdatedAt:company.updated_at });
+  }
+  const articles = assembleArticles(raw.articles ?? [], raw.articleLinks ?? [], companies);
 
   const allSourceNames = [...new Set(details.flatMap((d) => d.sourceNames))].sort((a, b) =>
     a.localeCompare(b, 'ja'),
   );
 
   return {
+    articles,
     companies,
     cases,
     details,

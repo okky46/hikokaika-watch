@@ -3,4 +3,4 @@ Allow: /
 Disallow: /mypage/
 Disallow: /admin/
 
-Sitemap: https://hikokaika-watch.pages.dev/sitemap.xml
+Sitemap: https://hikokaika.com/sitemap.xml

@@ -1,0 +1,71 @@
+[
+  {
+    "id": "a0000000-0000-4000-8000-000000000001",
+    "slug": "demo-capital-policy",
+    "draft": {
+      "title": "SECRET_UNAPPROVED_ARTICLE",
+      "summary": "架空の公表資料を使ったサンプル。親子関係の見直しと非公開化の決定を区別します。",
+      "body": "会社の資本政策を継続して確認するための記録です。",
+      "confirmed_facts": "架空の会社が資本関係を見直す方針を説明した、というサンプルです。",
+      "interpretation": "資本関係の見直しだけで非公開化を決めたとは読み取れません。",
+      "unknowns": "具体的な方法・時期・条件は未確認です。",
+      "checked_on": "2026-09-29",
+      "correction_note": "",
+      "sources": [
+        {
+          "name": "架空の会社IR（サンプル）",
+          "url": "https://example.com/ir",
+          "published_on": "2026-09-01",
+          "checked_on": "2026-09-29"
+        }
+      ]
+    },
+    "published": {
+      "title": "デモ企業の資本政策を公表資料から整理する",
+      "summary": "架空の公表資料を使ったサンプル。親子関係の見直しと非公開化の決定を区別します。",
+      "body": "会社の資本政策を継続して確認するための記録です。",
+      "confirmed_facts": "架空の会社が資本関係を見直す方針を説明した、というサンプルです。",
+      "interpretation": "資本関係の見直しだけで非公開化を決めたとは読み取れません。",
+      "unknowns": "具体的な方法・時期・条件は未確認です。",
+      "checked_on": "2026-09-29",
+      "correction_note": "",
+      "sources": [
+        {
+          "name": "架空の会社IR（サンプル）",
+          "url": "https://example.com/ir",
+          "published_on": "2026-09-01",
+          "checked_on": "2026-09-29"
+        }
+      ]
+    },
+    "publication_version": "a0000000-0000-4000-8000-000000000099",
+    "first_published_at": "2026-09-01T00:00:00Z",
+    "published_at": "2026-09-29T00:00:00Z"
+  },
+  {
+    "id": "a0000000-0000-4000-8000-000000000002",
+    "slug": "unpublished-secret",
+    "draft": {
+      "title": "デモ企業の資本政策を公表資料から整理する",
+      "summary": "架空の公表資料を使ったサンプル。親子関係の見直しと非公開化の決定を区別します。",
+      "body": "SECRET_DRAFT_ONLY",
+      "confirmed_facts": "架空の会社が資本関係を見直す方針を説明した、というサンプルです。",
+      "interpretation": "資本関係の見直しだけで非公開化を決めたとは読み取れません。",
+      "unknowns": "具体的な方法・時期・条件は未確認です。",
+      "checked_on": "2026-09-29",
+      "correction_note": "",
+      "sources": [
+        {
+          "name": "架空の会社IR（サンプル）",
+          "url": "https://example.com/ir",
+          "published_on": "2026-09-01",
+          "checked_on": "2026-09-29"
+        }
+      ]
+    },
+    "published": null,
+    "publication_version": null,
+    "first_published_at": null,
+    "published_at": null
+  }
+]

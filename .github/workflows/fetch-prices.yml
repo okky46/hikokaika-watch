@@ -1,8 +1,7 @@
 name: Fetch daily prices
 
 on:
-  schedule:
-    - cron: '30 7 * * 1-5'
+  # チャート非表示期間は定期取得を停止。ニュース収集はcollect.ymlで継続。
   workflow_dispatch:
 
 concurrency:

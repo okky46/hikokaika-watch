@@ -128,5 +128,22 @@
     "updated_at": "2026-07-10T19:00:00+09:00",
     "is_visible": true,
     "metadata": null
+  },
+  {
+    "id": "b0000000-0000-4000-8000-000000000002",
+    "company_id": "b0000000-0000-4000-8000-000000000001",
+    "title": "市場観測をきっかけに追跡",
+    "slug": "999z-tracking",
+    "status": "rumored",
+    "summary": "架空のサンプル銘柄です。",
+    "tracking_reason": "市場で資本政策への関心が見られたため、管理者が追跡対象として登録（架空のサンプル）。",
+    "tracking_started_on": "2026-09-01",
+    "last_checked_on": "2026-09-29",
+    "verification_note": "具体的な非公開化方針や特定媒体の報道は確認していません。",
+    "first_reported_at": null,
+    "site_published_at": "2026-09-29T00:00:00Z",
+    "updated_at": "2026-09-29T00:00:00Z",
+    "is_visible": true,
+    "metadata": null
   }
 ]

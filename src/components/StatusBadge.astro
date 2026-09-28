@@ -13,16 +13,11 @@ interface Props {
   heatLevel?: 1 | 2 | 3 | 4;
 }
 
-const { status, reportCount = 0, commentCount = 0, heatLevel } = Astro.props;
+const { status } = Astro.props;
 const def = statusDef(status);
-const tone = publicStatusTone(status, heatLevel);
+const tone = publicStatusTone(status);
 
-const label =
-  status === 'rumored'
-    ? `観測 第${reportCount}報`
-    : status === 'commented'
-      ? `コメントあり(${commentCount}回目)`
-      : def.label;
+const label = status === 'rumored' ? '追跡中（未確定）' : def.label;
 ---
 
 <span class={`badge badge--${tone}`} title={def.description}>

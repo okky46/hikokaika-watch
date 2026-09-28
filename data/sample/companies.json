@@ -98,5 +98,15 @@
     "is_active": true,
     "created_at": "2026-03-01T10:00:00+09:00",
     "updated_at": "2026-03-01T10:00:00+09:00"
+  },
+  {
+    "id": "b0000000-0000-4000-8000-000000000001",
+    "security_code": "999Z",
+    "name_ja": "デモ追跡工業",
+    "market": "サンプル",
+    "industry": null,
+    "is_active": true,
+    "created_at": "2026-09-29T00:00:00Z",
+    "updated_at": "2026-09-29T00:00:00Z"
   }
 ]

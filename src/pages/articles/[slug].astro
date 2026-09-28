@@ -1,0 +1,28 @@
+---
+import Base from '../../layouts/Base.astro';
+import { loadPublicData } from '../../lib/publicData';
+import { formatDate } from '../../lib/format';
+import type { PublicArticle } from '../../lib/articles';
+export async function getStaticPaths() {
+  const data = await loadPublicData();
+  return data.articles.map(article => ({ params:{slug:article.slug}, props:{article,isSampleData:data.isSampleData, cases:data.cases.filter(c => article.companies.some(co => co.id === c.companyId))} }));
+}
+interface Props { article: PublicArticle; isSampleData: boolean; cases: import('../../lib/types').CaseListItem[] }
+const {article:a,isSampleData,cases}=Astro.props;
+---
+<Base title={a.title} description={a.summary.slice(0,155)} path={`/articles/${a.slug}/`}>
+  <article class="article-reader" data-publication-version={a.publicationVersion}>
+    {isSampleData && <p class="notice">開発・デモ用の架空のサンプル記事です。</p>}
+    <nav class="small" aria-label="パンくず"><a href="/articles/">記事・調査ノート</a> › 記事</nav>
+    <h1>{a.title}</h1><p>{a.summary}</p>
+    <p class="small muted">初回公開: {formatDate(a.firstPublishedAt)} / 更新: {formatDate(a.publishedAt)} / 情報確認日: {formatDate(a.checked_on)}</p>
+    <section class="section"><h2 class="section-title">確認できた事実</h2><p class="article-body">{a.confirmed_facts}</p></section>
+    {a.body && <section class="section"><h2 class="section-title">経緯・整理</h2><p class="article-body">{a.body}</p></section>}
+    {a.interpretation && <section class="section"><h2 class="section-title">編集上の解釈</h2><p class="article-body">{a.interpretation}</p></section>}
+    <section class="section"><h2 class="section-title">未確認事項</h2><p class="article-body">{a.unknowns || '追加の未確認事項は記載されていません。将来の非公開化を確定するものではありません。'}</p></section>
+    <section class="section"><h2 class="section-title">出典</h2><ul>{a.sources.map(s => <li><a href={s.url} target="_blank" rel="noopener noreferrer nofollow">{s.name} ↗</a><span class="small muted"> 公表日: {formatDate(s.published_on)} / 確認日: {formatDate(s.checked_on)}</span></li>)}</ul></section>
+    {a.correction_note && <section class="section card"><h2 class="section-title">訂正履歴</h2><p class="article-body">{a.correction_note}</p></section>}
+    <section class="section"><h2 class="section-title">関連銘柄・経過</h2><ul>{a.companies.map(c => <li><a href={`/companies/${c.securityCode}/`}>{c.nameJa}（{c.securityCode}）</a></li>)}</ul><ul>{cases.map(c => <li><a href={`/cases/${c.slug}/`}>{c.companyName}: {c.title}の経過</a></li>)}</ul></section>
+    <p class="small muted">本記事は売買推奨や非公開化の実現可能性の評価を行うものではありません。</p>
+  </article>
+</Base>

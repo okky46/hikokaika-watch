@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import ArticleAdmin from '../../components/ArticleAdmin.astro';
 import { CASE_STATUS, EVENT_TYPE, STATUS_ORDER } from '../../lib/status';
 import { COMMENT_STANCE_LABELS, COMMENT_TAGS, COMMENT_TAG_ORDER } from '../../lib/commentTags';
 
@@ -46,7 +47,8 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     <nav class="section" aria-label="管理メニュー" style="display:flex; gap:0.4rem; flex-wrap:wrap;">
       <button class="btn" data-tab="inbox">収集候補</button>
       <button class="btn" data-tab="companies">会社</button>
-      <button class="btn" data-tab="cases">案件</button>
+      <button class="btn" data-tab="cases">追跡銘柄</button>
+      <button class="btn" data-tab="articles">記事・調査ノート</button>
       <button class="btn" data-tab="events">出来事</button>
       <button class="btn" data-tab="prices">株価</button>
       <button class="btn" data-tab="corrections">訂正履歴</button>
@@ -111,6 +113,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       <h2 class="section-title">案件の登録・編集</h2>
       <div class="card" style="margin-bottom:0.8rem">
         <form id="case-form" onsubmit="return false">
+          <p class="small">記事・報道イベントなしでも登録できます。会社が未登録の場合は、<button type="button" class="btn" data-tab="companies">会社を登録</button>してから戻ってください。</p>
           <input type="hidden" id="ca-id" />
           <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:0.6rem;">
             <div class="form-row"><label for="ca-company">会社 *</label><select id="ca-company" required><option value="">会社を選択</option></select></div>
@@ -120,7 +123,10 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
             <div class="form-row"><label for="ca-first">最初の観測報道日時</label><input type="datetime-local" id="ca-first" /></div>
           </div>
           <div class="form-row"><label for="ca-summary">概要</label><textarea id="ca-summary" style="min-height:4.5rem"></textarea></div>
-          <label class="filter-check"><input type="checkbox" id="ca-visible" /> 公開する(チェックなし=下書き)</label>
+          <div class="form-row"><label for="ca-tracking-reason">追跡のきっかけ（公開用。噂を確認済み報道と断定しない）</label><textarea id="ca-tracking-reason"></textarea></div>
+          <div class="editor-grid"><div class="form-row"><label for="ca-tracking-start">追跡開始日（不明なら空欄）</label><input type="date" id="ca-tracking-start"/></div><div class="form-row"><label for="ca-last-checked">最終確認日</label><input type="date" id="ca-last-checked"/></div></div>
+          <div class="form-row"><label for="ca-verification">確認状況・未確認事項（公開用）</label><textarea id="ca-verification"></textarea></div>
+          <label class="filter-check"><input type="checkbox" id="ca-visible" /> 次の再ビルドで公開する（記事は自動作成しません）</label>
           <div style="display:flex; gap:0.6rem; margin-top:0.6rem; flex-wrap:wrap;">
             <button type="button" class="btn btn--primary" id="ca-save">保存</button>
             <button type="button" class="btn" id="ca-clear">クリア(新規)</button>
@@ -140,6 +146,8 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       </div>
     </section>
 
+    <ArticleAdmin/>
+
     <!-- ============ 出来事 ============ -->
     <section class="section" data-panel="events" hidden>
       <h2 class="section-title">出来事の追加・編集</h2>
@@ -152,7 +160,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
           <input type="hidden" id="ev-id" />
           <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:0.6rem;">
             <div class="form-row"><label for="ev-type">種類 *</label><select id="ev-type"></select></div>
-            <div class="form-row"><label for="ev-occurred">報道・公表日時 *</label><input type="datetime-local" id="ev-occurred" required /></div>
+            <div class="form-row"><label for="ev-occurred">報道・公表日時（不明なら空欄）</label><input type="datetime-local" id="ev-occurred" /></div>
             <div class="form-row"><label for="ev-title">見出し *</label><input type="text" id="ev-title" required /></div>
             <div class="form-row"><label for="ev-source-name">媒体名・発表主体 *</label><input type="text" id="ev-source-name" required /></div>
             <div class="form-row"><label for="ev-source-url">元情報URL</label><input type="url" id="ev-source-url" placeholder="https://…" /></div>
@@ -240,7 +248,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
         <p class="small">
           「公開処理を実行」を押すと Cloudflare Pages の Deploy Hook が呼び出され、
           現在 Supabase に登録されている公開データ(is_visible = true)で静的サイトが再ビルドされます。
-          反映まで数分かかります。
+          記事は承認済みの公開版だけが使われます。反映まで数分かかります。
         </p>
         <p class="small muted">
           Deploy Hook URL は Supabase の <code>admin_settings</code> テーブル(key: <code>deploy_hook_url</code>)に登録します(docs/SETUP.md 参照)。
@@ -294,6 +302,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
 <script>
   import { getSupabase } from '../../lib/supabaseBrowser';
+  import { setupArticleAdmin } from '../../lib/articleAdmin';
   import { buildLargeShareholdingMetadata } from '../../lib/noteMetadataHelpers';
   import { hasDailyCloseConflict } from '../../lib/priceHelpers';
   import { filterInboxItems, inboxEmptyState, normalizeHttpUrl, normalizeSecurityCode, pendingBulkRejectIds, preserveSelectValueIfValid, resolveInboxCaseId, resolveInboxCompanyId, visibleSelectionIds } from '../../lib/inboxAdminHelpers';
@@ -307,6 +316,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   };
 
   const supabase = getSupabase();
+  const articleAdmin = supabase ? setupArticleAdmin(supabase) : null;
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
   const esc = (s: unknown) =>
     String(s ?? '').replace(/[&<>"']/g, (ch) =>
@@ -506,7 +516,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     renderCaseSelects();
     renderCompanyTable();
     renderCaseTable();
-    await Promise.all([loadEvents(), loadPrices(), loadInbox()]);
+    await Promise.all([loadEvents(), loadPrices(), loadInbox(), articleAdmin?.reload()]);
   }
 
 
@@ -676,7 +686,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     $<HTMLSelectElement>('ev-case-select').value = resolveInboxCaseId(cases, item.matched_case_id);
     $<HTMLInputElement>('ev-id').value = '';
     $<HTMLSelectElement>('ev-type').value = item.suggested_event_type || 'observation_report';
-    $<HTMLInputElement>('ev-occurred').value = isoToLocal(item.published_at || item.created_at);
+    $<HTMLInputElement>('ev-occurred').value = isoToLocal(item.published_at);
     $<HTMLInputElement>('ev-title').value = item.title || '';
     $<HTMLTextAreaElement>('ev-summary').value = '';
     $<HTMLInputElement>('ev-source-name').value = item.source_kind || '';
@@ -799,7 +809,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
           <td class="code">${esc(co?.security_code ?? '?')}</td>
           <td>${esc(c.title)}<div class="small muted mono">/cases/${esc(c.slug)}/</div></td>
           <td>${badge(statusDefs[c.status], c.status)}</td>
-          <td>${c.is_visible ? '公開' : '<span class="badge badge--pause">下書き</span>'}</td>
+          <td>${c.is_visible ? '公開対象（反映は未確認）' : '<span class="badge badge--pause">下書き</span>'}</td>
           <td class="nowrap">${fmtDate(c.updated_at)}</td>
           <td><button type="button" class="btn" data-edit-case="${c.id}">編集</button></td>
         </tr>`;
@@ -808,6 +818,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   }
 
   $('ca-save')?.addEventListener('click', async () => {
+    if (!($('case-form') as HTMLFormElement).reportValidity()) return;
     const id = $<HTMLInputElement>('ca-id').value;
     const visible = $<HTMLInputElement>('ca-visible').checked;
     const row: any = {
@@ -816,6 +827,10 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       slug: $<HTMLInputElement>('ca-slug').value.trim(),
       status: $<HTMLSelectElement>('ca-status').value,
       summary: $<HTMLTextAreaElement>('ca-summary').value.trim(),
+      tracking_reason: $<HTMLTextAreaElement>('ca-tracking-reason').value.trim(),
+      tracking_started_on: $<HTMLInputElement>('ca-tracking-start').value || null,
+      last_checked_on: $<HTMLInputElement>('ca-last-checked').value || null,
+      verification_note: $<HTMLTextAreaElement>('ca-verification').value.trim(),
       first_reported_at: localToIso($<HTMLInputElement>('ca-first').value),
       is_visible: visible,
     };
@@ -825,12 +840,13 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     }
     // 初回公開時にサイト掲載日時を自動設定
     const existing = cases.find((c) => c.id === id);
+    if (existing?.site_published_at && row.slug !== existing.slug) { $('ca-status-msg').textContent = '公開済みのURLは変更できません'; return; }
     if (visible && !existing?.site_published_at) row.site_published_at = new Date().toISOString();
     const q = id
       ? supabase!.from('cases').update(row).eq('id', id).select('id').single()
       : supabase!.from('cases').insert(row).select('id').single();
     const { data: savedCase, error } = await q;
-    $('ca-status-msg').textContent = error ? `保存エラー: ${error.message}` : '保存しました';
+    $('ca-status-msg').textContent = error ? `保存エラー: ${error.message}` : visible ? '保存済み・公開待ちです。公開処理から再ビルドしてください。' : '非公開で保存しました。既に公開済みの場合は再ビルドで取り下げが反映されます。';
     if (!error) {
       if (savedCase?.id) $<HTMLInputElement>('ca-id').value = savedCase.id;
       if (currentInboxIdForCase) {
@@ -931,11 +947,16 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       return;
     }
     if (row.source_url) row.source_url = normalizeHttpUrl(row.source_url);
-    if (!row.case_id || !row.occurred_at || !row.title || !row.source_name) {
-      $('ev-status').textContent = '案件・日時・見出し・媒体名は必須です';
+    if (!row.case_id || !row.title || !row.source_name) {
+      $('ev-status').textContent = '案件・見出し・媒体名は必須です';
       return;
     }
     const existing = events.find((e) => e.id === id);
+    // PR #8適用済みDBの既存レコードに限って日付精度を同期する。
+    const dateChanged = (row.occurred_at ? Date.parse(row.occurred_at) : null) !== (existing?.occurred_at ? Date.parse(existing.occurred_at) : null);
+    if (existing && 'date_precision' in existing && dateChanged) {
+      row.date_precision = row.occurred_at ? 'datetime' : 'unknown';
+    }
     if (visible && !existing?.site_published_at) row.site_published_at = new Date().toISOString();
     const q = id
       ? supabase!.from('case_events').update(row).eq('id', id).select('id').single()
@@ -1141,6 +1162,10 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       $<HTMLInputElement>('ca-slug').value = c.slug;
       $<HTMLSelectElement>('ca-status').value = c.status;
       $<HTMLTextAreaElement>('ca-summary').value = c.summary ?? '';
+      $<HTMLTextAreaElement>('ca-tracking-reason').value = c.tracking_reason ?? '';
+      $<HTMLInputElement>('ca-tracking-start').value = c.tracking_started_on ?? '';
+      $<HTMLInputElement>('ca-last-checked').value = c.last_checked_on ?? '';
+      $<HTMLTextAreaElement>('ca-verification').value = c.verification_note ?? '';
       $<HTMLInputElement>('ca-first').value = isoToLocal(c.first_reported_at);
       $<HTMLInputElement>('ca-visible').checked = c.is_visible;
       return;
