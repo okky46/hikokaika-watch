@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { describe, it, before } from 'node:test';
 import ts from 'typescript';
@@ -18,7 +19,7 @@ before(async () => {
     });
     const file = path.join(os.tmpdir(), `${name}-${process.pid}-${Date.now()}.mjs`);
     fs.writeFileSync(file, outputText);
-    return import(file);
+    return import(pathToFileURL(file).href);
   };
   helpers = await compileHelper('src/lib/noteMetadataHelpers.ts', 'noteMetadataHelpers');
   companyHelpers = await compileHelper('src/lib/publicCompanyHelpers.ts', 'publicCompanyHelpers');
@@ -444,7 +445,7 @@ describe('phase 3 analytics and advertising regressions', () => {
     });
     const file = path.join(os.tmpdir(), `analytics-${process.pid}-${Date.now()}.mjs`);
     fs.writeFileSync(file, outputText);
-    const { queryCloudflare } = await import(file);
+    const { queryCloudflare } = await import(pathToFileURL(file).href);
     const originalFetch = globalThis.fetch;
     const env = { CF_ANALYTICS_API_TOKEN: 'secret-token', CF_ZONE_TAG: 'secret-zone' };
     try {

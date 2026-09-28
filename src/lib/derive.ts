@@ -113,11 +113,11 @@ export function deriveCaseFields(input: DeriveCaseInput): DerivedCaseFields {
 }
 
 export function firstVisibleReportOccurredAt(
-  events: readonly { event_type: EventType; occurred_at: string; is_visible: boolean }[],
+  events: readonly { event_type: EventType; occurred_at: string | null; is_visible: boolean }[],
 ): string | null {
   const firstReport = events
-    .filter((e) => e.is_visible && REPORT_EVENT_TYPES.includes(e.event_type))
-    .sort((a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime())[0];
+    .filter((e) => e.is_visible && e.occurred_at && REPORT_EVENT_TYPES.includes(e.event_type))
+    .sort((a, b) => new Date(a.occurred_at!).getTime() - new Date(b.occurred_at!).getTime())[0];
 
   return firstReport?.occurred_at ?? null;
 }

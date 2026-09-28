@@ -1,23 +1,24 @@
 ---
 import Base from '../../layouts/Base.astro';
 import StatusBadge from '../../components/StatusBadge.astro';
-import StatusFunnel from '../../components/StatusFunnel.astro';
+import StockLinks from '../../components/StockLinks.astro';
+import ArticleList from '../../components/ArticleList.astro';
 import EventTypeBadge from '../../components/EventTypeBadge.astro';
 import AdSlot from '../../components/AdSlot.astro';
 import { loadPublicData } from '../../lib/publicData';
-import { formatDate, formatDateTime, daysBetween } from '../../lib/format';
-import { formatPrice } from '../../lib/format';
+import { formatDate, formatDateTime } from '../../lib/format';
 import type { CaseDetail } from '../../lib/types';
 
 export async function getStaticPaths() {
   const data = await loadPublicData();
   return data.details.map((detail) => ({
     params: { slug: detail.slug },
-    props: { detail, isSampleData: data.isSampleData },
+    props: { detail, isSampleData: data.isSampleData, articles: data.articles.filter(a => a.companies.some(co => co.id === detail.companyId)) },
   }));
 }
 
 interface Props {
+  articles: import('../../lib/articles').PublicArticle[];
   detail: CaseDetail;
   isSampleData: boolean;
 }
@@ -26,9 +27,8 @@ const { detail: c, isSampleData } = Astro.props;
 const formUrl = import.meta.env.PUBLIC_REQUEST_FORM_URL ?? '';
 
 const title = `${c.companyName}(${c.securityCode})${c.title.includes(c.companyName) ? '' : ` ${c.title}`}の経過`;
-const description = `${c.companyName}(証券コード${c.securityCode})の非公開化・MBO・TOB関連の観測報道から現在までの経過を時系列で整理。${c.summary}`.slice(0, 155);
+const description = `${c.companyName}(証券コード${c.securityCode})の非公開化・MBO・TOBに関する追跡開始から現在までの経過を時系列で整理。${c.summary}`.slice(0, 155);
 
-const elapsed = daysBetween(c.firstReportedAt, c.lastUpdatedAt);
 const timelineAdSlots = [
   import.meta.env.PUBLIC_ADSENSE_SLOT_CASE_TIMELINE_1 ?? '',
   import.meta.env.PUBLIC_ADSENSE_SLOT_CASE_TIMELINE_2 ?? '',
@@ -83,47 +83,23 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
     <div class="case-head__meta">
       <span>最初の観測報道: {formatDate(c.firstReportedAt)}</span>
       <span>最終更新: {formatDate(c.lastUpdatedAt)}</span>
-      {elapsed !== null && <span>最初の報道からの経過日数: {elapsed}日</span>}
+
       <span>サイト掲載: {formatDate(c.sitePublishedAt)}</span>
     </div>
-    <p style="margin-top:0.6rem">{c.summary}</p>
+    {c.summary && c.summary !== c.trackingReason && <p style="margin-top:0.6rem">{c.summary}</p>}
   </header>
 
-  <StatusFunnel
-    effectiveStatus={c.effectiveStatus}
-    reportCount={c.reportCount}
-    commentCount={c.commentCount}
-    heatLevel={c.heatLevel}
-  />
-
-  <section class="section" aria-label="株価情報">
-    <h2 class="section-title">株価情報</h2>
-    <div class="price-grid">
-      <div class="price-card">
-        <p class="price-card__label">観測報道前の終値</p>
-        <p class="price-card__value">{formatPrice(c.preReportClose?.price)}</p>
-        {c.preReportClose && <p class="price-card__date">{formatDate(c.preReportClose.priceDate)} 時点</p>}
-      </div>
-      <div class="price-card">
-        <p class="price-card__label">現在株価(参考値)</p>
-        <p class="price-card__value">{formatPrice(c.currentClose?.price)}</p>
-        {c.currentClose && <p class="price-card__date">基準日: {formatDate(c.currentClose.priceDate)}</p>}
-      </div>
-      {c.formalOfferPrice && (
-        <div class="price-card">
-          <p class="price-card__label">正式公開買付価格</p>
-          <p class="price-card__value">{formatPrice(c.formalOfferPrice.price)}</p>
-          <p class="price-card__date">{formatDate(c.formalOfferPrice.priceDate)} 発表</p>
-        </div>
-      )}
-    </div>
-    {c.sparklineSvg && <div class="sparkline-detail" set:html={c.sparklineSvg} />}
-    <p class="small muted" style="margin-top:0.4rem">
-      ※ 株価は管理者が公開情報をもとに手動登録した参考値であり、リアルタイム情報ではありません。
-    </p>
+  <section class="section card" aria-label="追跡のきっかけと確認状況">
+    <h2 class="section-title">追跡のきっかけと確認状況</h2>
+    <p>{c.trackingReason || '追跡理由はまだ整理されていません。'}</p>
+    <dl class="tracking-meta"><div><dt>追跡開始日</dt><dd>{formatDate(c.trackingStartedOn)}</dd></div><div><dt>最終確認日</dt><dd>{formatDate(c.lastCheckedOn)}</dd></div></dl>
+    <p>{c.verificationNote || '確認状況は未整理です。掲載は非公開化の決定・実現を示すものではありません。'}</p>
+    <p class="small muted">日付が「—」の場合は未登録です。登録日と報道日を同じ日付として扱いません。</p>
+    <StockLinks code={c.securityCode}/>
   </section>
+  <p class="small"><a href="#timeline">経過タイムライン</a>　<a href="#related-articles">関連記事</a>　<a href="/mypage/">ログインしてメモ・お気に入りを利用</a></p>
 
-  <section class="section" aria-label="出来事タイムライン">
+  <section class="section" aria-label="出来事タイムライン" id="timeline">
     <h2 class="section-title">経過タイムライン</h2>
     {c.events.length === 0 ? (
       <p class="empty-state">公開されている出来事はまだありません。</p>
@@ -134,11 +110,11 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
             <AdSlot placement={`case-timeline-${row.slotNumber}`} slotId={timelineAdSlots[row.slotNumber - 1]} />
           </li>
         ) : (
-          <li class="timeline__item">
+          <li class="timeline__item" id={`event-${row.event.id}`}>
             <article class="event-card">
               <div class="event-card__head">
                 <EventTypeBadge type={row.event.eventType} />
-                <span class="event-card__date">{formatDateTime(row.event.occurredAt)}</span>
+                <span class="event-card__date">{row.event.dateLabel}</span>
                 {row.event.corrected && (
                   <span class="badge badge--stop"><span class="badge__mark" aria-hidden="true">!</span>訂正あり</span>
                 )}
@@ -169,6 +145,8 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
       各出来事には、報道・発表が存在した事実と中立的な説明のみを掲載しています。記事本文の転載は行いません。
     </p>
   </section>
+
+  <section class="section" id="related-articles"><h2 class="section-title">関連記事</h2><ArticleList articles={Astro.props.articles}/></section>
 
   <section class="section" aria-label="自分専用メモ" id="note-section" hidden>
     <h2 class="section-title">自分専用メモ</h2>

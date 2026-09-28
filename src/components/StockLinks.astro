@@ -1,0 +1,7 @@
+---
+import { externalStockLinks } from '../lib/tracking';
+interface Props { code: string }
+---
+<nav class="stock-links" aria-label="銘柄の外部情報">
+  {externalStockLinks(Astro.props.code).map(link => <a href={link.url} target="_blank" rel="noopener noreferrer">{link.label} ↗</a>)}
+</nav>

@@ -1,0 +1,47 @@
+<section class="section" data-panel="articles" hidden>
+  <h2 class="section-title">記事・調査ノート</h2>
+  <p class="small muted">噂だけの銘柄は「追跡銘柄」から登録してください。記事は公表資料などで確認できた事実を整理します。下書きの保存だけでは公開版は変わりません。</p>
+  <div class="stock-links"><button type="button" class="btn" id="ar-new">新規記事</button><button type="button" class="btn" id="ar-reload">一覧を再読込</button><button type="button" class="btn" id="ar-check">このサイトへの公開反映を確認</button></div>
+  <p class="small" id="ar-list-status" aria-live="polite"></p>
+  <div id="ar-list" class="article-list"></div>
+  <form class="card section" id="article-form" onsubmit="return false">
+    <h3>記事の編集</h3>
+    <div class="editor-grid">
+      <div class="form-row"><label for="ar-title">タイトル</label><input id="ar-title" type="text" maxlength="240"/></div>
+      <div class="form-row"><label for="ar-slug">URL用slug（初回公開後は固定）</label><input id="ar-slug" type="text" pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="2026-capital-policy" required/></div>
+      <div class="form-row"><label for="ar-checked_on">情報確認日</label><input id="ar-checked_on" type="date"/></div>
+    </div>
+    <div class="form-row"><label for="ar-summary">要約</label><textarea id="ar-summary" rows="2"></textarea></div>
+    <div class="form-row"><label for="ar-confirmed_facts">確認できた事実（公開時必須）</label><textarea id="ar-confirmed_facts"></textarea></div>
+    <div class="form-row"><label for="ar-body">経緯・整理</label><textarea id="ar-body"></textarea></div>
+    <div class="editor-grid">
+      <div class="form-row"><label for="ar-interpretation">編集上の解釈</label><textarea id="ar-interpretation"></textarea></div>
+      <div class="form-row"><label for="ar-unknowns">未確認事項</label><textarea id="ar-unknowns"></textarea></div>
+    </div>
+    <p class="small muted">本文はプレーンテキストとして表示します。HTMLは実行されません。未読の有料記事の内容や、非公開化の実現を断定しないでください。</p>
+    <div class="form-row"><label for="ar-sources">出典（1行ごとに「出典名 | https://URL | 公表日 | 確認日」。日付はYYYY-MM-DD、公表日不明は空欄）</label><textarea id="ar-sources" placeholder="会社IR | https://example.com/ir/ | 2026-09-01 | 2026-09-29"></textarea></div>
+    <p class="small muted">文字としての「|」は <code>\|</code>、バックスラッシュは <code>\\</code>、改行は <code>\n</code> と入力します。JSON取込・再読込時は自動変換します。</p>
+    <p class="small muted">出典URLは通常の英数字ドメインまたはIPアドレスに対応しています。国際化ドメイン（日本語ドメイン等）は未対応です。</p>
+    <fieldset><legend>関連銘柄（複数選択可）</legend><p class="small muted">会社単位の関連付けです。同じ会社の各追跡ページに関連記事として表示します。</p><div id="ar-companies" class="editor-grid"></div></fieldset>
+    <div class="form-row"><label for="ar-correction_note">訂正履歴（前の履歴を残して追記）</label><textarea id="ar-correction_note" rows="2"></textarea></div>
+    <div class="stock-links">
+      <button type="button" class="btn btn--primary" id="ar-save">下書きを保存</button>
+      <button type="button" class="btn" id="ar-preview">入力内容をプレビュー</button>
+      <button type="button" class="btn" id="ar-publish" disabled>保存した内容の公開を承認</button>
+      <button type="button" class="btn" id="ar-unpublish" disabled>記事を非公開に戻す</button>
+    </div>
+    <div id="ar-confirm" class="notice" hidden role="region" aria-label="記事の公開操作の確認">
+      <p id="ar-confirm-text"></p>
+      <button type="button" class="btn btn--primary" id="ar-confirm-apply">確認した内容で実行する</button>
+      <button type="button" class="btn" id="ar-confirm-cancel">キャンセル</button>
+    </div>
+    <p class="small" id="ar-status" aria-live="polite"></p>
+    <p class="small muted">承認後は「公開処理」タブから再ビルドしてください。非公開への変更も再ビルド完了まで既存ページに残ります。関連銘柄の追跡ページは残ります。</p>
+    <div id="ar-preview-body" class="card article-body" hidden></div>
+  </form>
+  <details class="section card"><summary>ChatGPT／Codexで作成したドラフトを取り込む</summary>
+    <p class="small">docs/RESEARCH_WORKFLOW.md のJSON形式を貼り付けます。入力欄への取込だけでは保存・公開されません。未登録の会社は先に会社タブで登録してください。</p>
+    <label for="ar-import">ドラフトJSON</label><textarea id="ar-import"></textarea>
+    <button type="button" class="btn" id="ar-import-run">新規記事の入力欄に取り込む</button>
+  </details>
+</section>

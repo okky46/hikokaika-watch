@@ -3,7 +3,7 @@ import { defineConfig } from 'astro/config';
 
 // 公開サイトのURL。Cloudflare Pages のカスタムドメイン確定後に変更する。
 // 環境変数 SITE_URL があればそちらを優先する。
-const SITE_URL = process.env.SITE_URL || 'https://hikokaika-watch.pages.dev';
+const SITE_URL = process.env.SITE_URL || 'https://hikokaika.com';
 
 export default defineConfig({
   site: SITE_URL,

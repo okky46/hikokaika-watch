@@ -85,6 +85,10 @@ export interface RawCase {
   site_published_at: string | null;
   updated_at: string;
   is_visible: boolean;
+  tracking_reason?: string;
+  tracking_started_on?: string | null;
+  last_checked_on?: string | null;
+  verification_note?: string;
   metadata: Record<string, unknown> | null;
 }
 
@@ -92,7 +96,10 @@ export interface RawEvent {
   id: string;
   case_id: string;
   event_type: EventType;
-  occurred_at: string;
+  occurred_at: string | null;
+  date_precision?: 'datetime' | 'date' | 'issue' | 'unknown';
+  issue_label?: string | null;
+  sort_at?: string | null;
   title: string;
   summary: string;
   source_name: string;
@@ -137,6 +144,12 @@ export interface CaseListItem {
   firstReportedAt: string | null;
   firstSourceName: string | null;
   lastUpdatedAt: string;
+  companyId: string;
+  trackingReason: string;
+  trackingStartedOn: string | null;
+  lastCheckedOn: string | null;
+  verificationNote: string;
+  latestEvent: { id: string; title: string; dateLabel: string } | null;
   hasFormalAnnouncement: boolean;
   hasAcknowledgedCompanyComment: boolean;
   /** この案件の可視イベントに登場する媒体名(絞り込み用) */
@@ -171,7 +184,8 @@ export interface CaseListItem {
 export interface CaseEventView {
   id: string;
   eventType: EventType;
-  occurredAt: string;
+  occurredAt: string | null;
+  dateLabel: string;
   title: string;
   summary: string;
   sourceName: string;
@@ -203,6 +217,7 @@ export interface PublicCompany {
 }
 
 export interface PublicData {
+  articles: import('./articles').PublicArticle[];
   companies: PublicCompany[];
   cases: CaseListItem[];
   details: CaseDetail[];

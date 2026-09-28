@@ -12,9 +12,10 @@ interface Props {
   hasAdSlots?: boolean;
 }
 
-const { title, description, path, noindex = false, hasAdSlots = false } = Astro.props;
+const { title, description, path, noindex: requestedNoindex = false, hasAdSlots = false } = Astro.props;
+const noindex = requestedNoindex || import.meta.env.DEPLOY_ENV !== 'production';
 
-const site = Astro.site ?? new URL('https://hikokaika-watch.pages.dev');
+const site = Astro.site ?? new URL('https://hikokaika.com');
 const canonical = new URL(path ?? Astro.url.pathname, site).href;
 const formUrl = import.meta.env.PUBLIC_REQUEST_FORM_URL ?? '';
 const cfAnalyticsToken = import.meta.env.PUBLIC_CF_ANALYTICS_TOKEN ?? '';
@@ -48,9 +49,10 @@ const fullTitle = title === SITE_NAME ? title : `${title} | ${SITE_NAME}`;
     <header class="site-header">
       <div class="site-header__inner">
         <a class="site-header__brand" href="/">非公開化ウォッチ</a>
-        <span class="site-header__tag">非公開化・MBO・TOB 観測報道アーカイブ</span>
+        <span class="site-header__tag">非公開化の噂とその後を追う</span>
         <nav class="site-nav" aria-label="サイト内メニュー">
-          <a href="/">案件一覧</a>
+          <a href="/">追跡銘柄</a>
+          <a href="/articles/">記事・調査ノート</a>
           <a href="/guidelines/">掲載基準・FAQ</a>
           <a href="/disclaimer/">免責事項</a>
           <a href="/mypage/">マイページ</a>
@@ -68,7 +70,8 @@ const fullTitle = title === SITE_NAME ? title : `${title} | ${SITE_NAME}`;
     <footer class="site-footer">
       <div class="site-footer__inner">
         <nav class="site-footer__nav" aria-label="フッターメニュー">
-          <a href="/">案件一覧</a>
+          <a href="/">追跡銘柄</a>
+          <a href="/articles/">記事・調査ノート</a>
           <a href="/guidelines/">掲載基準・FAQ</a>
           <a href="/disclaimer/">免責事項</a>
           <a href="/privacy/">プライバシーポリシー</a>
@@ -78,11 +81,11 @@ const fullTitle = title === SITE_NAME ? title : `${title} | ${SITE_NAME}`;
           )}
         </nav>
         <p class="site-footer__note">
-          非公開化ウォッチは、一般に公開された報道・適時開示・会社発表および株価情報を時系列で整理する情報データベースです。
+          非公開化ウォッチは、非公開化に関する追跡対象と、確認できた報道・会社発表を時系列で整理する情報データベースです。
           特定の有価証券の取得・売却・保有その他の投資判断を推奨または助言するものではありません。
         </p>
         <p class="site-footer__note">
-          株価情報は管理者が公開情報をもとに手動登録した参考値であり、リアルタイム情報ではありません。
+          株価チャート・業績は各銘柄の外部リンクからご確認ください。
         </p>
         <p class="site-footer__note">© 非公開化ウォッチ</p>
       </div>
