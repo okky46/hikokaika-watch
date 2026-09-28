@@ -69,3 +69,7 @@ Cloudflare Access(管理画面保護)の手順は [docs/SETUP.md](docs/SETUP.md)
 ## ビルド時データソース
 
 本番誤公開防止のため、ビルド環境は `DEPLOY_ENV=development|test|preview|production`、データソースは `DATA_SOURCE=sample|supabase` で判定します。Cloudflare Pages では両方必須で、本番は `DEPLOY_ENV=production DATA_SOURCE=supabase` と `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` を設定してください。ローカル開発では両方未設定の場合に限り `development + sample` にフォールバックします。`SITE_URL` は canonical / OGP / sitemap 用であり、環境判定には使用しません。
+
+## Supabase更新の自動化
+
+2026-09-29に0007・0008の適用後CSVを確認済み。今後のDB変更は [初回設定と自動更新手順](docs/AUTO_DEPLOY.md) に従い、公開前に自動適用する。初回のみCloudflare Productionへのトークン登録とビルドコマンド変更が必要。
