@@ -1,0 +1,30 @@
+{
+  "version": "0008",
+  "confirmedOn": "2026-09-29",
+  "files": [
+    {
+      "name": "0001_init.sql",
+      "sha256": "7e8ab9eb757f7f716fed4b0922010e3b41de43c5d181b48a12737dbfc116220b"
+    },
+    {
+      "name": "0002_comment_mfa_audit_notes.sql",
+      "sha256": "ae5a99db9c2a5c75d5fcbfaaf898b3608f82e7a1ad28b2132eca5e258eaa6a7b"
+    },
+    {
+      "name": "0003_price_event_enums.sql",
+      "sha256": "37d65deb733cd1a73f7829958edd207ec14eabdbe8181de136a9916a1a95bf83"
+    },
+    {
+      "name": "0004_inbox.sql",
+      "sha256": "b9f454387bb548659923b4024186aa557efe3a0035e0caba6c53f6680f6a3c07"
+    },
+    {
+      "name": "0007_tracking_articles.sql",
+      "sha256": "98afa8652ecf134bf755165959009dac64f643b0ef6db9e21d5075cfc35cf671"
+    },
+    {
+      "name": "0008_article_validation.sql",
+      "sha256": "51f1a81209e4a5491654f17ded0a373542db3023ed66730c5002942fbff23505"
+    }
+  ]
+}
