@@ -13,7 +13,8 @@ export async function cloudflareBuild({ env = process.env, migrate = deployDatab
     for (const key of Object.keys(testEnv)) if (/^(PUBLIC_)?SUPABASE_/.test(key)) delete testEnv[key];
     log('[deploy] 公開前のコード検証');
     await run(['node_modules/astro/astro.js', 'check'], testEnv);
-    await run(['--test', ...fs.readdirSync('tests').filter(name => name.endsWith('.test.mjs')).sort().map(name => `tests/${name}`)], testEnv);
+    // Cloudflare Node 22.16 needs explicit type stripping for tests importing .ts.
+    await run(['--experimental-strip-types', '--test', ...fs.readdirSync('tests').filter(name => name.endsWith('.test.mjs')).sort().map(name => `tests/${name}`)], testEnv);
     log('[deploy] DBの状態照合・未適用SQLの更新');
     const count = await migrate(config);
     log(`[deploy] DB更新履歴 ${count}件を確認。サイトをビルドします`);
