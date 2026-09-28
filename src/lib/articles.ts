@@ -1,6 +1,29 @@
 import { safeHttpUrl } from './tracking.ts';
 
 export interface ArticleSource { name: string; url: string; published_on: string; checked_on: string }
+
+/** 出典欄の区切り文字と、文字としての |・バックスラッシュ・改行を区別する。 */
+export function formatArticleSources(sources: ArticleSource[]): string {
+  const escape = (value: string) => value.replace(/[\\|\n\r]/g, ch => ({'\\':'\\\\','|':'\\|','\n':'\\n','\r':'\\r'}[ch]!));
+  return sources.map(s => [s.name,s.url,s.published_on,s.checked_on].map(escape).join(' | ')).join('\n');
+}
+
+export function parseArticleSources(text: string): ArticleSource[] {
+  const escapes: Record<string,string> = {'\\':'\\','|':'|',n:'\n',r:'\r'};
+  return text.split(/\r?\n/).filter(line => line.trim()).map(line => {
+    const parts = [''];
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '\\' && Object.hasOwn(escapes, line[i+1])) parts[parts.length-1] += escapes[line[++i]];
+      else if (ch === '|') parts.push('');
+      else parts[parts.length-1] += ch;
+    }
+    if (parts.length !== 4) throw new Error('出典は1行4項目を | で区切ってください（文字としての | は \\|）');
+    const [name,url,published_on,checked_on] = parts.map(v => v.trim());
+    return {name,url,published_on,checked_on};
+  });
+}
+
 export interface ArticleContent {
   title: string; summary: string; body: string; confirmed_facts: string;
   interpretation: string; unknowns: string; checked_on: string; correction_note: string;

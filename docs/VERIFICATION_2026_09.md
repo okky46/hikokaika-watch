@@ -27,11 +27,11 @@ PR #8のhead: `9c4035ed5942605aa3cb930e47df6ae924a6c0d9`。マージせず必要
 ## 実行コマンド
 
 - `npm run check`: エラー0、警告0（既存のinline script等にヒント3件）。
-- `npm test`: 103件成功。Windowsでも既存の一時ファイルimportが動くようfile URLに修正した。
+- `npm test`: 自己レビュー修正後105件成功（当初103件）。出典名・URL内の区切り文字、改行、バックスラッシュの取込→保存→再読込と、従来形式の互換性を追加検査。Windowsでも既存の一時ファイルimportが動くようfile URLに修正した。
 - `python -m unittest discover -s scripts/collect -p 'test_*.py'`: 既存のニュース収集テスト33件成功。Windowsの検証用仮想環境にのみtzdataを追加した。
 - `PR8_SQL_DIR=../pr8 node --test tests/articleDatabase.test.mjs`: 3環境とも成功。`../pr8`には参照headの0005/0006を `git show` で抽出。検証専用で本番へ適用していない。
 - `DEPLOY_ENV=test DATA_SOURCE=sample npm run build`: 静的ビルド成功。
-- `node scripts/verify_build.mjs`: 生成物の下書き隔離・リンク・記事なし銘柄・フォント・noindex検査に成功。CIにも追加。
+- `node scripts/verify_build.mjs`: 生成物の下書き隔離・リンク・記事なし銘柄・フォント・noindex検査に成功。自己レビュー修正後は、報道のない銘柄の説明文が「追跡開始から現在まで」であることも確認。CIにも追加。
 - `git diff --check`: 成功。
 
 ブラウザーの管理画面検証ではGoogle OAuthを模擬し、一時DBの管理者で新記事エディターを動かした。これは本番GoogleログインのE2E成功を意味しない。記事の権限・MFA拒否は別途実DBテストで確認した。

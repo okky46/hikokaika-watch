@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { emptyArticle, parseArticleContent, parseResearchDraft } from './articles';
+import { emptyArticle, formatArticleSources, parseArticleSources, parseArticleContent, parseResearchDraft } from './articles';
 import type { ArticleContent, RawArticle } from './articles';
 
 type EditorArticle = RawArticle & {draft: ArticleContent; revision: number};
@@ -36,15 +36,12 @@ export function setupArticleAdmin(supabase: SupabaseClient) {
     pendingPublication=null; element('ar-confirm').hidden=true;
     selected=row; for (const key of fields) value(key).value=content[key];
     value('slug').value=row?.slug ?? ''; value('slug').readOnly=Boolean(row?.first_published_at);
-    value('sources').value=content.sources.map(s=>[s.name,s.url,s.published_on,s.checked_on].join(' | ')).join('\n');
+    value('sources').value=formatArticleSources(content.sources);
     renderCompanies(ids); dirty=false; element('ar-preview-body').hidden=true; buttons();
   }
   function read() {
     const content:Record<string,unknown>={}; for (const key of fields) content[key]=value(key).value;
-    content.sources=value('sources').value.split('\n').filter(s=>s.trim()).map(line=> {
-      const parts=line.split('|').map(v=>v.trim()); if(parts.length!==4) throw new Error('出典は1行4項目を | で区切ってください');
-      return {name:parts[0],url:parts[1],published_on:parts[2],checked_on:parts[3]};
-    });
+    content.sources=parseArticleSources(value('sources').value);
     return parseArticleContent(content);
   }
   const companyIds=()=>[...document.querySelectorAll<HTMLInputElement>('input[name="article-company"]:checked')].map(c=>c.value);

@@ -27,7 +27,7 @@ const { detail: c, isSampleData } = Astro.props;
 const formUrl = import.meta.env.PUBLIC_REQUEST_FORM_URL ?? '';
 
 const title = `${c.companyName}(${c.securityCode})${c.title.includes(c.companyName) ? '' : ` ${c.title}`}の経過`;
-const description = `${c.companyName}(証券コード${c.securityCode})の非公開化・MBO・TOB関連の観測報道から現在までの経過を時系列で整理。${c.summary}`.slice(0, 155);
+const description = `${c.companyName}(証券コード${c.securityCode})の非公開化・MBO・TOBに関する追跡開始から現在までの経過を時系列で整理。${c.summary}`.slice(0, 155);
 
 const timelineAdSlots = [
   import.meta.env.PUBLIC_ADSENSE_SLOT_CASE_TIMELINE_1 ?? '',

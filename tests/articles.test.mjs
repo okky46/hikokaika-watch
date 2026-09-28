@@ -1,12 +1,30 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { assembleArticles, parseArticleContent, parseResearchDraft } from '../src/lib/articles.ts';
+import { assembleArticles, formatArticleSources, parseArticleSources, parseArticleContent, parseResearchDraft } from '../src/lib/articles.ts';
 import { eventDateLabel, eventSortKey, externalStockLinks } from '../src/lib/tracking.ts';
 import { assemble } from '../src/lib/publicData.ts';
 const sample=name=>JSON.parse(fs.readFileSync(`data/sample/${name}.json`,'utf8'));
 const rows=sample('articles');
 const companies=sample('companies').map(c=>({id:c.id,securityCode:c.security_code,nameJa:c.name_ja}));
+
+test('出典の区切り文字・改行・バックスラッシュをJSON取込後も再保存できる',()=>{
+  const content={...rows[0].published,sources:[{name:'会社IR | 決算説明資料\n追補\\notes\r\n確認',url:'https://example.com/ir?category=a|b',published_on:'',checked_on:'2026-09-29'},rows[0].published.sources[0]]};
+  const imported=parseResearchDraft({version:1,kind:'article',slug:'source-escapes',company_codes:[],content}).content;
+  const editor=formatArticleSources(imported.sources);
+  assert.equal(editor.split('\n').length,2);
+  const saved=parseArticleContent({...imported,sources:parseArticleSources(editor)},true);
+  assert.deepEqual(saved.sources,imported.sources);
+  assert.deepEqual(parseArticleSources(formatArticleSources(saved.sources)),saved.sources);
+});
+
+test('従来の出典入力・空の公表日・手動エスケープを読み、余分な区切りを拒否する',()=>{
+  const source={name:'会社IR',url:'https://example.com/ir',published_on:'',checked_on:'2026-09-29'};
+  assert.deepEqual(parseArticleSources('会社IR | https://example.com/ir | | 2026-09-29\r\n'),[source]);
+  assert.equal(parseArticleSources(String.raw`会社IR \| 追補\\notes | https://example.com/ir | | 2026-09-29`)[0].name,'会社IR | 追補\\notes');
+  assert.throws(()=>parseArticleSources('会社IR | 追補 | https://example.com/ir | | 2026-09-29'),/1行4項目/);
+  assert.deepEqual(parseArticleSources('  \n'),[]);
+});
 test('未公開記事・公開記事の編集中本文と関連付けは公開モデルに含まれない',()=>{
   const links=[...sample('article_companies'),{article_id:rows[0].id,company_id:companies[2].id,edition:'draft'}];
   const result=assembleArticles(rows,links,companies);
