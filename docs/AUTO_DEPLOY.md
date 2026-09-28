@@ -6,6 +6,15 @@
 
 ## 最初に一度だけ行うこと
 
+### 2026-09-29の設定状況
+
+- 管理者の承認を受け、`hikokaika-watch` だけの Database Read-write トークン `hikokaika-cloudflare-deploy` を発行済み。有効期限は **2026-12-28**。期限前の更新が必要であり、鍵の自動更新は未実装。
+- 既存Cloudflare Pages `hikokaika-watch` の **Production** に `SUPABASE_DEPLOY_TOKEN` をSecretとして保存し、「値が暗号化されました」を確認済み。Previewには存在しないことも確認済み。鍵の値はリポジトリに保存しない。
+- Supabaseの対象と既存 `SUPABASE_URL` の一致、本番の `DEPLOY_ENV=production` / `DATA_SOURCE=supabase`、Previewの `DEPLOY_ENV=preview` / `DATA_SOURCE=sample` を確認済み。
+- **未完了:** PR #10・#11のマージ、ビルドコマンド変更、初回本番デプロイ、実DBの照合・Googleログインとメモの動作確認。現在のビルドコマンドは `npm run build` のまま。自動化コードがmainに入る前に変更しない。
+
+再開時は鍵を再発行せず、PRとCloudflareの最新状態を確認して未完了項目から進める。
+
 ### 1. 自動化コードを取り込む
 
 PR #10を先にマージし、その後、この自動化PRをマージする。最初はCloudflareの従来の `npm run build` のままでよい。今回の0007・0008は手動適用済みなので、新コードを取り込むための追加SQLはない。
