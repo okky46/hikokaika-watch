@@ -9,7 +9,15 @@ export function eventSortKey(event: RawEvent): string {
 export function eventDateLabel(event: RawEvent): string {
   if (event.date_precision === 'issue') return event.issue_label || '号数のみ確認';
   if (event.date_precision === 'unknown' || !event.occurred_at) return '日付未確認';
-  return event.date_precision === 'date' ? formatDate(event.occurred_at) : formatDateTime(event.occurred_at);
+  return (event.date_precision ?? event.metadata?.date_precision) === 'date' ? formatDate(event.occurred_at) : formatDateTime(event.occurred_at);
+}
+
+/** 日付だけの資料はJSTの同日を保存上の基準にし、時刻として公開しない。 */
+export function dateOnlyToIso(value: string): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = new Date(`${value}T00:00:00+09:00`);
+  if (!Number.isFinite(date.getTime())) return null;
+  return formatDate(date.toISOString()).replaceAll('/', '-') === value ? date.toISOString() : null;
 }
 
 export function externalStockLinks(code: string) {

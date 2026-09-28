@@ -160,7 +160,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
           <input type="hidden" id="ev-id" />
           <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:0.6rem;">
             <div class="form-row"><label for="ev-type">種類 *</label><select id="ev-type"></select></div>
-            <div class="form-row"><label for="ev-occurred">報道・公表日時（不明なら空欄）</label><input type="datetime-local" id="ev-occurred" /></div>
+            <div class="form-row"><label for="ev-occurred">報道・公表日時（不明なら空欄）</label><input type="datetime-local" id="ev-occurred" /><label class="filter-check"><input type="checkbox" id="ev-date-only" /> 日付のみ判明（時刻は表示しない）</label></div>
             <div class="form-row"><label for="ev-title">見出し *</label><input type="text" id="ev-title" required /></div>
             <div class="form-row"><label for="ev-source-name">媒体名・発表主体 *</label><input type="text" id="ev-source-name" required /></div>
             <div class="form-row"><label for="ev-source-url">元情報URL</label><input type="url" id="ev-source-url" placeholder="https://…" /></div>
@@ -301,6 +301,8 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 </script>
 
 <script>
+  import { dateOnlyToIso, eventDateLabel } from '../../lib/tracking';
+  import { formatDate } from '../../lib/format';
   import { getSupabase } from '../../lib/supabaseBrowser';
   import { setupArticleAdmin } from '../../lib/articleAdmin';
   import { buildLargeShareholdingMetadata } from '../../lib/noteMetadataHelpers';
@@ -670,6 +672,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     currentInboxIdForEvent = null;
     $<HTMLInputElement>('ev-id').value = '';
     ($('event-form') as HTMLFormElement).reset();
+    $<HTMLInputElement>('ev-occurred').type = 'datetime-local';
     $<HTMLInputElement>('ev-corrected').checked = false;
     $('ev-correction-row').hidden = true;
     $<HTMLInputElement>('ev-correction-note').value = '';
@@ -893,7 +896,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     $('event-table').querySelector('tbody')!.innerHTML = events
       .map(
         (e) => `<tr>
-          <td class="nowrap">${fmtDate(e.occurred_at)}</td>
+          <td class="nowrap">${esc(eventDateLabel(e))}</td>
           <td>${badge(eventTypeDefs[e.event_type], e.event_type)}</td>
           <td>${esc(e.title)}${e.metadata?.corrected ? ' <span class="badge badge--stop">訂正あり</span>' : ''}</td>
           <td>${esc(e.source_name)}</td>
@@ -919,6 +922,14 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     $('ev-correction-row').hidden = !$<HTMLInputElement>('ev-corrected').checked;
   });
 
+  $('ev-date-only')?.addEventListener('change', () => {
+    const input = $<HTMLInputElement>('ev-occurred');
+    const value = input.value;
+    const dateOnly = $<HTMLInputElement>('ev-date-only').checked;
+    input.type = dateOnly ? 'date' : 'datetime-local';
+    input.value = dateOnly ? value.slice(0, 10) : '';
+  });
+
   $('ev-save')?.addEventListener('click', async () => {
     const id = $<HTMLInputElement>('ev-id').value;
     const corrected = $<HTMLInputElement>('ev-corrected').checked;
@@ -928,10 +939,14 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       $('ev-status').textContent = metadataResult.error;
       return;
     }
+    const dateOnly = $<HTMLInputElement>('ev-date-only').checked;
+    const dateInput = $<HTMLInputElement>('ev-occurred').value;
+    const occurredAt = dateOnly ? dateOnlyToIso(dateInput) : localToIso(dateInput);
+    if (dateInput && !occurredAt) { $('ev-status').textContent = '有効な日付を入力してください'; return; }
     const row: any = {
       case_id: $<HTMLSelectElement>('ev-case-select').value,
       event_type: $<HTMLSelectElement>('ev-type').value,
-      occurred_at: localToIso($<HTMLInputElement>('ev-occurred').value),
+      occurred_at: occurredAt,
       title: $<HTMLInputElement>('ev-title').value.trim(),
       summary: $<HTMLTextAreaElement>('ev-summary').value.trim(),
       source_name: $<HTMLInputElement>('ev-source-name').value.trim(),
@@ -940,7 +955,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       is_visible: visible,
       comment_tags: $<HTMLSelectElement>('ev-type').value === 'company_comment' ? selectedCommentTags() : [],
       comment_stance: $<HTMLSelectElement>('ev-type').value === 'company_comment' ? classifyCommentStance(selectedCommentTags()) : null,
-      metadata: metadataResult.metadata,
+      metadata: { ...metadataResult.metadata, ...(dateOnly && occurredAt ? { date_precision: 'date' } : {}) },
     };
     if (row.source_url && !normalizeHttpUrl(row.source_url)) {
       $('ev-status').textContent = '元情報URLは http/https の絶対URLのみ保存できます';
@@ -954,8 +969,8 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     const existing = events.find((e) => e.id === id);
     // PR #8適用済みDBの既存レコードに限って日付精度を同期する。
     const dateChanged = (row.occurred_at ? Date.parse(row.occurred_at) : null) !== (existing?.occurred_at ? Date.parse(existing.occurred_at) : null);
-    if (existing && 'date_precision' in existing && dateChanged) {
-      row.date_precision = row.occurred_at ? 'datetime' : 'unknown';
+    if (existing && 'date_precision' in existing && (dateChanged || dateOnly || existing.date_precision === 'date')) {
+      row.date_precision = row.occurred_at ? (dateOnly ? 'date' : 'datetime') : 'unknown';
     }
     if (visible && !existing?.site_published_at) row.site_published_at = new Date().toISOString();
     const q = id
@@ -998,6 +1013,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     currentInboxIdForEvent = null;
     currentInboxIdForCase = null;
     ($('event-form') as HTMLFormElement).reset();
+    $<HTMLInputElement>('ev-occurred').type = 'datetime-local';
     $('ev-correction-row').hidden = true;
     $('ev-status').textContent = '';
     $('ev-status-suggestion').innerHTML = '';
@@ -1049,6 +1065,10 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
   $('pr-save')?.addEventListener('click', async () => {
     const id = $<HTMLInputElement>('pr-id').value;
+    const dateOnly = $<HTMLInputElement>('ev-date-only').checked;
+    const dateInput = $<HTMLInputElement>('ev-occurred').value;
+    const occurredAt = dateOnly ? dateOnlyToIso(dateInput) : localToIso(dateInput);
+    if (dateInput && !occurredAt) { $('ev-status').textContent = '有効な日付を入力してください'; return; }
     const row: any = {
       case_id: $<HTMLSelectElement>('pr-case-select').value,
       price_type: $<HTMLSelectElement>('pr-type').value,
@@ -1179,7 +1199,10 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       currentInboxIdForCase = null;
       $<HTMLInputElement>('ev-id').value = x.id;
       $<HTMLSelectElement>('ev-type').value = x.event_type;
-      $<HTMLInputElement>('ev-occurred').value = isoToLocal(x.occurred_at);
+      const dateOnly = (x.date_precision ?? x.metadata?.date_precision) === 'date';
+      $<HTMLInputElement>('ev-date-only').checked = dateOnly;
+      $<HTMLInputElement>('ev-occurred').type = dateOnly ? 'date' : 'datetime-local';
+      $<HTMLInputElement>('ev-occurred').value = dateOnly ? formatDate(x.occurred_at).replaceAll('/', '-') : isoToLocal(x.occurred_at);
       $<HTMLInputElement>('ev-title').value = x.title;
       $<HTMLTextAreaElement>('ev-summary').value = x.summary ?? '';
       $<HTMLInputElement>('ev-source-name').value = x.source_name ?? '';
@@ -1238,7 +1261,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
         <li class="timeline__item"><article class="event-card">
           <div class="event-card__head">
             ${badge(eventTypeDefs[e.event_type], e.event_type)}
-            <span class="event-card__date">${fmtDate(e.occurred_at)}</span>
+            <span class="event-card__date">${esc(eventDateLabel(e))}</span>
             ${e.is_visible ? '' : '<span class="badge badge--pause">非公開</span>'}
             ${e.metadata?.corrected ? '<span class="badge badge--stop">訂正あり</span>' : ''}
           </div>

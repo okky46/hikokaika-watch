@@ -110,7 +110,7 @@ export interface RawEvent {
   is_visible: boolean;
   comment_stance: CommentStance | null;
   comment_tags: CommentTag[];
-  metadata: { corrected?: boolean; correction_note?: string; holder_name?: string; ratio?: number; previous_ratio?: number | null; filing_date?: string; change_type?: 'new' | 'increase' | 'decrease' | 'exit' } | null;
+  metadata: { date_precision?: 'date'; corrected?: boolean; correction_note?: string; holder_name?: string; ratio?: number; previous_ratio?: number | null; filing_date?: string; change_type?: 'new' | 'increase' | 'decrease' | 'exit' } | null;
 }
 
 export interface RawPrice {
