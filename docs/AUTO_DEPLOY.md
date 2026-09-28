@@ -11,9 +11,11 @@
 - 管理者の承認を受け、`hikokaika-watch` だけの Database Read-write トークン `hikokaika-cloudflare-deploy` を発行済み。有効期限は **2026-12-28**。期限前の更新が必要であり、鍵の自動更新は未実装。
 - 既存Cloudflare Pages `hikokaika-watch` の **Production** に `SUPABASE_DEPLOY_TOKEN` をSecretとして保存し、「値が暗号化されました」を確認済み。Previewには存在しないことも確認済み。鍵の値はリポジトリに保存しない。
 - Supabaseの対象と既存 `SUPABASE_URL` の一致、本番の `DEPLOY_ENV=production` / `DATA_SOURCE=supabase`、Previewの `DEPLOY_ENV=preview` / `DATA_SOURCE=sample` を確認済み。
-- **未完了:** PR #10・#11のマージ、ビルドコマンド変更、初回本番デプロイ、実DBの照合・Googleログインとメモの動作確認。現在のビルドコマンドは `npm run build` のまま。自動化コードがmainに入る前に変更しない。
+- **有効化完了:** 管理者承認に基づきPR #10・#11をマージし、ビルドコマンドを `npm run build:cloudflare` に変更した。CloudflareのNode.js 22.16ではTypeScriptテストの明示設定が必要だったため、PR #12で最小修正し、同じバージョンのCI成功後に取り込んだ。
+- main `02899e4` の本番デプロイ `f431acdc-ef4a-43bc-b15d-2f7c9031e524` が2026-09-29 04:46 JSTに成功。ログで112テスト成功、実DB照合、更新履歴6件の確認、公開完了を確認済み。既存SQLは再実行していない。
+- 管理者本人によるGoogleログイン後、本番で全体メモ・案件別メモ・お気に入りの保存と再読み込みを確認。テスト用に加えた内容は元の状態に戻した。既存の銘柄URL、記事一覧、フォント、canonicalも確認済み。
 
-再開時は鍵を再発行せず、PRとCloudflareの最新状態を確認して未完了項目から進める。
+再開時は初回設定や既存SQLをやり直さず、Cloudflareの最新状態と鍵の有効期限を確認する。以下は再設定・鍵更新時の手順として残す。
 
 ### 1. 自動化コードを取り込む
 
@@ -92,6 +94,6 @@ DB更新は1つのトランザクションで実行し、失敗した回のSQL�
 
 ## 検証・有効化の状態
 
-自動化コードはメモリ内PostgreSQLと模擬APIで検証する。実際のManagement API、トークンの権限、初回の本番照合、Cloudflare設定は、初回設定・デプロイが成功するまで未検証。リポジトリへのコード追加だけで有効化済みとは扱わない。
+自動化コードはメモリ内PostgreSQL・模擬APIで検証済み。2026-09-29の本番デプロイで実際のManagement API、トークンの権限、初回の本番照合と履歴採用、Cloudflare公開まで成功した。将来の新SQLは今回の本番検証対象に含まれないため、変更ごとにレビュー・テストする。
 
 公式資料: [Supabase SQL実行API](https://supabase.com/docs/reference/api/v1-run-a-query)、[トークンの権限](https://supabase.com/docs/guides/platform/personal-access-tokens)、[Cloudflareのビルド設定](https://developers.cloudflare.com/pages/configuration/build-configuration/)。
