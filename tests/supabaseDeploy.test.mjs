@@ -109,6 +109,7 @@ test('検証→DB更新→ビルドの順。失敗時は公開ビルドへ進ま
   const order=[];
   const run=async(args,childEnv)=>{
     assert.equal(childEnv.SUPABASE_DEPLOY_TOKEN,undefined);
+    if(args.includes('--test'))assert.ok(args.includes('--experimental-strip-types'));
     if(args.includes('check')||args.includes('--test'))assert.equal(childEnv.SUPABASE_SERVICE_ROLE_KEY,undefined);
     order.push(args.includes('--test')?'test':args.at(-1));
   };
