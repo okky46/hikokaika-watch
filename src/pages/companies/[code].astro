@@ -28,7 +28,7 @@ const description = `${company.nameJa}(証券コード${company.securityCode})�
   <section class="section">
     <h2 class="section-title">全案件一覧</h2>
     {company.cases.length === 0 ? <p class="empty-state">公開中の案件はありません。</p> : (
-      <div class="table-wrap"><table class="case-table"><thead><tr><th>ステータス</th><th>案件</th><th>最初の観測報道</th><th>最終更新</th></tr></thead><tbody>
+      <div class="table-wrap"><table class="case-table"><thead><tr><th>ステータス</th><th>案件</th><th>日付を確認できた最初の報道</th><th>最終更新</th></tr></thead><tbody>
         {company.cases.map((c) => <tr><td><StatusBadge status={c.effectiveStatus} reportCount={c.reportCount} commentCount={c.commentCount} heatLevel={c.heatLevel} /></td><td><a class="case-link" href={`/cases/${c.slug}/`}>{c.title}</a><div class="small muted">{c.summary}</div></td><td>{formatDate(c.firstReportedAt)}</td><td>{formatDate(c.lastUpdatedAt)}</td></tr>)}
       </tbody></table></div>
     )}
