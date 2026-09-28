@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
+import { parseArticleContent, assembleArticles } from '../src/lib/articles.ts';
 
 const userA='10000000-0000-4000-8000-000000000001';
 const userB='10000000-0000-4000-8000-000000000002';
@@ -34,6 +35,19 @@ for(const pr8 of process.env.PR8_SQL_DIR ? [false,'0005','0006'] : [false]) {
       const policySql=`select tablename,policyname,qual,with_check from pg_policies where tablename in ('user_case_notes','user_global_notes','user_case_favorites') order by tablename,policyname`;
       const originalPolicies=(await db.query(policySql)).rows;
       await db.exec(fs.readFileSync('supabase/migrations/0007_tracking_articles.sql','utf8'));
+      const validationSql=fs.readFileSync('supabase/migrations/0008_article_validation.sql','utf8');
+      const legacyBad={...content,sources:[{...source,url:'https://?bad'}]};
+      await db.query(`insert into articles(slug,draft,published,publication_version,first_published_at,published_at) values('legacy-invalid',$1,$1,gen_random_uuid(),now(),now())`,[legacyBad]);
+      await assert.rejects(db.exec(validationSql),/既存公開記事 legacy-invalid/);
+      await db.exec('rollback');
+      assert.equal((await db.query("select published from articles where slug='legacy-invalid'")).rows[0].published.sources[0].url,'https://?bad');
+      await db.exec("update articles set published=null,publication_version=null where slug='legacy-invalid'");
+      await db.exec(validationSql);
+      await db.exec(validationSql); // 再実行しても権限・データを変えない
+      const urlCorpus=['example.com','a-b.example.co.jp','127.0.0.1','0127.0.0.1','256.1.1.1','[::1]','[:::1]','xn--a.com','xn--r8jz45g.xn--zckzah','a..com','a.123','?bad','user@example.com','%65xample.com']
+        .flatMap(host=>['',':0',':443',':65535',':65536',':bad'].flatMap(port=>['/','/?q=a|b','/#fragment','/日本語','/bad\\path','/bad\npath'].map(tail=>`https://${host}${port}${tail}`)));
+      const urlResults=(await db.query('select value,article_source_url_valid(value) as accepted from jsonb_array_elements_text($1)',[urlCorpus])).rows;
+      for(const {value,accepted} of urlResults) if(accepted)assert.doesNotThrow(()=>parseArticleContent({...content,sources:[{...source,url:value}]},true),value);
       assert.deepEqual((await db.query(policySql)).rows,originalPolicies);
       assert.equal((await db.query(`select pg_get_functiondef('public.is_admin()'::regprocedure) as def`)).rows[0].def,adminFunction);
       const session=async(role,id='')=>{await db.exec('reset role');await db.query(`select set_config('request.jwt.claim.sub',$1,false)`,[id]);await db.exec(`set role ${role}`);};
@@ -61,6 +75,31 @@ for(const pr8 of process.env.PR8_SQL_DIR ? [false,'0005','0006'] : [false]) {
       await assert.rejects(save(null,'forbidden',content,[],null),/管理者権限/);
       await assert.rejects(db.query('select read_published_articles()'));
       await session('authenticated',admin);
+      const validUrls=['https://example.com/ir?x=a|b','https://sub-domain.example.co.jp/a%20b#c','https://example.com:65535/', 'http://127.0.0.1:0/', 'https://[2001:db8::1]/', 'https://[::ffff:c000:201]/'];
+      const invalidUrls=['https://?bad','https://#bad','https://','https://example.com:65536/','https://user:pass@example.com/','javascript:alert(1)','https://256.1.1.1/','https://[bad::ip]/','https://xn--a.com/','https://xn--r8jz45g.xn--zckzah/'];
+      for(const [i,url] of invalidUrls.entries()) {
+        const payload={...content,sources:[{...source,url}]};
+        assert.throws(()=>parseArticleContent(payload,true),undefined,url);
+        await assert.rejects(save(null,`invalid-url-${i}`,payload,[],null),undefined,url);
+      }
+      for(const [i,url] of validUrls.entries()) {
+        const payload=parseArticleContent({...content,title:'😀'.repeat(120),sources:[{...source,url}]},true);
+        const row=await save(null,`valid-url-${i}`,payload,[],null);
+        const approval=await publish(row.id,row.revision,true);
+        const raw=(await db.query('select * from articles where id=$1',[row.id])).rows[0];
+        assert.equal(assembleArticles([raw],[],[]).length,1);
+        await publish(row.id,approval.revision,false);
+      }
+      await assert.rejects(save(null,'unicode-over-limit',{...content,title:'😀'.repeat(121)},[],null),/タイトル/);
+      await assert.rejects(save(null,'body-over-limit',{...content,body:'😀'.repeat(25001)},[],null),/項目/);
+      const blank='\t\r\n\u00a0\u1680\u2000\u2009\u2028\u202f\u205f\u3000\ufeff';
+      for(const key of ['title','summary','confirmed_facts','checked_on']) {
+        const payload={...content,[key]:blank};
+        assert.throws(()=>parseArticleContent(payload,true));
+        const row=await save(null,`blank-${key.replaceAll('_','-')}`,payload,[],null);
+        await assert.rejects(publish(row.id,row.revision,true),/公開には/);
+      }
+      await assert.rejects(save(null,'blank-source',{...content,sources:[{...source,name:blank}]},[],null),/出典名/);
       let saved=await save(null,'sample',content,[companyA,companyB],null);
       const id=saved.id;
       await assert.rejects(db.query('update articles set published=draft where id=$1',[id]));

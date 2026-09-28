@@ -1,4 +1,4 @@
-import { safeHttpUrl } from './tracking.ts';
+import { articleSourceUrl } from './articleSourceUrl.ts';
 
 export interface ArticleSource { name: string; url: string; published_on: string; checked_on: string }
 
@@ -57,9 +57,9 @@ export function parseArticleContent(value: unknown, publish = false): ArticleCon
   result.sources = source.sources.map((s: unknown) => {
     if (!s || typeof s !== 'object') throw new Error('出典の形式を確認してください');
     const v = s as Record<string, unknown>;
-    if (typeof v.name !== 'string' || !v.name.trim() || typeof v.url !== 'string' || !safeHttpUrl(v.url)) throw new Error('出典名とhttp(s)のURLが必要です');
+    if (typeof v.name !== 'string' || !v.name.trim() || typeof v.url !== 'string' || !articleSourceUrl(v.url)) throw new Error('出典名と有効なhttp(s) URLが必要です（国際化ドメインは未対応）');
     if (typeof v.published_on !== 'string' || (v.published_on && !validDate(v.published_on)) || !validDate(v.checked_on)) throw new Error('出典の日付を確認してください（公表日不明は空欄）');
-    return { name: v.name.trim(), url: safeHttpUrl(v.url)!, published_on: v.published_on as string, checked_on: v.checked_on as string };
+    return { name: v.name.trim(), url: articleSourceUrl(v.url)!, published_on: v.published_on as string, checked_on: v.checked_on as string };
   });
   if (publish && (!result.title || !result.summary || !result.confirmed_facts || !result.checked_on || !result.sources.length)) throw new Error('公開にはタイトル・要約・確認できた事実・確認日・出典が必要です');
   return result;
