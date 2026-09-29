@@ -21,6 +21,14 @@ const formUrl = import.meta.env.PUBLIC_REQUEST_FORM_URL ?? '';
 const cfAnalyticsToken = import.meta.env.PUBLIC_CF_ANALYTICS_TOKEN ?? '';
 const SITE_NAME = '非公開化ウォッチ';
 const fullTitle = title === SITE_NAME ? title : `${title} | ${SITE_NAME}`;
+const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
+const navigation = [
+  { href: '/', label: '追跡銘柄', active: currentPath === '/' || /^\/(cases|companies)\//.test(currentPath) },
+  { href: '/articles/', label: '調査記事', active: currentPath === '/articles' || currentPath.startsWith('/articles/') },
+  { href: '/guidelines/', label: '掲載基準・FAQ', active: currentPath === '/guidelines' },
+  { href: '/disclaimer/', label: '免責事項', active: currentPath === '/disclaimer' },
+  { href: '/mypage/', label: 'マイページ', active: currentPath === '/mypage' },
+];
 ---
 
 <!doctype html>
@@ -51,11 +59,7 @@ const fullTitle = title === SITE_NAME ? title : `${title} | ${SITE_NAME}`;
         <a class="site-header__brand" href="/">非公開化ウォッチ</a>
         <span class="site-header__tag">非公開化の噂とその後を追う</span>
         <nav class="site-nav" aria-label="サイト内メニュー">
-          <a href="/">追跡銘柄</a>
-          <a href="/articles/">記事・調査ノート</a>
-          <a href="/guidelines/">掲載基準・FAQ</a>
-          <a href="/disclaimer/">免責事項</a>
-          <a href="/mypage/">マイページ</a>
+          {navigation.map(item => <a href={item.href} aria-current={item.active ? (currentPath === (item.href.replace(/\/$/, '') || '/') ? 'page' : 'location') : undefined}>{item.label}</a>)}
           {formUrl && (
             <a class="is-cta" href={formUrl} target="_blank" rel="noopener noreferrer">
               追加・訂正申請
@@ -71,7 +75,7 @@ const fullTitle = title === SITE_NAME ? title : `${title} | ${SITE_NAME}`;
       <div class="site-footer__inner">
         <nav class="site-footer__nav" aria-label="フッターメニュー">
           <a href="/">追跡銘柄</a>
-          <a href="/articles/">記事・調査ノート</a>
+          <a href="/articles/">調査記事</a>
           <a href="/guidelines/">掲載基準・FAQ</a>
           <a href="/disclaimer/">免責事項</a>
           <a href="/privacy/">プライバシーポリシー</a>
@@ -81,11 +85,7 @@ const fullTitle = title === SITE_NAME ? title : `${title} | ${SITE_NAME}`;
           )}
         </nav>
         <p class="site-footer__note">
-          非公開化ウォッチは、非公開化に関する追跡対象と、確認できた報道・会社発表を時系列で整理する情報データベースです。
-          特定の有価証券の取得・売却・保有その他の投資判断を推奨または助言するものではありません。
-        </p>
-        <p class="site-footer__note">
-          株価チャート・業績は各銘柄の外部リンクからご確認ください。
+          掲載情報は非公開化の実現を保証するものではなく、売買を推奨するものでもありません。
         </p>
         <p class="site-footer__note">© 非公開化ウォッチ</p>
       </div>

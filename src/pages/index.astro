@@ -52,11 +52,10 @@ const stages=[{id:'',label:'すべて'},{id:'pre',label:'正式発表前'},{id:'
     </form>
     <div class="list-toolbar"><div><h2 class="section-title">追跡銘柄 <span class="small muted" id="filter-count" aria-live="polite">全{cases.length}件</span></h2><div class="list-checked small"><strong>最終確認日: {latestCheckedOn ? <time datetime={latestCheckedOn}>{formatDate(latestCheckedOn)}</time> : '未確認'}</strong><details class="list-help"><summary aria-label="確認日と並び順について">ⓘ</summary><p>掲載銘柄の確認日のうち最新です。全銘柄を同日に確認した意味ではありません。個別の確認日は詳細に記載しています。</p><p>標準では公表日が分かる直近の出来事順。日付未確認のみの銘柄は、その後にサイト登録順で表示します。</p></details></div></div><div class="filter-field"><label class="sr-only" for="f-sort">並び順</label><select id="f-sort" name="sort" form="filter-form"><option value="event">出来事が新しい順</option><option value="registered">サイト登録が新しい順</option><option value="updated">編集が新しい順</option><option value="code">証券コード順</option></select></div></div>
     <TrackingLegend/>
-    <p class="metrics-pending small muted">株価・指標の「—」はデータ未取得です。公開用の取得元を確認中です。</p>
+    <p class="metrics-pending small muted">株価・指標の「—」は未取得です。</p>
     <TrackingTable cases={cases}/>
     {hasHomeAd && <AdSlot placement="home-between-sections" slotId={homeAdSlot}/>}
   </section>
-  <section class="section card"><h2 class="section-title">このデータベースの読み方</h2><p>銘柄の登録と記事の公開は別です。市場の噂だけでも追跡対象として掲載し、確認できた報道・会社発表を時系列で追加します。有料記事の原文を未閲覧の場合は、確認できた範囲を詳細に示します。</p><p class="small"><a href="/guidelines/">掲載基準・FAQ</a>　<a href="/disclaimer/">免責事項</a></p></section>
   <script is:inline type="application/json" id="tracking-search-data" set:html={searchData}/>
 </Base>
 <script>

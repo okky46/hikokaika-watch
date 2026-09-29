@@ -3,8 +3,8 @@ import type { PublicArticle } from '../lib/articles';
 import { formatDate } from '../lib/format';
 interface Props { articles: PublicArticle[] }
 ---
-{Astro.props.articles.length ? <ul class="article-list">{Astro.props.articles.map(a => <li class="card">
+{Astro.props.articles.length ? <ul class="article-list">{Astro.props.articles.map(a => <li class="card research-card">
   <p class="small muted">公開: {formatDate(a.firstPublishedAt)} / 更新: {formatDate(a.publishedAt)}</p>
-  <h3><a href={`/articles/${a.slug}/`}>{a.title}</a></h3><p>{a.summary}</p>
-  <p class="small">{a.companies.map(c => <a href={`/companies/${c.securityCode}/`} style="margin-right:1rem">{c.nameJa}（{c.securityCode}）</a>)}</p>
-</li>)}</ul> : <p class="empty-state">公開済みの記事はまだありません。追跡銘柄は記事の有無にかかわらず掲載しています。</p>}
+  <h3><a class="research-title" href={`/articles/${a.slug}/`}><span>{a.title}</span><span aria-hidden="true">→</span></a></h3><p>{a.summary}</p>
+  <div class="related-links small">{a.companies.map(c => <a class="entity-link" href={`/companies/${c.securityCode}/`}>{c.nameJa}（{c.securityCode}）<span aria-hidden="true">→</span></a>)}</div>
+</li>)}</ul> : <p class="empty-state">記事はまだありません。</p>}

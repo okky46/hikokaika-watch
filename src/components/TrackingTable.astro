@@ -13,7 +13,7 @@ const { cases } = Astro.props;
       <td data-label="銘柄"><div class="tracking-company"><div><span class="mono small muted">{c.securityCode}</span><br/><a class="case-link" href={`/cases/${c.slug}/`}>{c.companyName}</a></div><button type="button" class="fav-toggle" data-fav-toggle={c.id} aria-pressed="false" aria-label={`${c.companyName}をお気に入りに登録`} title="お気に入り(ログインが必要です)">☆</button></div><a class="small muted" href={externalStockLinks(c.securityCode)[0]?.url} target="_blank" rel="noopener noreferrer nofollow">株探 ↗</a></td>
       <td data-label="媒体・噂の概要" class="tracking-summary"><div class="media-chips">{c.media.slice(0,2).map(m=><a class="media-chip" href={`/cases/${c.slug}/#evidence`}>{m.name}</a>)}{c.media.length>2 && <a class="media-chip" href={`/cases/${c.slug}/#evidence`}>ほか{c.media.length-2}媒体</a>}</div><p>{c.tracking?.short_reason || c.trackingReason}</p><p class="first-report small muted">{first.label}{first.date && <>：<time datetime={first.date}>{first.date.replaceAll('-','/')}</time></>}{first.date && first.uncertain && <span>（日付未確認の報道あり）</span>}</p></td>
       <td data-label="今の状況" class="tracking-situation"><TrackingStatus profile={c.tracking} activity={c.activity}/><p class="period-match small" hidden></p></td>
-      {['株価（終値）','PER（会社予想）','PBR（実績）','EV/EBITDA（会社予想）'].map(label=><td class="metric" data-label={label}><span aria-label="データ未取得" title="公開用データの取得元を確認中です">—</span></td>)}
+      {['株価（終値）','PER（会社予想）','PBR（実績）','EV/EBITDA（会社予想）'].map(label=><td class="metric" data-label={label}><span aria-label="データ未取得" title="データ未取得">—</span></td>)}
     </tr>})}</tbody>
   </table>
   <p class="empty-state" id="empty-state" hidden>条件に一致する銘柄はありません。<button type="button" class="btn" data-clear-search>条件をすべて解除</button></p>
