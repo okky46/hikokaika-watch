@@ -8,7 +8,7 @@
 //
 // このモジュールはビルド時(Node)専用。ブラウザからは import しない。
 // ============================================================
-import { applyPublishedProfile, parseTrackingProfile, validateProfileReferences, TRACKING_STATUS } from './trackingProfile.ts';
+import { applyPublishedProfile, parseTrackingProfile, validateProfileReferences, TRACKING_STATUS, publicTrackingStatus } from './trackingProfile.ts';
 import type { TrackingEdition, MediaOutlet } from './trackingProfile.ts';
 import { publicEventDate, timelineDateKey } from './trackingDates.ts';
 import { compareCases, latestDatedEvent } from './trackingSearch.ts';
@@ -244,7 +244,7 @@ export function assemble(raw: RawData): PublicData {
     const media = mediaIds.map(id => ({id, name:id==='none' ? '報道なし' : id==='unreviewed' ? '媒体を確認中' : mediaOutlets.find(m=>m.id===id)!.name}));
     const search: SearchCase = {id:c.id,code:company.security_code,name:company.name_ja,
       reason:profile?.short_reason || c.tracking_reason || c.summary,
-      media:mediaIds,stage:profile ? TRACKING_STATUS[profile.public_status].stage : 'unreviewed',status:profile?.public_status ?? 'unreviewed',
+      media:mediaIds,stage:profile ? TRACKING_STATUS[profile.public_status].stage : 'unreviewed',status:profile ? publicTrackingStatus(profile) : 'unreviewed',
       statementTags:[...new Set(profile?.statements.flatMap(s=>s.tags) ?? [])],registeredOn:c.site_published_at ?? '',updatedAt:lastUpdatedAt,
       events:eventViews.map(e=>({id:e.id,title:e.title,date:e.date}))};
     const latest = latestDatedEvent(search);

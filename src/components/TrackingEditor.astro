@@ -3,10 +3,11 @@ import { TRACKING_STATUS } from '../lib/trackingProfile';
 ---
 <div class="editor-grid">
   <div class="form-row"><label for="tp-short">一覧に出す噂の概要（300文字以内）</label><textarea id="tp-short" maxlength="300" placeholder="Mergermarketとの話はあるが未確認、など。意味を変える限定を省略しない。"></textarea></div>
-  <div class="form-row"><label for="tp-status">今の状況</label><select id="tp-status">{Object.entries(TRACKING_STATUS).map(([id,s])=><option value={id}>{s.label}</option>)}</select></div>
+  <div class="form-row"><label for="tp-status">今の状況</label><select id="tp-status">{Object.entries(TRACKING_STATUS).map(([id,s])=><option value={id}>{id==='rumor' ? '噂・観測報道（根拠から自動判定）' : s.label}</option>)}</select></div>
   <div class="form-row"><label for="tp-status-note">状況の補足（主体・日付・未決定など）</label><textarea id="tp-status-note" maxlength="300" placeholder="5/14 会社説明時点で未決定。以後の検討継続は未確認。"></textarea></div>
 </div>
-<fieldset><legend>状況タグの根拠となる出来事</legend><p class="small muted">噂段階以外では1件以上必要です。新規銘柄は先に下書き保存し、「出来事」で根拠を追加してからここへ戻れます。</p><div id="tp-status-events" class="editor-grid"></div><button type="button" class="btn" id="tp-refresh-events">入力を保ったまま出来事を再読込</button></fieldset>
+<p class="small muted">「噂・観測報道」では、確認済み媒体の根拠があれば「観測報道あり」、なければ「噂段階」と表示します。会社説明などを選んだ場合はその状況を優先します。サイト内の記事作成だけでは変わりません。</p>
+<fieldset><legend>状況タグの根拠となる出来事</legend><p class="small muted">検討への言及・否定・正式発表などの状況では1件以上必要です。新規銘柄は先に下書き保存し、「出来事」で根拠を追加してからここへ戻れます。</p><div id="tp-status-events" class="editor-grid"></div><button type="button" class="btn" id="tp-refresh-events">入力を保ったまま出来事を再読込</button></fieldset>
 <div class="form-row"><label for="tp-report-state">媒体の分類</label><select id="tp-report-state"><option value="none">報道なし（当サイトで未確認）</option><option value="reported">報道の存在を確認済み</option><option value="unreviewed">分類作業中（公開承認不可）</option></select></div>
 <div class="form-row"><label for="tp-report-note">市場の噂・媒体の確認範囲（公開用）</label><textarea id="tp-report-note" placeholder="噂だけでも登録できます。未確認の媒体名はここに説明し、確認済み媒体として選択しないでください。"></textarea></div>
 <details open><summary>確認済み媒体の根拠</summary><p class="small muted">報道なしの場合は0件のまま保存できます。原文未閲覧なら、報道の存在を確認した会社開示や二次報道のURLを登録します。単なる伝聞は確認済み媒体へ分類しません。</p><div id="tp-reports"></div><button type="button" class="btn" id="tp-add-report">媒体と根拠を追加</button></details>

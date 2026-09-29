@@ -20,6 +20,18 @@ export const TRACKING_STATUS = {
   failed: { label: '不成立', stage: 'closed', legacy: 'withdrawn', tone: 'stop' },
 } as const satisfies Record<string, { label: string; stage: string; legacy: CaseStatus; tone: string }>;
 export type TrackingStatus = keyof typeof TRACKING_STATUS;
+const { rumor: rumorStatus, ...laterStatuses } = TRACKING_STATUS;
+/** Public labels share the approved evidence classification; no second manual report flag. */
+export const PUBLIC_TRACKING_STATUS = {
+  rumor: rumorStatus,
+  reported: { label: '観測報道あり', stage: 'pre', legacy: 'rumored', tone: 'watch' },
+  ...laterStatuses,
+} as const;
+export type PublicTrackingStatus = keyof typeof PUBLIC_TRACKING_STATUS;
+export function publicTrackingStatus(p: Pick<TrackingProfile,'public_status'|'report_state'|'reports'>): PublicTrackingStatus {
+  return p.public_status === 'rumor' && p.report_state === 'reported' && p.reports.length > 0
+    ? 'reported' : p.public_status;
+}
 export type TrackingStage = 'pre' | 'post' | 'closed';
 export const REPORT_METHOD = { direct: '原報道を直接確認', company: '会社開示で言及を確認', secondary: '二次報道で言及を確認' } as const;
 export const REPORT_ACCESS = { full: '本文確認', partial: '公開部分のみ確認', unread: '原文未閲覧' } as const;

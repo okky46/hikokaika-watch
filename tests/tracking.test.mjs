@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
-import { emptyTrackingProfile, parseTrackingProfile } from '../src/lib/trackingProfile.ts';
+import { emptyTrackingProfile, parseTrackingProfile, publicTrackingStatus } from '../src/lib/trackingProfile.ts';
 import { publicEventDate, lastTwelveMonths, matchesDate } from '../src/lib/trackingDates.ts';
 import { matchesCase, defaultSearch, readSearch, searchParams, compareCases } from '../src/lib/trackingSearch.ts';
 import { assemble } from '../src/lib/publicData.ts';
@@ -10,6 +10,21 @@ import { assemble } from '../src/lib/publicData.ts';
 const admin='10000000-0000-4000-8000-000000000001', user='10000000-0000-4000-8000-000000000002';
 const company='20000000-0000-4000-8000-000000000001', event='30000000-0000-4000-8000-000000000001';
 const rumor=()=>({...emptyTrackingProfile(),title:'市場の噂から追跡',short_reason:'Mergermarketとの話はあるが未確認',last_checked_on:'2026-09-29',report_state:'none',report_note:'管理者が把握した市場の噂。報道は未確認。'});
+
+test('噂と確認済み観測報道を表示・検索で区別し、会社説明を優先する',()=>{
+  const p=rumor();
+  const evidence={outlet_id:'mergermarket',event_id:'',source_name:'会社開示',source_url:'https://example.com/disclosure',method:'company',access:'unread',checked_on:'2026-09-29',reported_on:'',scope_note:'会社開示で記事の存在を確認。原文未閲覧。'};
+  const reported=parseTrackingProfile({...p,report_state:'reported',reports:[evidence]},true);
+  assert.equal(publicTrackingStatus(p),'rumor');
+  assert.equal(publicTrackingStatus(reported),'reported');
+  assert.equal(publicTrackingStatus({...reported,reports:[{...evidence,method:'secondary'}]}),'reported');
+  for(const public_status of ['proposal','consideration','consideration_denied','announced','offer_succeeded'])assert.equal(publicTrackingStatus({...reported,public_status}),public_status);
+  const f={...defaultSearch(),status:'reported'};
+  assert.deepEqual(readSearch(searchParams(f),[]).filters,f);
+  const c={id:'case',code:'130A',name:'デモ',reason:'非公開化観測',media:['mergermarket'],stage:'pre',status:publicTrackingStatus(reported),statementTags:[],registeredOn:'',updatedAt:'',events:[]};
+  assert.equal(matchesCase(c,f),true);
+  assert.equal(matchesCase(c,{...f,status:'rumor'}),false);
+});
 
 test('噂だけの登録はURL不要。提案・検討・未決定・否定は別分類',()=>{
   assert.equal(parseTrackingProfile(rumor(),true).reports.length,0);
@@ -45,6 +60,15 @@ test('公開組み立ては承認済み分類だけを読み、噂の媒体名�
   const edition=raw.trackingEditions.at(-1);edition.draft={...rumor(),title:'SECRET_DRAFT'};
   const data=assemble(raw);assert.doesNotMatch(JSON.stringify(data),/SECRET_DRAFT/);
   const c=data.cases.find(c=>c.id===edition.case_id);assert.deepEqual(c.media.map(m=>m.id),['none']);
+  assert.equal(c.search.status,'rumor');
+  const reportedCase=data.cases.find(c=>c.tracking.public_status==='rumor'&&c.tracking.report_state==='reported');
+  assert.equal(reportedCase.search.status,'reported');
+  // A published article linked to the rumor-only company does not create external report evidence.
+  raw.articles=read('articles');
+  raw.articleLinks=[{article_id:raw.articles.find(a=>a.published).id,company_id:c.companyId,edition:'published'}];
+  const withArticle=assemble(raw);
+  assert.ok(withArticle.articles.some(a=>a.companies.some(co=>co.id===c.companyId)));
+  assert.equal(withArticle.cases.find(x=>x.id===c.id).search.status,'rumor');
   const datedEdition=raw.trackingEditions.find(t=>raw.events.some(e=>e.case_id===t.case_id&&e.event_type==='observation_report'));
   const reportEvents=raw.events.filter(e=>e.case_id===datedEdition.case_id&&['observation_report','follow_up_report'].includes(e.event_type));
   datedEdition.published.event_dates=reportEvents.map(e=>({event_id:e.id,precision:'unknown',value:'',issue_label:''}));

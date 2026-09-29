@@ -1,12 +1,12 @@
 import { matchesDate, timelineDateKey } from './trackingDates.ts';
 import type { PublicEventDate } from './trackingDates.ts';
-import { TRACKING_STATUS, validDate } from './trackingProfile.ts';
-import type { TrackingStage, TrackingStatus } from './trackingProfile.ts';
+import { PUBLIC_TRACKING_STATUS, validDate } from './trackingProfile.ts';
+import type { TrackingStage, PublicTrackingStatus } from './trackingProfile.ts';
 
 export interface SearchEvent { id: string; title: string; date: PublicEventDate }
 export interface SearchCase {
   id: string; code: string; name: string; reason: string; media: string[];
-  stage: TrackingStage | 'unreviewed'; status: TrackingStatus | 'unreviewed'; statementTags: string[];
+  stage: TrackingStage | 'unreviewed'; status: PublicTrackingStatus | 'unreviewed'; statementTags: string[];
   registeredOn: string; updatedAt: string; events: SearchEvent[];
 }
 export interface SearchFilters {
@@ -25,7 +25,7 @@ export function readSearch(search: string, allowedMedia: string[]): { filters: S
   f.q=(p.get('q') ?? '').slice(0,150);
   f.media=[...new Set(p.getAll('media'))].filter(m => { const ok=allowedMedia.includes(m); if(!ok)ignored=true; return ok; });
   if(f.media.includes('none') && f.media.length>1) { f.media=['none']; ignored=true; }
-  for(const [key,allowed] of [['stage',['pre','post','closed','unreviewed']],['status',[...Object.keys(TRACKING_STATUS),'unreviewed']],['statement',Object.keys(STATEMENT_FILTERS)],['sort',['event','registered','updated','code']]] as const) {
+  for(const [key,allowed] of [['stage',['pre','post','closed','unreviewed']],['status',[...Object.keys(PUBLIC_TRACKING_STATUS),'unreviewed']],['statement',Object.keys(STATEMENT_FILTERS)],['sort',['event','registered','updated','code']]] as const) {
     const v=p.get(key); if(v && (allowed as readonly string[]).includes(v)) (f as unknown as Record<string,unknown>)[key]=v; else if(v)ignored=true;
   }
   for(const k of ['from','to'] as const) { const v=p.get(k); if(v && validDate(v)) f[k]=v; else if(v)ignored=true; }

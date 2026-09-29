@@ -305,7 +305,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   import { formatDate } from '../../lib/format';
   import { getSupabase } from '../../lib/supabaseBrowser';
   import { setupTrackingAdmin } from '../../lib/trackingAdmin';
-  import { TRACKING_STATUS } from '../../lib/trackingProfile';
+  import { PUBLIC_TRACKING_STATUS, publicTrackingStatus } from '../../lib/trackingProfile';
   import type { TrackingEdition } from '../../lib/trackingProfile';
   import { publicEventDate } from '../../lib/trackingDates';
   import { setupArticleAdmin } from '../../lib/articleAdmin';
@@ -819,11 +819,12 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       .map((c) => {
         const co = companies.find((x) => x.id === c.company_id);
         const edition=trackingEditions.find(e=>e.case_id===c.id);
-        const status=edition?.published?.public_status ?? edition?.draft?.public_status;
+        const profile=edition?.published ?? edition?.draft;
+        const status=profile ? PUBLIC_TRACKING_STATUS[publicTrackingStatus(profile)] : null;
         return `<tr>
           <td class="code">${esc(co?.security_code ?? '?')}</td>
           <td>${esc(c.title)}<div class="small muted mono">/cases/${esc(c.slug)}/</div></td>
-          <td>${status?`<span class="badge badge--${TRACKING_STATUS[status].tone}">${TRACKING_STATUS[status].label}</span>`:badge(statusDefs[c.status], c.status)}</td>
+          <td>${status?`<span class="badge badge--${status.tone}">${status.label}</span>`:badge(statusDefs[c.status], c.status)}</td>
           <td>${c.is_visible ? '公開対象（反映は未確認）' : '<span class="badge badge--pause">下書き</span>'}</td>
           <td class="nowrap">${fmtDate(c.updated_at)}</td>
           <td><button type="button" class="btn" data-edit-case="${c.id}">編集</button></td>

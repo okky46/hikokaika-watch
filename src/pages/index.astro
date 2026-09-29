@@ -3,7 +3,7 @@ import Base from '../layouts/Base.astro';
 import TrackingTable from '../components/TrackingTable.astro';
 import AdSlot from '../components/AdSlot.astro';
 import { loadPublicData } from '../lib/publicData';
-import { TRACKING_STATUS } from '../lib/trackingProfile';
+import { PUBLIC_TRACKING_STATUS } from '../lib/trackingProfile';
 import { STATEMENT_FILTERS } from '../lib/trackingSearch';
 const { cases, mediaOutlets, isSampleData } = await loadPublicData();
 const activeMedia = new Set(cases.flatMap(c=>c.search.media));
@@ -32,7 +32,7 @@ const hasHomeAd = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT && homeAdSlot);
       <fieldset class="media-filter"><legend>媒体 <span class="small muted">複数選択可・いずれかを含む</span></legend><div class="media-options">{media.map(m=><label><input type="checkbox" name="media" value={m.id} data-label={m.name}/>{m.name} <span class="muted small">(<span data-media-count={m.id}>{cases.filter(c=>c.search.media.includes(m.id)).length}</span>)</span></label>)}</div></fieldset>
       <details class="search-more"><summary>期間・会社説明で絞り込む</summary>
         <div class="filter-bar">
-          <div class="filter-field"><label for="f-status">今の状況</label><select name="status" id="f-status"><option value="">すべて</option>{Object.entries(TRACKING_STATUS).map(([id,s])=><option value={id}>{s.label}</option>)}<option value="unreviewed">状況を確認中</option></select></div>
+          <div class="filter-field"><label for="f-status">今の状況</label><select name="status" id="f-status"><option value="">すべて</option>{Object.entries(PUBLIC_TRACKING_STATUS).map(([id,s])=><option value={id}>{s.label}</option>)}<option value="unreviewed">状況を確認中</option></select></div>
           <div class="filter-field"><label for="f-statement">過去を含む会社説明</label><select name="statement" id="f-statement"><option value="">すべて</option>{Object.entries(STATEMENT_FILTERS).map(([id,label])=><option value={id}>{label}</option>)}</select></div>
           <div class="filter-field"><label for="f-from">出来事の開始日</label><input id="f-from" name="from" type="date"/></div>
           <div class="filter-field"><label for="f-to">終了日</label><input id="f-to" name="to" type="date"/></div>
