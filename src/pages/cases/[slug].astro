@@ -92,7 +92,7 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
       </section>
       <section class="case-overview__status" aria-label="今の状況">
         <h2>今の状況</h2>
-        <TrackingStatus profile={c.tracking}/>
+        <TrackingStatus profile={c.tracking} activity={c.activity}/>
       </section>
     </div>
     <StockLinks code={c.securityCode}/>
