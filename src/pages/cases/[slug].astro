@@ -1,6 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { trackingSummaryHtml } from '../../lib/trackingPresentation';
+import TrackingStatus from '../../components/TrackingStatus.astro';
 import { REPORT_METHOD, REPORT_ACCESS } from '../../lib/trackingProfile';
 import StockLinks from '../../components/StockLinks.astro';
 import ArticleList from '../../components/ArticleList.astro';
@@ -54,19 +54,22 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
     </p>
   )}
 
-  <nav class="small" aria-label="パンくず" style="margin-bottom:0.8rem">
-    <a href="/" id="return-to-results">銘柄一覧</a> › <span class="muted">{c.companyName}({c.securityCode})</span>
+  <nav class="case-breadcrumb small" aria-label="パンくず">
+    <a href="/" id="return-to-results"><span aria-hidden="true">←</span> 銘柄一覧</a><span class="muted">銘柄の経過</span>
   </nav>
 
-  <header class="case-head">
-    <p class="case-head__company">
-      <a class="mono" href={`/companies/${c.securityCode}/`}>{c.securityCode}</a>
-      {c.market && <span> / {c.market}</span>}
-      {c.industry && <span> / {c.industry}</span>}
-    </p>
-    <h1><a href={`/companies/${c.securityCode}/`}>{c.companyName}</a>（{c.securityCode}）の経過</h1>
-    <div style="display:flex; align-items:center; gap:0.7rem; flex-wrap:wrap;">
-
+  <header class="case-head case-overview">
+    <div class="case-overview__heading">
+      <div>
+        <p class="case-overview__eyebrow">非公開化の噂と、その後</p>
+        <h1>{c.companyName}（{c.securityCode}）の経過</h1>
+        <div class="case-overview__identity small">
+          {c.market && <span>{c.market}</span>}{c.industry && <span>{c.industry}</span>}
+          <a href={`/companies/${c.securityCode}/`}>企業ページ <span aria-hidden="true">→</span></a>
+          <span class="muted">最終確認 {formatDate(c.lastCheckedOn)}</span>
+        </div>
+      </div>
+      <div class="case-overview__personal">
       <button
         type="button"
         class="btn"
@@ -79,29 +82,29 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
         <option value="2">関心度 2: 注目</option>
         <option value="3">関心度 3: 最重要</option>
       </select>
+      </div>
     </div>
-    <div class="case-head__meta">
-      <span>日付を確認できた最初の報道: {formatDate(c.firstReportedAt)}</span>
-      <span>最終更新: {formatDate(c.lastUpdatedAt)}</span>
-
-      <span>サイト掲載: {formatDate(c.sitePublishedAt)}</span>
+    <div class="case-overview__summary">
+      <section class="case-overview__reason" aria-label="追跡のきっかけ">
+        <h2>追跡のきっかけ</h2>
+        <p>{c.tracking?.short_reason || c.trackingReason}</p>
+        <div class="media-chips">{c.media.map(m=><a class="media-chip" href="#evidence">{m.name}</a>)}</div>
+      </section>
+      <section class="case-overview__status" aria-label="今の状況">
+        <h2>今の状況</h2>
+        <TrackingStatus profile={c.tracking}/>
+      </section>
     </div>
-    {c.tracking ? <div class="tracking-summary" set:html={trackingSummaryHtml(c.tracking,c.media)}/> : <p>{c.trackingReason}</p>}
     <StockLinks code={c.securityCode}/>
   </header>
 
-  <section class="section" id="evidence" aria-label="媒体と確認した根拠">
-    <details class="card evidence-details"><summary>媒体・追跡理由・確認した根拠を読む</summary>
-      <p>{c.trackingReason || '追跡理由はまだ整理されていません。'}</p>
-      {c.tracking?.report_note && <p>{c.tracking.report_note}</p>}
-      {c.tracking?.report_state==='none' && <p class="small muted">「報道なし」は当サイトで報道を確認できていないことを示します。報道が存在しないとの断定ではありません。</p>}
-      <ul class="evidence-list">{c.tracking?.reports.map(r=><li><strong>{c.media.find(m=>m.id===r.outlet_id)?.name}</strong> <span class="small">{REPORT_METHOD[r.method]}・{REPORT_ACCESS[r.access]}</span><p>{r.scope_note}</p><a href={r.source_url} target="_blank" rel="noopener noreferrer nofollow">{r.source_name} ↗</a><span class="small muted"> 確認: {formatDate(r.checked_on)}{r.reported_on && ` ／ 報道日: ${formatDate(r.reported_on)}`}</span>{r.event_id && <p class="small"><a href={`#event-${r.event_id}`}>関連する出来事</a></p>}</li>)}</ul>
-      {c.tracking?.statements.length ? <><h3>記録した会社説明</h3><ul class="evidence-list">{c.tracking.statements.map(statement=><li><strong>{statement.subject}</strong><p>{statement.text}</p><a href={`#event-${statement.event_id}`}>{c.events.find(e=>e.id===statement.event_id)?.dateLabel} の説明</a></li>)}</ul><p class="small muted">各日付時点の説明です。過去の「検討」「否定」が現在も続くことを意味しません。</p></> : null}
-      <dl class="tracking-meta"><div><dt>追跡開始</dt><dd>{formatDate(c.trackingStartedOn)}</dd></div><div><dt>最終確認</dt><dd>{formatDate(c.lastCheckedOn)}</dd></div></dl>
-      {c.verificationNote && <p>{c.verificationNote}</p>}
-    </details>
-  </section>
-  <p class="small"><a href="#timeline">経過タイムライン</a>　<a href="#related-articles">関連記事</a>　<a href="/mypage/" id="personal-note-link">ログインしてメモ・お気に入りを利用</a></p>
+  <nav class="case-section-nav" aria-label="この銘柄のページ内メニュー">
+    <a href="#timeline" aria-current="location">経過<span class="case-section-nav__count">{c.events.length}</span></a>
+    <a href="#evidence">根拠・媒体</a>
+    <a href="#related-articles">関連記事<span class="case-section-nav__count">{Astro.props.articles.length}</span></a>
+    <a href="/mypage/" id="personal-note-link" aria-label="ログインして自分のメモを利用">自分のメモ</a>
+  </nav>
+
 
   <section class="section" aria-label="出来事タイムライン" id="timeline">
     <h2 class="section-title">経過タイムライン</h2>
@@ -151,6 +154,18 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
     </p>
   </section>
 
+  <section class="section" id="evidence" aria-label="媒体と確認した根拠">
+    <details class="card evidence-details"><summary>媒体・追跡理由・確認した根拠を読む</summary>
+      <p>{c.trackingReason || '追跡理由はまだ整理されていません。'}</p>
+      {c.tracking?.report_note && <p>{c.tracking.report_note}</p>}
+      {c.tracking?.report_state==='none' && <p class="small muted">「報道なし」は当サイトで報道を確認できていないことを示します。報道が存在しないとの断定ではありません。</p>}
+      <ul class="evidence-list">{c.tracking?.reports.map(r=><li><strong>{c.media.find(m=>m.id===r.outlet_id)?.name}</strong> <span class="small">{REPORT_METHOD[r.method]}・{REPORT_ACCESS[r.access]}</span><p>{r.scope_note}</p><a href={r.source_url} target="_blank" rel="noopener noreferrer nofollow">{r.source_name} ↗</a><span class="small muted"> 確認: {formatDate(r.checked_on)}{r.reported_on && ` ／ 報道日: ${formatDate(r.reported_on)}`}</span>{r.event_id && <p class="small"><a href={`#event-${r.event_id}`}>関連する出来事</a></p>}</li>)}</ul>
+      {c.tracking?.statements.length ? <><h3>記録した会社説明</h3><ul class="evidence-list">{c.tracking.statements.map(statement=><li><strong>{statement.subject}</strong><p>{statement.text}</p><a href={`#event-${statement.event_id}`}>{c.events.find(e=>e.id===statement.event_id)?.dateLabel} の説明</a></li>)}</ul><p class="small muted">各日付時点の説明です。過去の「検討」「否定」が現在も続くことを意味しません。</p></> : null}
+      <dl class="tracking-meta"><div><dt>追跡開始</dt><dd>{formatDate(c.trackingStartedOn)}</dd></div><div><dt>最終確認</dt><dd>{formatDate(c.lastCheckedOn)}</dd></div><div><dt>日付を確認できた最初の報道</dt><dd>{formatDate(c.firstReportedAt)}</dd></div><div><dt>最終更新</dt><dd>{formatDate(c.lastUpdatedAt)}</dd></div><div><dt>サイト掲載</dt><dd>{formatDate(c.sitePublishedAt)}</dd></div></dl>
+      {c.verificationNote && <p>{c.verificationNote}</p>}
+    </details>
+  </section>
+
   <section class="section" id="related-articles"><h2 class="section-title">関連記事</h2><ArticleList articles={Astro.props.articles}/></section>
 
   <section class="section" aria-label="自分専用メモ" id="note-section" hidden>
@@ -192,8 +207,33 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
 
   const back=document.getElementById('return-to-results') as HTMLAnchorElement;
   try {const query=sessionStorage.getItem('tracking-public-search');if(query)back.href='/?'+query;}catch{}
-  function openEvidence() {if(location.hash==='#evidence')document.querySelector<HTMLDetailsElement>('#evidence details')!.open=true;}
+  const evidenceSection=document.getElementById('evidence')!;
+  const evidenceDetails=evidenceSection.querySelector<HTMLDetailsElement>('details')!;
+  // Expand before the browser positions the anchor, including repeat clicks on the same hash.
+  document.querySelectorAll('a[href="#evidence"]').forEach(link=>link.addEventListener('click',()=>{evidenceDetails.open=true;}));
+  function openEvidence() {if(location.hash==='#evidence'){evidenceDetails.open=true;evidenceSection.scrollIntoView();}}
   openEvidence();window.addEventListener('hashchange',openEvidence);
+  const sectionNav=document.querySelector<HTMLElement>('.case-section-nav')!;
+  function updateSectionNav() {
+    const links=[...sectionNav.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')];
+    const visible=links.map(link=>({link,section:document.getElementById(link.hash.slice(1))})).filter(item=>item.section && !item.section.hidden);
+    const cutoff=sectionNav.getBoundingClientRect().bottom+32;
+    let current=visible.filter(item=>item.section!.getBoundingClientRect().top<=cutoff).at(-1) ?? visible[0];
+    // A short final section cannot always scroll all the way to the sticky navigation.
+    const hashTarget=visible.find(item=>item.link.hash===location.hash);
+    if(hashTarget && window.scrollY+window.innerHeight>=document.documentElement.scrollHeight-2 && hashTarget.section!.getBoundingClientRect().top<window.innerHeight)current=hashTarget;
+    for(const link of links) {
+      if(link===current?.link)link.setAttribute('aria-current','location');else link.removeAttribute('aria-current');
+    }
+  }
+  let navFrame=0;
+  const scheduleNav=()=>{if(!navFrame)navFrame=requestAnimationFrame(()=>{navFrame=0;updateSectionNav();});};
+  window.addEventListener('scroll',scheduleNav,{passive:true});
+  window.addEventListener('resize',scheduleNav);
+  window.addEventListener('hashchange',scheduleNav);
+  window.addEventListener('pageshow',scheduleNav);
+  document.querySelector('#evidence details')?.addEventListener('toggle',scheduleNav);
+  scheduleNav();
   const supabase = getSupabase();
   const favBtn = document.getElementById('fav-btn') as HTMLButtonElement;
   const intensitySel = document.getElementById('fav-intensity') as HTMLSelectElement;
@@ -246,7 +286,9 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
     noteSection.hidden = false;
     const personalLink=document.getElementById('personal-note-link') as HTMLAnchorElement;
     personalLink.href='#note-section';
-    personalLink.textContent='自分のメモを書く';
+    personalLink.setAttribute('aria-label','自分のメモを書く');
+    if(location.hash==='#note-section')noteSection.scrollIntoView();
+    scheduleNav();
 
     const [{ data: fav }, { data: note }] = await Promise.all([
       supabase
