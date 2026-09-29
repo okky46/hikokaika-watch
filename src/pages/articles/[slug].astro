@@ -19,10 +19,9 @@ const {article:a,isSampleData,cases}=Astro.props;
     <section class="section"><h2 class="section-title">確認できた事実</h2><p class="article-body">{a.confirmed_facts}</p></section>
     {a.body && <section class="section"><h2 class="section-title">経緯・整理</h2><p class="article-body">{a.body}</p></section>}
     {a.interpretation && <section class="section"><h2 class="section-title">編集上の解釈</h2><p class="article-body">{a.interpretation}</p></section>}
-    <section class="section"><h2 class="section-title">未確認事項</h2><p class="article-body">{a.unknowns || '追加の未確認事項は記載されていません。将来の非公開化を確定するものではありません。'}</p></section>
+    {a.unknowns && <section class="section"><h2 class="section-title">未確認事項</h2><p class="article-body">{a.unknowns}</p></section>}
     <section class="section"><h2 class="section-title">出典</h2><ul>{a.sources.map(s => <li><a href={s.url} target="_blank" rel="noopener noreferrer nofollow">{s.name} ↗</a><span class="small muted"> 公表日: {formatDate(s.published_on)} / 確認日: {formatDate(s.checked_on)}</span></li>)}</ul></section>
     {a.correction_note && <section class="section card"><h2 class="section-title">訂正履歴</h2><p class="article-body">{a.correction_note}</p></section>}
     <section class="section"><h2 class="section-title">関連銘柄・経過</h2><ul>{a.companies.map(c => <li><a href={`/companies/${c.securityCode}/`}>{c.nameJa}（{c.securityCode}）</a></li>)}</ul><ul>{cases.map(c => <li><a href={`/cases/${c.slug}/`}>{c.companyName}: {c.title}の経過</a></li>)}</ul></section>
-    <p class="small muted">本記事は売買推奨や非公開化の実現可能性の評価を行うものではありません。</p>
   </article>
 </Base>

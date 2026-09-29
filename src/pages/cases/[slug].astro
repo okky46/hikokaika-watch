@@ -61,7 +61,6 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
   <header class="case-head case-overview">
     <div class="case-overview__heading">
       <div>
-        <p class="case-overview__eyebrow">非公開化の噂と、その後</p>
         <h1>{c.companyName}（{c.securityCode}）の経過</h1>
         <div class="case-overview__identity small">
           {c.market && <span>{c.market}</span>}{c.industry && <span>{c.industry}</span>}
@@ -149,9 +148,6 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
         ))}
       </ol>
     )}
-    <p class="small muted">
-      各出来事には、報道・発表が存在した事実と中立的な説明のみを掲載しています。記事本文の転載は行いません。
-    </p>
   </section>
 
   <section class="section" id="evidence" aria-label="媒体と確認した根拠">
@@ -172,7 +168,7 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
     <h2 class="section-title">自分専用メモ</h2>
     <div class="card">
       <p class="small muted" style="margin-bottom:0.5rem">
-        このメモはあなただけが閲覧できる私的な整理用メモです。他のユーザーや管理者向けに公開されることはありません。
+        メモは公開されません。
       </p>
       <div class="note-grid">
         <label>想定シナリオ<input type="text" id="note-scenario" /></label>
