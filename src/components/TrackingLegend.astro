@@ -1,8 +1,11 @@
 <aside class="tracking-legend" aria-label="状況の色の凡例">
   <strong class="small">状況の目安</strong>
   <ol class="stage-legend">
-    <li class="legend-rumor">噂段階</li><li class="legend-reported">観測報道</li><li class="legend-process">検討・入札</li><li class="legend-announced">正式発表</li><li class="legend-complete">非公開化完了</li>
+    <li class="tracking-badge--rumor">噂段階</li><li class="tracking-badge--reported">観測報道</li><li class="tracking-badge--process">検討・入札</li><li class="tracking-badge--announced">正式発表</li>
   </ol>
-  <details class="legend-help"><summary>色の濃淡について</summary><p>入札は一次・二次・最終と進むほど濃く、続報を180日超確認できない銘柄は淡く表示します。</p><p>淡色化は正式発表前のみ。日付不明の出来事がある銘柄や、否定・撤回・終了した銘柄は対象外です。色は成立の確率や検討の継続を示しません。</p></details>
-  <p class="legend-intensity small"><span class="intensity-swatches" aria-hidden="true"><i></i><i></i><i></i></span>淡い：続報未確認 <span>／</span> 濃い：入札の進展 <span class="muted">（成立の確率ではありません）</span></p>
+  <details class="legend-help"><summary>色の見方</summary><p>入札は一次・二次・最終と進むほど濃く、続報を180日超確認できない銘柄は元の色を淡く表示します。</p><p>緑は正式発表後の段階で、成立を保証するものではありません。上場廃止・非公開化完了は白地、明確な否定・撤回・不成立・検討終了は灰色で表示します。</p><p>淡色化は正式発表前のみ。日付不明の出来事がある銘柄や、否定・撤回・終了した銘柄は対象外です。</p></details>
+  <div class="legend-secondary">
+    <p class="legend-outcomes small"><span class="badge tracking-badge tracking-badge--stopped">否定・中止</span><span class="badge tracking-badge tracking-badge--complete">完了</span></p>
+    <p class="legend-intensity small"><span class="intensity-swatches" aria-hidden="true"><i></i><i></i><i></i></span>淡い：180日超の続報なし <span>／</span> 濃い：入札の進展 <span class="muted">（成立の確率ではありません）</span></p>
+  </div>
 </aside>
