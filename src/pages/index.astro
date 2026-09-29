@@ -3,9 +3,11 @@ import Base from '../layouts/Base.astro';
 import TrackingTable from '../components/TrackingTable.astro';
 import AdSlot from '../components/AdSlot.astro';
 import { loadPublicData } from '../lib/publicData';
-import { PUBLIC_TRACKING_STATUS } from '../lib/trackingProfile';
+import { PUBLIC_TRACKING_STATUS, validDate } from '../lib/trackingProfile';
+import { formatDate } from '../lib/format';
 import { STATEMENT_FILTERS } from '../lib/trackingSearch';
 const { cases, mediaOutlets, isSampleData } = await loadPublicData();
+const latestCheckedOn=cases.map(c=>c.lastCheckedOn).filter((date):date is string=>!!date && validDate(date)).sort().at(-1);
 const activeMedia = new Set(cases.flatMap(c=>c.search.media));
 const media = [...mediaOutlets.filter(m=>m.is_active || activeMedia.has(m.id)), {id:'none',name:'報道なし'}, ...(activeMedia.has('unreviewed') ? [{id:'unreviewed',name:'媒体を確認中'}] : [])];
 const searchData=JSON.stringify(cases.map(c=>({...c.search,slug:c.slug}))).replaceAll('<','\\u003c');
@@ -18,21 +20,20 @@ const hasHomeAd = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT && homeAdSlot);
   <section class="tracking-intro" aria-label="サービス概要">
     <h1>非公開化ウォッチ</h1>
     <p>以前、非公開化の噂になっていた銘柄。<strong>今どうなっている？</strong></p>
-    <p class="muted">どの媒体・どんな噂で注目され、その後どう変わったかを記録します。「報道なし」は当サイトで報道を確認できていない銘柄を含みます。掲載は非公開化の決定や実現可能性を示すものではありません。</p>
-    <p class="small"><a href="/articles/">記事・調査ノート</a>　<a href="/mypage/">お気に入り・自分専用メモ</a></p>
+    <p class="small muted">噂・報道と、その後の会社説明を記録します。掲載は非公開化の決定や実現可能性を示すものではありません。<a href="/guidelines/">掲載基準</a></p>
   </section>
   <section class="section" aria-label="銘柄の検索・絞り込み">
     <h2 class="section-title">追跡銘柄 <span class="small muted">全{cases.length}件</span></h2>
     <form class="card tracking-filters" id="filter-form" role="search">
       <div class="filter-bar">
         <div class="filter-field filter-field--wide"><label for="f-q">会社名・証券コード・噂</label><input name="q" type="search" id="f-q" maxlength="150" placeholder="会社名・コードなど" autocomplete="off"/></div>
+        <div class="filter-field"><label for="f-status">今の状況</label><select name="status" id="f-status"><option value="">すべて</option>{Object.entries(PUBLIC_TRACKING_STATUS).map(([id,s])=><option value={id}>{s.label}</option>)}<option value="unreviewed">状況を確認中</option></select></div>
         <div class="filter-field"><label for="f-stage">段階</label><select id="f-stage" name="stage"><option value="">すべて</option><option value="pre">正式発表前</option><option value="post">正式発表後</option><option value="closed">完了・終了</option><option value="unreviewed">分類確認中</option></select></div>
         <div class="filter-field"><label for="f-sort">並び順</label><select id="f-sort" name="sort"><option value="event">出来事が新しい順</option><option value="registered">サイト登録が新しい順</option><option value="updated">編集が新しい順</option><option value="code">証券コード順</option></select></div>
       </div>
       <fieldset class="media-filter"><legend>媒体 <span class="small muted">複数選択可・いずれかを含む</span></legend><div class="media-options">{media.map(m=><label><input type="checkbox" name="media" value={m.id} data-label={m.name}/>{m.name} <span class="muted small">(<span data-media-count={m.id}>{cases.filter(c=>c.search.media.includes(m.id)).length}</span>)</span></label>)}</div></fieldset>
       <details class="search-more"><summary>期間・会社説明で絞り込む</summary>
         <div class="filter-bar">
-          <div class="filter-field"><label for="f-status">今の状況</label><select name="status" id="f-status"><option value="">すべて</option>{Object.entries(PUBLIC_TRACKING_STATUS).map(([id,s])=><option value={id}>{s.label}</option>)}<option value="unreviewed">状況を確認中</option></select></div>
           <div class="filter-field"><label for="f-statement">過去を含む会社説明</label><select name="statement" id="f-statement"><option value="">すべて</option>{Object.entries(STATEMENT_FILTERS).map(([id,label])=><option value={id}>{label}</option>)}</select></div>
           <div class="filter-field"><label for="f-from">出来事の開始日</label><input id="f-from" name="from" type="date"/></div>
           <div class="filter-field"><label for="f-to">終了日</label><input id="f-to" name="to" type="date"/></div>
@@ -52,6 +53,7 @@ const hasHomeAd = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT && homeAdSlot);
       <noscript><p class="notice">検索にはJavaScriptが必要です。すべての銘柄は下の一覧から閲覧できます。</p></noscript>
     </form>
     <p class="small muted">公表日が分かる直近の出来事を基準に並べます。日付未確認のみの銘柄は、その後にサイト登録順で表示します。</p>
+    <p class="list-checked small"><strong>最終確認日: {latestCheckedOn ? <time datetime={latestCheckedOn}>{formatDate(latestCheckedOn)}</time> : '未確認'}</strong><span class="muted">掲載銘柄の確認日のうち最新。各銘柄の確認日は詳細に記載しています。</span></p>
     <TrackingTable cases={cases}/>
     {hasHomeAd && <AdSlot placement="home-between-sections" slotId={homeAdSlot}/>}
   </section>

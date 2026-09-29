@@ -11,7 +11,7 @@
 import { applyPublishedProfile, parseTrackingProfile, validateProfileReferences, TRACKING_STATUS, publicTrackingStatus } from './trackingProfile.ts';
 import type { TrackingEdition, MediaOutlet } from './trackingProfile.ts';
 import { publicEventDate, timelineDateKey } from './trackingDates.ts';
-import { compareCases, latestDatedEvent } from './trackingSearch.ts';
+import { compareCases, latestDatedEvent, companySearchAliases } from './trackingSearch.ts';
 import type { SearchCase } from './trackingSearch.ts';
 import { createClient } from '@supabase/supabase-js';
 import fs from 'node:fs';
@@ -243,6 +243,7 @@ export function assemble(raw: RawData): PublicData {
     const mediaIds = profile ? profile.report_state === 'none' ? ['none'] : [...new Set(profile.reports.map(r => r.outlet_id))] : ['unreviewed'];
     const media = mediaIds.map(id => ({id, name:id==='none' ? '報道なし' : id==='unreviewed' ? '媒体を確認中' : mediaOutlets.find(m=>m.id===id)!.name}));
     const search: SearchCase = {id:c.id,code:company.security_code,name:company.name_ja,
+      aliases:companySearchAliases(company.name_ja,c.title),
       reason:profile?.short_reason || c.tracking_reason || c.summary,
       media:mediaIds,stage:profile ? TRACKING_STATUS[profile.public_status].stage : 'unreviewed',status:profile ? publicTrackingStatus(profile) : 'unreviewed',
       statementTags:[...new Set(profile?.statements.flatMap(s=>s.tags) ?? [])],registeredOn:c.site_published_at ?? '',updatedAt:lastUpdatedAt,
