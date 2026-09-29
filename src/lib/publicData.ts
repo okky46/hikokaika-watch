@@ -8,6 +8,11 @@
 //
 // このモジュールはビルド時(Node)専用。ブラウザからは import しない。
 // ============================================================
+import { applyPublishedProfile, parseTrackingProfile, validateProfileReferences, TRACKING_STATUS } from './trackingProfile.ts';
+import type { TrackingEdition, MediaOutlet } from './trackingProfile.ts';
+import { publicEventDate, timelineDateKey } from './trackingDates.ts';
+import { compareCases, latestDatedEvent } from './trackingSearch.ts';
+import type { SearchCase } from './trackingSearch.ts';
 import { createClient } from '@supabase/supabase-js';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -16,8 +21,8 @@ import type { RawArticle, ArticleLink } from './articles.ts';
 import { classifyCommentStance, latestCommentStanceFromEvent } from './commentTags.ts';
 import { resolvePublicDataEnvironment } from './buildEnv.ts';
 import { hasFormalAnnouncement } from './caseFilters.ts';
-import { deriveCaseFields, firstVisibleReportOccurredAt } from './derive.ts';
-import { eventSortKey, eventDateLabel, safeHttpUrl } from './tracking.ts';
+import { deriveCaseFields } from './derive.ts';
+import { safeHttpUrl } from './tracking.ts';
 import { sanitizeLargeShareholdingMetadata } from './noteMetadataHelpers.ts';
 import { buildPublicCompanies, isPublishableCompany } from './publicCompanyHelpers.ts';
 import { normalizeDailyCloses } from './priceHelpers.ts';
@@ -35,6 +40,8 @@ import type {
 } from './types.ts';
 
 interface RawData {
+  trackingEditions?: TrackingEdition[];
+  mediaOutlets?: MediaOutlet[];
   articles?: RawArticle[];
   articleLinks?: ArticleLink[];
   companies: RawCompany[];
@@ -77,21 +84,28 @@ async function loadRaw(): Promise<RawData> {
 async function loadFromSupabase(url: string, key: string): Promise<RawData> {
   const supabase = createClient(url, key, { auth: { persistSession: false } });
 
-  const [companies, cases, events, prices, publications] = await Promise.all([
+  const [companies, cases, events, prices, publications, trackingPublications] = await Promise.all([
     supabase.from('companies').select('*'),
     supabase.from('cases').select('*').eq('is_visible', true),
     supabase.from('case_events').select('*').eq('is_visible', true),
     supabase.from('price_snapshots').select('*'),
     supabase.rpc('read_published_articles'),
+    supabase.rpc('read_published_tracking'),
   ]);
 
-  for (const [name, res] of Object.entries({ companies, cases, case_events: events, price_snapshots: prices, publications })) {
+  for (const [name, res] of Object.entries({ companies, cases, case_events: events, price_snapshots: prices, publications, trackingPublications })) {
     if (res.error) {
-      throw new Error(`[publicData] ${name} の取得に失敗: ${res.error.message}。0007適用状況を確認してください（記事を黙って省略しません）。`);
+      throw new Error(`[publicData] ${name} の取得に失敗: ${res.error.message}。DBの自動更新・マイグレーション履歴を確認してください（公開情報を黙って省略しません）。`);
     }
   }
 
+  const classified = new Set((trackingPublications.data.editions ?? []).map((e: TrackingEdition) => e.case_id));
+  const active = new Set((companies.data ?? []).filter(c=>c.is_active).map(c=>c.id));
+  const missing = (cases.data ?? []).filter(c=>active.has(c.company_id)&&!classified.has(c.id));
+  if(missing.length)throw new Error('[publicData] 公開銘柄の分類が未承認です: '+missing.map(c=>c.slug).join(', '));
   return {
+    trackingEditions: trackingPublications.data.editions,
+    mediaOutlets: trackingPublications.data.outlets,
     articles: publications.data.articles,
     articleLinks: publications.data.links,
     companies: (companies.data ?? []) as RawCompany[],
@@ -108,6 +122,8 @@ function loadFromSample(): RawData {
     JSON.parse(fs.readFileSync(path.join(dir, file), 'utf-8')) as T;
 
   return {
+    trackingEditions: read<TrackingEdition[]>('tracking_editions.json'),
+    mediaOutlets: read<MediaOutlet[]>('media_outlets.json'),
     articles: read<RawArticle[]>('articles.json'),
     articleLinks: read<ArticleLink[]>('article_companies.json'),
     companies: read<RawCompany[]>('companies.json'),
@@ -131,7 +147,15 @@ export function assemble(raw: RawData): PublicData {
 
   const details: CaseDetail[] = [];
 
-  for (const c of raw.cases.filter(c => c.is_visible)) {
+  const editions = new Map((raw.trackingEditions ?? []).map(e => [e.case_id, e]));
+  const mediaOutlets = raw.mediaOutlets ?? [];
+  for (const original of raw.cases.filter(c => c.is_visible)) {
+    const edition = editions.get(original.id);
+    const profile = edition?.published ? parseTrackingProfile(edition.published, true) : null;
+    if (profile) validateProfileReferences(profile, original, raw.events, mediaOutlets);
+    const c = profile ? applyPublishedProfile(original, profile) : original;
+    const overrides = new Map((profile?.event_dates ?? []).map(d => [d.event_id,d]));
+    const dateOf = (e: RawEvent) => publicEventDate(e, overrides.get(e.id));
     const company = companyById.get(c.company_id);
     if (!company) {
       console.warn(`[publicData] 案件 ${c.slug} の会社(${c.company_id})が見つからないためスキップ`);
@@ -146,7 +170,7 @@ export function assemble(raw: RawData): PublicData {
       .slice()
       .sort(
         (a, b) =>
-          new Date(eventSortKey(a)).getTime() - new Date(eventSortKey(b)).getTime() ||
+          timelineDateKey(dateOf(a)).localeCompare(timelineDateKey(dateOf(b))) ||
           a.sort_order - b.sort_order,
       );
 
@@ -158,11 +182,13 @@ export function assemble(raw: RawData): PublicData {
     const currentClose = dailyCloses.at(-1) ?? latestPrice(prices, 'current_close');
     const formalOfferPrice = latestPrice(prices, 'formal_offer_price');
 
-    const firstReportedAt = firstVisibleReportOccurredAt(events.filter(e => e.date_precision !== 'issue' && e.date_precision !== 'unknown'));
-    const firstReport = firstReportedAt ? events.find((e) => e.occurred_at === firstReportedAt) ?? null : null;
+    const firstReport = events.find(e => ['observation_report','follow_up_report'].includes(e.event_type) && ['date','datetime'].includes(dateOf(e).precision)) ?? null;
+    const firstDate = firstReport ? dateOf(firstReport) : null;
+    const firstReportedAt = firstDate ? firstDate.instant ?? `${firstDate.start}T00:00:00+09:00` : null;
 
     const lastUpdatedAt = maxIso([
       c.updated_at,
+      edition?.published_at ?? null,
       ...events.map((e) => e.updated_at),
     ]);
 
@@ -199,7 +225,8 @@ export function assemble(raw: RawData): PublicData {
       id: e.id,
       eventType: e.event_type,
       occurredAt: e.occurred_at,
-      dateLabel: eventDateLabel(e),
+      date: dateOf(e),
+      dateLabel: dateOf(e).label,
       title: e.title,
       summary: e.summary,
       sourceName: e.source_name,
@@ -213,7 +240,16 @@ export function assemble(raw: RawData): PublicData {
       largeShareholding: buildLargeShareholdingView(e),
     }));
 
+    const mediaIds = profile ? profile.report_state === 'none' ? ['none'] : [...new Set(profile.reports.map(r => r.outlet_id))] : ['unreviewed'];
+    const media = mediaIds.map(id => ({id, name:id==='none' ? '報道なし' : id==='unreviewed' ? '媒体を確認中' : mediaOutlets.find(m=>m.id===id)!.name}));
+    const search: SearchCase = {id:c.id,code:company.security_code,name:company.name_ja,
+      reason:profile?.short_reason || c.tracking_reason || c.summary,
+      media:mediaIds,stage:profile ? TRACKING_STATUS[profile.public_status].stage : 'unreviewed',status:profile?.public_status ?? 'unreviewed',
+      statementTags:[...new Set(profile?.statements.flatMap(s=>s.tags) ?? [])],registeredOn:c.site_published_at ?? '',updatedAt:lastUpdatedAt,
+      events:eventViews.map(e=>({id:e.id,title:e.title,date:e.date}))};
+    const latest = latestDatedEvent(search);
     details.push({
+      tracking:profile, publicationVersion:edition?.publication_version ?? null, media, search,
       id: c.id,
       slug: c.slug,
       title: c.title,
@@ -224,7 +260,7 @@ export function assemble(raw: RawData): PublicData {
       trackingStartedOn: c.tracking_started_on ?? null,
       lastCheckedOn: c.last_checked_on ?? null,
       verificationNote: c.verification_note ?? '',
-      latestEvent: events.length ? { id: events.at(-1)!.id, title: events.at(-1)!.title, dateLabel: eventDateLabel(events.at(-1)!) } : null,
+      latestEvent: latest ? {id:latest.id,title:latest.title,dateLabel:latest.date.label} : null,
       securityCode: company.security_code,
       companyName: company.name_ja,
       market: company.market,
@@ -250,7 +286,7 @@ export function assemble(raw: RawData): PublicData {
 
   // 標準の並び順: 最終更新日の新しい順(要件 §5.2)
   details.sort(
-    (a, b) => new Date(b.lastUpdatedAt).getTime() - new Date(a.lastUpdatedAt).getTime(),
+    (a, b) => compareCases(a.search,b.search,'event'),
   );
 
   const cases: CaseListItem[] = details.map(({ events: _e, industry: _i, sitePublishedAt: _s, ...item }) => item);
@@ -273,6 +309,7 @@ export function assemble(raw: RawData): PublicData {
     cases,
     details,
     allSourceNames,
+    mediaOutlets,
     isSampleData: raw.isSampleData,
     generatedAt: now.toISOString(),
   };

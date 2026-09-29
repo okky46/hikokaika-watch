@@ -1,0 +1,448 @@
+[
+  {
+    "case_id": "b0000001-0000-4000-8000-000000000001",
+    "published": {
+      "title": "東洋デモ精機、MBOによる非公開化",
+      "summary": "経営陣による買収(MBO)実施の観測報道の後、会社が検討中である旨のコメントを公表。その後、1株2,200円でのMBO実施が正式発表された。",
+      "tracking_reason": "",
+      "tracking_started_on": "",
+      "last_checked_on": "2026-09-29",
+      "verification_note": "",
+      "short_reason": "経営陣による買収(MBO)実施の観測報道の後、会社が検討中である旨のコメントを公表。その後、1株2,200円でのMBO実施が正式発表された。",
+      "status_note": "",
+      "report_note": "",
+      "public_status": "announced",
+      "report_state": "reported",
+      "status_event_ids": [
+        "c0000001-0000-4000-8000-000000000104"
+      ],
+      "statements": [
+        {
+          "event_id": "c0000001-0000-4000-8000-000000000102",
+          "subject": "東洋デモ精機(適時開示)",
+          "text": "会社は本日の一部報道について「当社が発表したものではないが、非公開化を含む様々な選択肢を検討していることは事実」とコメントした。",
+          "tags": [
+            "consideration_acknowledged",
+            "not_company_announcement",
+            "no_decision"
+          ]
+        }
+      ],
+      "reports": [
+        {
+          "outlet_id": "demo-1",
+          "event_id": "c0000001-0000-4000-8000-000000000101",
+          "source_name": "デモ経済新聞",
+          "source_url": "https://example.com/demo-keizai/20260512",
+          "method": "direct",
+          "access": "full",
+          "checked_on": "2026-09-29",
+          "reported_on": "",
+          "scope_note": "架空のサンプル報道です。"
+        },
+        {
+          "outlet_id": "demo-2",
+          "event_id": "c0000001-0000-4000-8000-000000000103",
+          "source_name": "サンプル通信",
+          "source_url": "https://example.com/sample-tsushin/20260520",
+          "method": "direct",
+          "access": "full",
+          "checked_on": "2026-09-29",
+          "reported_on": "",
+          "scope_note": "架空のサンプル報道です。"
+        }
+      ],
+      "event_dates": []
+    },
+    "publication_version": "90000000-0000-4000-8000-000000000001",
+    "published_at": "2026-07-08T20:00:00+09:00"
+  },
+  {
+    "case_id": "b0000001-0000-4000-8000-000000000002",
+    "published": {
+      "title": "サンプル化学工業、投資ファンドによる非公開化観測",
+      "summary": "海外投資ファンドによる非公開化提案を受けているとの観測報道。会社からの正式なコメント・発表は確認されていない。",
+      "tracking_reason": "",
+      "tracking_started_on": "",
+      "last_checked_on": "2026-09-29",
+      "verification_note": "",
+      "short_reason": "海外投資ファンドによる非公開化提案を受けているとの観測報道。会社からの正式なコメント・発表は確認されていない。",
+      "status_note": "",
+      "report_note": "",
+      "public_status": "rumor",
+      "report_state": "reported",
+      "status_event_ids": [],
+      "statements": [],
+      "reports": [
+        {
+          "outlet_id": "demo-2",
+          "event_id": "c0000001-0000-4000-8000-000000000201",
+          "source_name": "サンプル通信",
+          "source_url": "https://example.com/sample-tsushin/20260628",
+          "method": "direct",
+          "access": "full",
+          "checked_on": "2026-09-29",
+          "reported_on": "",
+          "scope_note": "架空のサンプル報道です。"
+        }
+      ],
+      "event_dates": []
+    },
+    "publication_version": "90000000-0000-4000-8000-000000000002",
+    "published_at": "2026-07-08T21:00:00+09:00"
+  },
+  {
+    "case_id": "b0000001-0000-4000-8000-000000000003",
+    "published": {
+      "title": "架空フーズHD、創業家によるMBO検討観測",
+      "summary": "創業家によるMBO検討との観測報道に対し、会社は「当社が発表したものではない」「決定した事実はない」とする適時開示を公表した。",
+      "tracking_reason": "",
+      "tracking_started_on": "",
+      "last_checked_on": "2026-09-29",
+      "verification_note": "",
+      "short_reason": "創業家によるMBO検討との観測報道に対し、会社は「当社が発表したものではない」「決定した事実はない」とする適時開示を公表した。",
+      "status_note": "",
+      "report_note": "",
+      "public_status": "comment",
+      "report_state": "reported",
+      "status_event_ids": [
+        "c0000001-0000-4000-8000-000000000302"
+      ],
+      "statements": [
+        {
+          "event_id": "c0000001-0000-4000-8000-000000000302",
+          "subject": "架空フーズHD(適時開示)",
+          "text": "会社は「当社が発表したものではなく、現時点で決定した事実はない」とする適時開示を公表した。",
+          "tags": [
+            "not_company_announcement",
+            "no_decision"
+          ]
+        }
+      ],
+      "reports": [
+        {
+          "outlet_id": "demo-3",
+          "event_id": "c0000001-0000-4000-8000-000000000301",
+          "source_name": "架空タイムズ",
+          "source_url": "https://example.com/kakuu-times/20260403",
+          "method": "direct",
+          "access": "full",
+          "checked_on": "2026-09-29",
+          "reported_on": "",
+          "scope_note": "架空のサンプル報道です。"
+        }
+      ],
+      "event_dates": []
+    },
+    "publication_version": "90000000-0000-4000-8000-000000000003",
+    "published_at": "2026-07-01T19:00:00+09:00"
+  },
+  {
+    "case_id": "b0000001-0000-4000-8000-000000000004",
+    "published": {
+      "title": "デモシステムズ、事業会社によるTOBで完全子会社化",
+      "summary": "大手事業会社による買収観測報道の後、1株1,400円でのTOBが正式発表され、公開買付けが成立。上場廃止となった。",
+      "tracking_reason": "",
+      "tracking_started_on": "",
+      "last_checked_on": "2026-09-29",
+      "verification_note": "",
+      "short_reason": "大手事業会社による買収観測報道の後、1株1,400円でのTOBが正式発表され、公開買付けが成立。上場廃止となった。",
+      "status_note": "",
+      "report_note": "",
+      "public_status": "delisted",
+      "report_state": "reported",
+      "status_event_ids": [
+        "c0000001-0000-4000-8000-000000000403"
+      ],
+      "statements": [],
+      "reports": [
+        {
+          "outlet_id": "demo-1",
+          "event_id": "c0000001-0000-4000-8000-000000000401",
+          "source_name": "デモ経済新聞",
+          "source_url": "https://example.com/demo-keizai/20250918",
+          "method": "direct",
+          "access": "full",
+          "checked_on": "2026-09-29",
+          "reported_on": "",
+          "scope_note": "架空のサンプル報道です。"
+        }
+      ],
+      "event_dates": []
+    },
+    "publication_version": "90000000-0000-4000-8000-000000000004",
+    "published_at": "2026-01-10T18:00:00+09:00"
+  },
+  {
+    "case_id": "b0000001-0000-4000-8000-000000000005",
+    "published": {
+      "title": "見本電子部品、TOBの撤回",
+      "summary": "投資ファンドによる1株4,000円でのTOBが正式発表されたが、前提条件が満たされず公開買付けは撤回された。",
+      "tracking_reason": "",
+      "tracking_started_on": "",
+      "last_checked_on": "2026-09-29",
+      "verification_note": "",
+      "short_reason": "投資ファンドによる1株4,000円でのTOBが正式発表されたが、前提条件が満たされず公開買付けは撤回された。",
+      "status_note": "",
+      "report_note": "",
+      "public_status": "withdrawn",
+      "report_state": "reported",
+      "status_event_ids": [
+        "c0000001-0000-4000-8000-000000000503"
+      ],
+      "statements": [],
+      "reports": [
+        {
+          "outlet_id": "demo-3",
+          "event_id": "c0000001-0000-4000-8000-000000000501",
+          "source_name": "架空タイムズ",
+          "source_url": "https://example.com/kakuu-times/20250610",
+          "method": "direct",
+          "access": "full",
+          "checked_on": "2026-09-29",
+          "reported_on": "",
+          "scope_note": "架空のサンプル報道です。"
+        }
+      ],
+      "event_dates": []
+    },
+    "publication_version": "90000000-0000-4000-8000-000000000005",
+    "published_at": "2025-10-16T19:00:00+09:00"
+  },
+  {
+    "case_id": "b0000001-0000-4000-8000-000000000006",
+    "published": {
+      "title": "例示物流、非公開化検討の終了",
+      "summary": "非公開化検討との観測報道の後、会社は検討の事実を認めたが、最終的に検討を終了した旨を公表した。",
+      "tracking_reason": "",
+      "tracking_started_on": "",
+      "last_checked_on": "2026-09-29",
+      "verification_note": "",
+      "short_reason": "非公開化検討との観測報道の後、会社は検討の事実を認めたが、最終的に検討を終了した旨を公表した。",
+      "status_note": "",
+      "report_note": "",
+      "public_status": "consideration_ended",
+      "report_state": "reported",
+      "status_event_ids": [
+        "c0000001-0000-4000-8000-000000000603"
+      ],
+      "statements": [
+        {
+          "event_id": "c0000001-0000-4000-8000-000000000602",
+          "subject": "例示物流(適時開示)",
+          "text": "会社は「様々な選択肢の一つとして検討していることは事実だが、決定した事実はない」と公表した。",
+          "tags": [
+            "consideration_acknowledged"
+          ]
+        }
+      ],
+      "reports": [
+        {
+          "outlet_id": "demo-1",
+          "event_id": "c0000001-0000-4000-8000-000000000601",
+          "source_name": "デモ経済新聞",
+          "source_url": "https://example.com/demo-keizai/20250305",
+          "method": "direct",
+          "access": "full",
+          "checked_on": "2026-09-29",
+          "reported_on": "",
+          "scope_note": "架空のサンプル報道です。"
+        }
+      ],
+      "event_dates": []
+    },
+    "publication_version": "90000000-0000-4000-8000-000000000006",
+    "published_at": "2025-07-31T19:00:00+09:00"
+  },
+  {
+    "case_id": "b0000001-0000-4000-8000-000000000007",
+    "published": {
+      "title": "試作堂、MBO観測報道(一部訂正あり)",
+      "summary": "MBOによる非公開化検討との観測報道。報道内容のうち買付価格に関する記述は後日訂正された。会社の正式発表は確認されていない。",
+      "tracking_reason": "",
+      "tracking_started_on": "",
+      "last_checked_on": "2026-09-29",
+      "verification_note": "",
+      "short_reason": "MBOによる非公開化検討との観測報道。報道内容のうち買付価格に関する記述は後日訂正された。会社の正式発表は確認されていない。",
+      "status_note": "",
+      "report_note": "",
+      "public_status": "rumor",
+      "report_state": "reported",
+      "status_event_ids": [],
+      "statements": [],
+      "reports": [
+        {
+          "outlet_id": "demo-3",
+          "event_id": "c0000001-0000-4000-8000-000000000701",
+          "source_name": "架空タイムズ",
+          "source_url": "https://example.com/kakuu-times/20260701",
+          "method": "direct",
+          "access": "full",
+          "checked_on": "2026-09-29",
+          "reported_on": "",
+          "scope_note": "架空のサンプル報道です。"
+        }
+      ],
+      "event_dates": []
+    },
+    "publication_version": "90000000-0000-4000-8000-000000000007",
+    "published_at": "2026-07-10T20:00:00+09:00"
+  },
+  {
+    "case_id": "b0000001-0000-4000-8000-000000000008",
+    "published": {
+      "title": "架空ネットワークス、非公開化観測が続報続き",
+      "summary": "投資ファンドによる非公開化提案の観測報道が第1報の後、買付想定価格・スキームに関する続報が相次いでいる。会社の正式なコメント・発表は確認されていない。",
+      "tracking_reason": "",
+      "tracking_started_on": "",
+      "last_checked_on": "2026-09-29",
+      "verification_note": "",
+      "short_reason": "投資ファンドによる非公開化提案の観測報道が第1報の後、買付想定価格・スキームに関する続報が相次いでいる。会社の正式なコメント・発表は確認されていない。",
+      "status_note": "",
+      "report_note": "",
+      "public_status": "rumor",
+      "report_state": "reported",
+      "status_event_ids": [],
+      "statements": [],
+      "reports": [
+        {
+          "outlet_id": "demo-1",
+          "event_id": "c0000001-0000-4000-8000-000000000801",
+          "source_name": "デモ経済新聞",
+          "source_url": "https://example.com/demo-keizai/20260625",
+          "method": "direct",
+          "access": "full",
+          "checked_on": "2026-09-29",
+          "reported_on": "",
+          "scope_note": "架空のサンプル報道です。"
+        },
+        {
+          "outlet_id": "demo-2",
+          "event_id": "c0000001-0000-4000-8000-000000000802",
+          "source_name": "サンプル通信",
+          "source_url": "https://example.com/sample-tsushin/20260702",
+          "method": "direct",
+          "access": "full",
+          "checked_on": "2026-09-29",
+          "reported_on": "",
+          "scope_note": "架空のサンプル報道です。"
+        },
+        {
+          "outlet_id": "demo-3",
+          "event_id": "c0000001-0000-4000-8000-000000000803",
+          "source_name": "架空タイムズ",
+          "source_url": "https://example.com/kakuu-times/20260710",
+          "method": "direct",
+          "access": "full",
+          "checked_on": "2026-09-29",
+          "reported_on": "",
+          "scope_note": "架空のサンプル報道です。"
+        }
+      ],
+      "event_dates": []
+    },
+    "publication_version": "90000000-0000-4000-8000-000000000008",
+    "published_at": "2026-07-10T20:00:00+09:00"
+  },
+  {
+    "case_id": "b0000001-0000-4000-8000-000000000009",
+    "published": {
+      "title": "見本アパレル、非公開化観測(長期未進展)",
+      "summary": "非公開化検討の観測報道があったが、その後1年以上にわたり会社コメント・続報・正式発表のいずれも確認されていない。",
+      "tracking_reason": "",
+      "tracking_started_on": "",
+      "last_checked_on": "2026-09-29",
+      "verification_note": "",
+      "short_reason": "非公開化検討の観測報道があったが、その後1年以上にわたり会社コメント・続報・正式発表のいずれも確認されていない。",
+      "status_note": "",
+      "report_note": "",
+      "public_status": "rumor",
+      "report_state": "reported",
+      "status_event_ids": [],
+      "statements": [],
+      "reports": [
+        {
+          "outlet_id": "demo-1",
+          "event_id": "c0000001-0000-4000-8000-000000000901",
+          "source_name": "デモ経済新聞",
+          "source_url": "https://example.com/demo-keizai/20250505",
+          "method": "direct",
+          "access": "full",
+          "checked_on": "2026-09-29",
+          "reported_on": "",
+          "scope_note": "架空のサンプル報道です。"
+        }
+      ],
+      "event_dates": []
+    },
+    "publication_version": "90000000-0000-4000-8000-000000000009",
+    "published_at": "2025-05-05T21:00:00+09:00"
+  },
+  {
+    "case_id": "b0000001-0000-4000-8000-000000000010",
+    "published": {
+      "title": "デモ精密機器、TOBの正式発表後に株価がTOB価格を上回って推移",
+      "summary": "投資ファンドによる非公開化観測報道の後、1株1,500円でのTOBが正式発表された。その後、対抗TOBや買付価格引き上げへの期待から株価がTOB価格を上回って推移している。",
+      "tracking_reason": "",
+      "tracking_started_on": "",
+      "last_checked_on": "2026-09-29",
+      "verification_note": "",
+      "short_reason": "投資ファンドによる非公開化観測報道の後、1株1,500円でのTOBが正式発表された。その後、対抗TOBや買付価格引き上げへの期待から株価がTOB価格を上回って推移している。",
+      "status_note": "",
+      "report_note": "",
+      "public_status": "announced",
+      "report_state": "reported",
+      "status_event_ids": [
+        "c0000001-0000-4000-8000-000000001003"
+      ],
+      "statements": [
+        {
+          "event_id": "c0000001-0000-4000-8000-000000001002",
+          "subject": "デモ精密機器(適時開示)",
+          "text": "会社は本日の一部報道について「非公開化を含む様々な選択肢を検討していることは事実」とコメントした。",
+          "tags": [
+            "consideration_acknowledged"
+          ]
+        }
+      ],
+      "reports": [
+        {
+          "outlet_id": "demo-2",
+          "event_id": "c0000001-0000-4000-8000-000000001001",
+          "source_name": "サンプル通信",
+          "source_url": "https://example.com/sample-tsushin/20260301",
+          "method": "direct",
+          "access": "full",
+          "checked_on": "2026-09-29",
+          "reported_on": "",
+          "scope_note": "架空のサンプル報道です。"
+        }
+      ],
+      "event_dates": []
+    },
+    "publication_version": "90000000-0000-4000-8000-000000000010",
+    "published_at": "2026-07-10T19:00:00+09:00"
+  },
+  {
+    "case_id": "b0000000-0000-4000-8000-000000000002",
+    "published": {
+      "title": "市場観測をきっかけに追跡",
+      "summary": "架空のサンプル銘柄です。",
+      "tracking_reason": "市場で資本政策への関心が見られたため、管理者が追跡対象として登録（架空のサンプル）。",
+      "tracking_started_on": "2026-09-01",
+      "last_checked_on": "2026-09-29",
+      "verification_note": "具体的な非公開化方針や特定媒体の報道は確認していません。",
+      "short_reason": "市場で資本政策への関心が見られたため、管理者が追跡対象として登録（架空のサンプル）。",
+      "status_note": "",
+      "report_note": "市場の噂として登録した架空例。報道は確認していません。",
+      "public_status": "rumor",
+      "report_state": "none",
+      "status_event_ids": [],
+      "statements": [],
+      "reports": [],
+      "event_dates": []
+    },
+    "publication_version": "90000000-0000-4000-8000-000000000002",
+    "published_at": "2026-09-29T00:00:00Z"
+  }
+]

@@ -1,0 +1,663 @@
+[
+  {
+    "id": "43b56a73-c5df-43ca-83c9-754e811ffef7",
+    "code": "9072",
+    "slug": "9072-001",
+    "patch": {
+      "short_reason": "非公開化をめぐる2次入札参加の検討を報道。入札結果・会社決定は未確認。",
+      "status_note": "Bloomberg原文は未閲覧。二次報道で追跡。",
+      "public_status": "rumor",
+      "status_event_ids": [],
+      "report_state": "reported",
+      "report_note": "",
+      "reports": [
+        {
+          "outlet_id": "bloomberg",
+          "event_id": "98e23516-cc47-4a0a-8f41-ec1bf3c9f2e8",
+          "source_name": "トレーダーズ・ウェブ（Yahoo!配信）：非公開化で2次入札検討との続報",
+          "source_url": "https://finance.yahoo.co.jp/news/detail/ed111fabb603e778073ffeaf11726ab8f18ee02a",
+          "method": "secondary",
+          "access": "unread",
+          "checked_on": "2026-09-29",
+          "reported_on": "2026-09-02",
+          "scope_note": "トレーダーズ・ウェブ配信記事でBloomberg報道への言及を確認。Bloomberg原文は未閲覧。"
+        }
+      ],
+      "statements": [],
+      "event_dates": []
+    },
+    "expected_events": [
+      {
+        "id": "98e23516-cc47-4a0a-8f41-ec1bf3c9f2e8",
+        "title": "2次入札検討について二次報道",
+        "summary": "トレーダーズ・ウェブは9月2日のBloomberg報道を紹介し、ベインとローンスターが2次入札参加を検討していると伝えた。会社の確定発表としては扱わない。",
+        "url": "https://finance.yahoo.co.jp/news/detail/ed111fabb603e778073ffeaf11726ab8f18ee02a"
+      }
+    ]
+  },
+  {
+    "id": "3f18262e-4869-49fa-bdcc-6987b83b9345",
+    "code": "9684",
+    "slug": "9684-tracking-202609",
+    "patch": {
+      "short_reason": "選択9月号で非公開化観測。会社は検討を否定。",
+      "status_note": "9/1時点の会社内部の検討を否定。将来の資本政策までの否定ではない。",
+      "public_status": "consideration_denied",
+      "status_event_ids": [
+        "e4f342be-9bde-4f2f-9701-ccf99dc3f154"
+      ],
+      "report_state": "reported",
+      "report_note": "",
+      "reports": [
+        {
+          "outlet_id": "sentaku",
+          "event_id": "e4f342be-9bde-4f2f-9701-ccf99dc3f154",
+          "source_name": "スクウェア・エニックスHD：Regarding Today’s Media Report",
+          "source_url": "https://www.hd.square-enix.com/eng/ir/pdf/20260901_01_en.pdf",
+          "method": "company",
+          "access": "unread",
+          "checked_on": "2026-09-29",
+          "reported_on": "",
+          "scope_note": "会社開示で「選択」9月号の報道への言及を確認。有料原文と正確な公表日は未確認。"
+        }
+      ],
+      "statements": [
+        {
+          "event_id": "e4f342be-9bde-4f2f-9701-ccf99dc3f154",
+          "subject": "スクウェア・エニックスHD",
+          "text": "会社は「選択」の記事に言及したうえで、会社として非公開化を検討していないと公表。",
+          "tags": [
+            "not_under_consideration",
+            "not_company_announcement"
+          ]
+        }
+      ],
+      "event_dates": []
+    },
+    "expected_events": [
+      {
+        "id": "e4f342be-9bde-4f2f-9701-ccf99dc3f154",
+        "title": "会社が検討を否定",
+        "summary": "会社は「選択」の記事に言及したうえで、会社として非公開化を検討していないと公表。",
+        "url": "https://www.hd.square-enix.com/eng/ir/pdf/20260901_01_en.pdf"
+      }
+    ]
+  },
+  {
+    "id": "8fc10635-4910-4d6c-aead-2009e3433869",
+    "code": "7600",
+    "slug": "7600-tracking-202609",
+    "patch": {
+      "short_reason": "非公開化に向けた入札プロセスをMergermarketが報道したと会社開示が言及。",
+      "status_note": "5/14会社説明時点で未決定。以後の検討継続・結果は未確認。",
+      "public_status": "consideration",
+      "status_event_ids": [
+        "943e5d63-079a-4713-9cc2-90389c59f537"
+      ],
+      "report_state": "reported",
+      "report_note": "",
+      "reports": [
+        {
+          "outlet_id": "mergermarket",
+          "event_id": "943e5d63-079a-4713-9cc2-90389c59f537",
+          "source_name": "日本エム・ディ・エム：当社に関する一部報道について",
+          "source_url": "https://www.jmdm.co.jp/wp/wp-content/uploads/26.05.14-%E5%BD%93%E7%A4%BE%E3%81%AB%E9%96%A2%E3%81%99%E3%82%8B%E4%B8%80%E9%83%A8%E5%A0%B1%E9%81%93%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6.pdf",
+          "method": "company",
+          "access": "unread",
+          "checked_on": "2026-09-29",
+          "reported_on": "2026-05-13",
+          "scope_note": "会社開示で前日のMergermarket報道への言及を確認。報道原文は未閲覧。"
+        }
+      ],
+      "statements": [
+        {
+          "event_id": "943e5d63-079a-4713-9cc2-90389c59f537",
+          "subject": "日本MDM",
+          "text": "会社は、報道のような施策案を含め各種経営施策を検討しているが、決定した事実はないと説明。報道本文は未閲覧。",
+          "tags": [
+            "consideration_acknowledged",
+            "no_decision",
+            "not_company_announcement"
+          ]
+        }
+      ],
+      "event_dates": []
+    },
+    "expected_events": [
+      {
+        "id": "943e5d63-079a-4713-9cc2-90389c59f537",
+        "title": "入札に関する報道を受け会社がコメント",
+        "summary": "会社は、報道のような施策案を含め各種経営施策を検討しているが、決定した事実はないと説明。報道本文は未閲覧。",
+        "url": "https://www.jmdm.co.jp/wp/wp-content/uploads/26.05.14-%E5%BD%93%E7%A4%BE%E3%81%AB%E9%96%A2%E3%81%99%E3%82%8B%E4%B8%80%E9%83%A8%E5%A0%B1%E9%81%93%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6.pdf"
+      }
+    ]
+  },
+  {
+    "id": "5593d69b-350f-4f33-9071-be17905b78a0",
+    "code": "7630",
+    "slug": "7630-tracking-202609",
+    "patch": {
+      "short_reason": "壱番屋の株式売却を含む非公開化を日経が報道。",
+      "status_note": "8/31親会社ハウス食品Gが検討に言及・未決定。",
+      "public_status": "consideration",
+      "status_event_ids": [
+        "339dade4-8d59-4e63-aec1-6d3143646bfc"
+      ],
+      "report_state": "reported",
+      "report_note": "",
+      "reports": [
+        {
+          "outlet_id": "nikkei",
+          "event_id": "339dade4-8d59-4e63-aec1-6d3143646bfc",
+          "source_name": "ハウス食品グループ本社：当社に関する一部報道について",
+          "source_url": "https://housefoods-group.com/newsrelease/pdf/260831_oshirase.pdf",
+          "method": "company",
+          "access": "unread",
+          "checked_on": "2026-09-29",
+          "reported_on": "2026-08-31",
+          "scope_note": "親会社の開示で日経電子版の同日報道への言及を確認。日経原文は未閲覧。"
+        }
+      ],
+      "statements": [
+        {
+          "event_id": "339dade4-8d59-4e63-aec1-6d3143646bfc",
+          "subject": "ハウス食品グループ本社（親会社）",
+          "text": "ハウス食品グループ本社は、壱番屋の株式売却を含む非公開化報道に対し、幅広い選択肢を検討しているが具体的な決定はないと説明。",
+          "tags": [
+            "consideration_acknowledged",
+            "no_decision",
+            "not_company_announcement"
+          ]
+        }
+      ],
+      "event_dates": []
+    },
+    "expected_events": [
+      {
+        "id": "339dade4-8d59-4e63-aec1-6d3143646bfc",
+        "title": "親会社が報道にコメント",
+        "summary": "ハウス食品グループ本社は、壱番屋の株式売却を含む非公開化報道に対し、幅広い選択肢を検討しているが具体的な決定はないと説明。",
+        "url": "https://housefoods-group.com/newsrelease/pdf/260831_oshirase.pdf"
+      }
+    ]
+  },
+  {
+    "id": "4d094b9a-2b5d-482b-bab4-ebec283b0087",
+    "code": "4967",
+    "slug": "4967-tracking-202609",
+    "patch": {
+      "short_reason": "NSSK・CVCによる非公開化の報道を受け、会社が初期提案の受領を説明。",
+      "status_note": "9/25会社説明時点で未決定。法的拘束力のない共同提案。",
+      "public_status": "proposal",
+      "status_event_ids": [
+        "2569adb4-1eaf-43f2-aab8-e6f0702d9f96"
+      ],
+      "report_state": "reported",
+      "report_note": "",
+      "reports": [
+        {
+          "outlet_id": "unknown",
+          "event_id": "2569adb4-1eaf-43f2-aab8-e6f0702d9f96",
+          "source_name": "小林製薬：一部報道機関による報道について",
+          "source_url": "https://www.kobayashi.co.jp/newsrelease/2026/20260925_02/",
+          "method": "company",
+          "access": "unread",
+          "checked_on": "2026-09-29",
+          "reported_on": "2026-09-24",
+          "scope_note": "会社開示で前日の報道の存在は確認できるが、開示に媒体名の記載はない。媒体名を推測で補っていない。"
+        }
+      ],
+      "statements": [
+        {
+          "event_id": "2569adb4-1eaf-43f2-aab8-e6f0702d9f96",
+          "subject": "小林製薬",
+          "text": "会社は前日の報道に言及し、2社の関連法人から共同提案を受領したと説明。会社としての決定はないとしている。",
+          "tags": [
+            "proposal_received",
+            "no_decision",
+            "not_company_announcement"
+          ]
+        }
+      ],
+      "event_dates": []
+    },
+    "expected_events": [
+      {
+        "id": "2569adb4-1eaf-43f2-aab8-e6f0702d9f96",
+        "title": "非公開化の初期提案を受領したと公表",
+        "summary": "会社は前日の報道に言及し、2社の関連法人から共同提案を受領したと説明。会社としての決定はないとしている。",
+        "url": "https://www.kobayashi.co.jp/newsrelease/2026/20260925_02/"
+      }
+    ]
+  },
+  {
+    "id": "86cf9c5a-981f-4796-b26c-da1ff221f136",
+    "code": "4420",
+    "slug": "4420-tracking-202609",
+    "patch": {
+      "short_reason": "日経の非公開化報道から、会社の検討説明・MBO発表を追跡。",
+      "status_note": "9/11 MBO開示を訂正。TOB成立・上場廃止は未確認。",
+      "public_status": "announced",
+      "status_event_ids": [
+        "9a1933d2-4db2-46fe-87e6-ed8c7536d108",
+        "e2f5180c-5f2d-4188-bb73-fc3aad358d23"
+      ],
+      "report_state": "reported",
+      "report_note": "",
+      "reports": [
+        {
+          "outlet_id": "nikkei",
+          "event_id": "ea93bef4-44f7-437b-a1a4-905d2f9d3e01",
+          "source_name": "イーソル：本日の一部報道について",
+          "source_url": "https://ssl4.eir-parts.net/doc/4420/tdnet/2879108/00.pdf",
+          "method": "company",
+          "access": "unread",
+          "checked_on": "2026-09-29",
+          "reported_on": "2026-08-28",
+          "scope_note": "8/28会社開示で日経電子版の同日報道への言及を確認。有料原文は未閲覧。"
+        }
+      ],
+      "statements": [
+        {
+          "event_id": "ea93bef4-44f7-437b-a1a4-905d2f9d3e01",
+          "subject": "イーソル",
+          "text": "会社は同日の日経電子版報道に言及し、中長期戦略として非公開化を含め検討しているが、当時決定した事実はないと説明。",
+          "tags": [
+            "consideration_acknowledged",
+            "no_decision",
+            "not_company_announcement"
+          ]
+        }
+      ],
+      "event_dates": []
+    },
+    "expected_events": [
+      {
+        "id": "ea93bef4-44f7-437b-a1a4-905d2f9d3e01",
+        "title": "日経の非公開化報道を受け、会社が検討を説明",
+        "summary": "会社は同日の日経電子版報道に言及し、中長期戦略として非公開化を含め検討しているが、当時決定した事実はないと説明。",
+        "url": "https://ssl4.eir-parts.net/doc/4420/tdnet/2879108/00.pdf"
+      },
+      {
+        "id": "9a1933d2-4db2-46fe-87e6-ed8c7536d108",
+        "title": "BCJ-110のTOBへの賛同を受け、JPXが監理銘柄に指定",
+        "summary": "JPXは、会社がBCJ-110によるTOBへの賛同を表明したと説明し、監理銘柄に指定。TOB成立後の手続きで上場廃止となる可能性があるとした。指定自体は成立・上場廃止の完了を意味しない。",
+        "url": "https://www.jpx.co.jp/news/1023/20260901-11.html"
+      },
+      {
+        "id": "e2f5180c-5f2d-4188-bb73-fc3aad358d23",
+        "title": "MBO開示を訂正し、アバールデータの応募合意を追記",
+        "summary": "9月1日のMBO開示を訂正。買付者が9月10日にアバールデータと保有株式80万株の応募について合意した旨などを追加した。TOB成立の発表ではない。",
+        "url": "https://ssl4.eir-parts.net/doc/4420/tdnet/2883695/00.pdf"
+      }
+    ]
+  },
+  {
+    "id": "37593d4f-15e4-4d7d-8814-52e03d88bed1",
+    "code": "4812",
+    "slug": "4812-test-1",
+    "patch": {
+      "short_reason": "選択・日経で親子上場解消や非公開化を観測。株探は関連する相場の思惑を解説。",
+      "status_note": "8/31訂正開示を確認。TOBの開始・成立・上場廃止の完了は未確認。",
+      "public_status": "announced",
+      "status_event_ids": [
+        "ec4e047b-06a7-40bf-a7ef-a391c10627fe",
+        "fad88f52-432c-4aeb-9b64-9c659305671b"
+      ],
+      "report_state": "reported",
+      "report_note": "",
+      "reports": [
+        {
+          "outlet_id": "sentaku",
+          "event_id": "a2e1f396-f7aa-4c91-9ca6-5a0be4c3b390",
+          "source_name": "選択",
+          "source_url": "https://www.sentaku.co.jp/articles/view/25892",
+          "method": "direct",
+          "access": "partial",
+          "checked_on": "2026-09-29",
+          "reported_on": "",
+          "scope_note": "2026年1月号の公開見出し・冒頭のみ確認。有料部分と正確な公表日は未確認。"
+        },
+        {
+          "outlet_id": "nikkei",
+          "event_id": "548942fb-3363-4c19-a242-d1ead4b4a90d",
+          "source_name": "日本経済新聞",
+          "source_url": "https://www.nikkei.com/article/DGXZQOUC088IW0Y6A400C2000000/",
+          "method": "direct",
+          "access": "partial",
+          "checked_on": "2026-09-29",
+          "reported_on": "2026-07-02",
+          "scope_note": "日経電子版の公開見出し・冒頭を確認。会員限定部分は未閲覧。"
+        },
+        {
+          "outlet_id": "kabutan",
+          "event_id": "8067ceb0-04b6-4499-890c-a0e10969a4aa",
+          "source_name": "株探",
+          "source_url": "https://kabutan.jp/stock/news?code=4812&b=n202601140659",
+          "method": "direct",
+          "access": "full",
+          "checked_on": "2026-09-29",
+          "reported_on": "2026-01-14",
+          "scope_note": "株探の相場解説で親子上場解消の思惑への言及を確認。独自の非公開化リークや会社決定を伝えた記事とは扱わない。"
+        }
+      ],
+      "statements": [
+        {
+          "event_id": "dd2f5362-7a48-4956-8bcc-37b9edd6d245",
+          "subject": "電通総研",
+          "text": "会社は日経報道に対し、非公開化を含む株主構成の選択肢を検討していると説明。当時、開示すべき情報はないとしていた。「検討していない」という否定ではない。",
+          "tags": [
+            "consideration_acknowledged",
+            "not_company_announcement"
+          ]
+        }
+      ],
+      "event_dates": [
+        {
+          "event_id": "a2e1f396-f7aa-4c91-9ca6-5a0be4c3b390",
+          "precision": "issue",
+          "value": "2026-01",
+          "issue_label": "2026年1月号"
+        }
+      ]
+    },
+    "expected_events": [
+      {
+        "id": "8067ceb0-04b6-4499-890c-a0e10969a4aa",
+        "title": "電通グループ後場急落、海外事業売却巡る報道で",
+        "summary": "株探は、親会社の海外事業売却をめぐる報道に伴う株価反応を紹介し、電通総研などの親子上場解消への思惑にも言及した。非公開化の決定を伝える会社発表ではない。",
+        "url": "https://kabutan.jp/stock/news?code=4812&b=n202601140659"
+      },
+      {
+        "id": "dd2f5362-7a48-4956-8bcc-37b9edd6d245",
+        "title": "当社に関する一部報道について",
+        "summary": "会社は日経報道に対し、非公開化を含む株主構成の選択肢を検討していると説明。当時、開示すべき情報はないとしていた。「検討していない」という否定ではない。",
+        "url": "https://www.dentsusoken.com/news/release/2026/0702.html"
+      },
+      {
+        "id": "548942fb-3363-4c19-a242-d1ead4b4a90d",
+        "title": "電通Gが電通総研を非公開化する方針を固めたと報道",
+        "summary": "日経電子版の公開見出しと冒頭で、電通総研の非公開化方針と外部出資の検討を報じたことを確認。会員限定部分は未閲覧であり、当時の会社決定としては扱わない。",
+        "url": "https://www.nikkei.com/article/DGXZQOUC088IW0Y6A400C2000000/"
+      },
+      {
+        "id": "a2e1f396-f7aa-4c91-9ca6-5a0be4c3b390",
+        "title": "「選択」2026年1月号に親子上場解消の観測記事",
+        "summary": "公開されている見出しと冒頭に、電通総研・セプテーニHDの処遇に関する記載がある。有料部分は未閲覧。確認できたのは2026年1月号という号数で、正確な公表日時は不明。",
+        "url": "https://www.sentaku.co.jp/articles/view/25892"
+      },
+      {
+        "id": "91681aed-f87a-46a2-b2ba-6cdd01470d11",
+        "title": "JPXが監理銘柄に指定",
+        "summary": "合同会社VICによるTOBへの賛同に関する発表を受けた指定。",
+        "url": "https://www.jpx.co.jp/news/1023/20260828-13.html"
+      },
+      {
+        "id": "ec4e047b-06a7-40bf-a7ef-a391c10627fe",
+        "title": "TOB開始予定の開示を訂正：最終判断・契約日を修正",
+        "summary": "買付側の条件充足と最終判断が8月31日になったとして、取引決定・関連契約の日付などを訂正。株価算定に使う一部数値も修正した。TOB開始・成立の完了報告ではない。",
+        "url": "https://pdf.irpocket.com/C4812/xoA3/M9fy/mIrq/Z5K5.pdf"
+      },
+      {
+        "id": "fad88f52-432c-4aeb-9b64-9c659305671b",
+        "title": "親会社が伊藤忠グループとの合弁化方針を公表",
+        "summary": "TOBが開始された場合の賛同・応募推奨、成立後の上場廃止予定を説明。電通グループの連結子会社であり続ける計画。",
+        "url": "https://www.group.dentsu.com/en/news/release/001749.html"
+      }
+    ]
+  },
+  {
+    "id": "dc18d8a2-34dc-40b7-9be7-62e6a6c3548d",
+    "code": "2540",
+    "slug": "2540-tracking-202609",
+    "patch": {
+      "short_reason": "Bloombergの非公開化報道への会社回答から、買付者の変更と取得完了までを記録。",
+      "status_note": "6/18上場廃止、9/1ツムラの全株式取得完了を確認。",
+      "public_status": "privatized",
+      "status_event_ids": [
+        "e918048d-a634-408e-9b3d-917a757d5f17",
+        "babc00ba-2b4c-43ac-9df9-e1abc4e529f5"
+      ],
+      "report_state": "reported",
+      "report_note": "",
+      "reports": [
+        {
+          "outlet_id": "bloomberg",
+          "event_id": "aa1e52ca-e8ff-489b-99f2-a83c6c7326c7",
+          "source_name": "養命酒製造：一部報道について",
+          "source_url": "https://www.yomeishu.co.jp/ir/library/material/pdf/20251230-1_ICHIBUHODONITSUITE.pdf",
+          "method": "company",
+          "access": "unread",
+          "checked_on": "2026-09-29",
+          "reported_on": "2025-12-29",
+          "scope_note": "会社開示で前日のBloomberg報道への言及を確認。原文は未閲覧。KKRとの交渉終了を非公開化自体の中止とは扱わない。"
+        }
+      ],
+      "statements": [],
+      "event_dates": [
+        {
+          "event_id": "e918048d-a634-408e-9b3d-917a757d5f17",
+          "precision": "unknown",
+          "value": "",
+          "issue_label": ""
+        }
+      ]
+    },
+    "expected_events": [
+      {
+        "id": "aa1e52ca-e8ff-489b-99f2-a83c6c7326c7",
+        "title": "KKRへの優先交渉権付与を説明",
+        "summary": "会社は前日の報道を受け、優先交渉権付与を認めた一方、翌1月のTOB実施見通しは立っていないと説明。",
+        "url": "https://www.yomeishu.co.jp/ir/library/material/pdf/20251230-1_ICHIBUHODONITSUITE.pdf"
+      },
+      {
+        "id": "64c05baa-035b-43a1-a758-ba3e652646a8",
+        "title": "同日続報で独占交渉権の失効を通知",
+        "summary": "会社は同日夕刻にKKRへ独占交渉権の失効を通知したと公表。湯沢との非公開化の協議方針も説明。",
+        "url": "https://www.yomeishu.co.jp/ir/library/material/pdf/20251230-2_ICHIBUHODONITSUITE.pdf"
+      },
+      {
+        "id": "1c511537-8ee8-4420-9499-a61efb9f7459",
+        "title": "レノによるTOB結果を公表",
+        "summary": "会社はレノによるTOBの結果と親会社等の異動について公表。",
+        "url": "https://www.yomeishu.co.jp/ir/library/material/pdf/KOKAIKAITSUKEKEKKA_OYAGAISYATONOIDOU.pdf"
+      },
+      {
+        "id": "e918048d-a634-408e-9b3d-917a757d5f17",
+        "title": "上場廃止",
+        "summary": "会社IRページが6月18日の上場廃止を案内。",
+        "url": "https://www.yomeishu.co.jp/ir/"
+      },
+      {
+        "id": "babc00ba-2b4c-43ac-9df9-e1abc4e529f5",
+        "title": "ツムラが全株式を取得",
+        "summary": "ツムラは一連の手続が完了し、湯沢から養命酒製造の全株式を取得したと公表。",
+        "url": "https://www.tsumura.co.jp/news/newsrelease/item/20260901.pdf"
+      }
+    ]
+  },
+  {
+    "id": "95ecb940-f32b-41d6-8796-a14c9aff1345",
+    "code": "3593",
+    "slug": "3593-tracking-202609",
+    "patch": {
+      "short_reason": "Mergermarketの非公開化に関する続報を受け、会社が戦略的選択肢を説明。",
+      "status_note": "会社IRで5/15の上場廃止を確認。TOB等の全経過は未収録。",
+      "public_status": "delisted",
+      "status_event_ids": [
+        "eef0d36b-5290-4e5f-be71-1765c6e60623"
+      ],
+      "report_state": "reported",
+      "report_note": "",
+      "reports": [
+        {
+          "outlet_id": "mergermarket",
+          "event_id": "944ebca4-183b-4d1a-833d-96571ad138a0",
+          "source_name": "ホギメディカル：当社に関する一部報道について",
+          "source_url": "https://www.hogy.co.jp/news/20251031houdo.pdf",
+          "method": "company",
+          "access": "unread",
+          "checked_on": "2026-09-29",
+          "reported_on": "2025-10-31",
+          "scope_note": "10/31会社開示でMergermarketの続報への言及を確認。初報の日付ではない。有料原文は未閲覧。"
+        }
+      ],
+      "statements": [
+        {
+          "event_id": "944ebca4-183b-4d1a-833d-96571ad138a0",
+          "subject": "ホギメディカル",
+          "text": "会社はMergermarketの続報に言及し、戦略的選択肢を継続的に検討しているが当時は未決定と説明。",
+          "tags": [
+            "consideration_acknowledged",
+            "no_decision",
+            "not_company_announcement"
+          ]
+        }
+      ],
+      "event_dates": [
+        {
+          "event_id": "eef0d36b-5290-4e5f-be71-1765c6e60623",
+          "precision": "unknown",
+          "value": "",
+          "issue_label": ""
+        }
+      ]
+    },
+    "expected_events": [
+      {
+        "id": "944ebca4-183b-4d1a-833d-96571ad138a0",
+        "title": "非公開化の検討を含む選択肢を説明",
+        "summary": "会社はMergermarketの続報に言及し、戦略的選択肢を継続的に検討しているが当時は未決定と説明。",
+        "url": "https://www.hogy.co.jp/news/20251031houdo.pdf"
+      },
+      {
+        "id": "eef0d36b-5290-4e5f-be71-1765c6e60623",
+        "title": "上場廃止",
+        "summary": "会社IRページが5月15日の上場廃止を案内。ページ自体の公表日は不明。",
+        "url": "https://www.hogy.co.jp/ir/"
+      }
+    ]
+  },
+  {
+    "id": "1cc99bc3-c86e-44d9-b373-78295fc949e1",
+    "code": "202A",
+    "slug": "202a-tracking-202609",
+    "patch": {
+      "short_reason": "大株主の資本戦略と非公開化可能性をMergermarketが報道したと会社開示が言及。",
+      "status_note": "4/16の売渡対象株式取得完了を確認（資料掲載4/20）。",
+      "public_status": "privatized",
+      "status_event_ids": [
+        "cefe48e7-197b-4826-bc05-e75864ba0831"
+      ],
+      "report_state": "reported",
+      "report_note": "",
+      "reports": [
+        {
+          "outlet_id": "mergermarket",
+          "event_id": "6b7d1ea1-4f1c-4bd0-b02b-26f8cd0225c3",
+          "source_name": "豆蔵：当社に関する一部報道について",
+          "source_url": "https://mamezo.tech/cms/wp-content/uploads/2026/05/2025.11.27tk.pdf",
+          "method": "company",
+          "access": "unread",
+          "checked_on": "2026-09-29",
+          "reported_on": "2025-11-26",
+          "scope_note": "11/27会社開示で前日のMergermarket報道への言及を確認。原文は未閲覧。会社としての当時の検討否定と、その後の手続きを分けて記録。"
+        }
+      ],
+      "statements": [
+        {
+          "event_id": "6b7d1ea1-4f1c-4bd0-b02b-26f8cd0225c3",
+          "subject": "豆蔵",
+          "text": "会社は前日のMergermarket報道に言及し、会社としてそのような検討をしていないと説明。",
+          "tags": [
+            "not_under_consideration",
+            "not_company_announcement"
+          ]
+        }
+      ],
+      "event_dates": [
+        {
+          "event_id": "cefe48e7-197b-4826-bc05-e75864ba0831",
+          "precision": "date",
+          "value": "2026-04-20",
+          "issue_label": ""
+        }
+      ]
+    },
+    "expected_events": [
+      {
+        "id": "6b7d1ea1-4f1c-4bd0-b02b-26f8cd0225c3",
+        "title": "大株主の資本戦略に関する報道に回答",
+        "summary": "会社は前日のMergermarket報道に言及し、会社としてそのような検討をしていないと説明。",
+        "url": "https://mamezo.tech/cms/wp-content/uploads/2026/05/2025.11.27tk.pdf"
+      },
+      {
+        "id": "1c82d802-6fde-447f-952f-aa0ec0d42f97",
+        "title": "JPXが4月14日の上場廃止を決定",
+        "summary": "株式等売渡請求の承認を受け、JPXが上場廃止日を公表。",
+        "url": "https://www.jpx.co.jp/news/1023/20260326-12.html"
+      },
+      {
+        "id": "cefe48e7-197b-4826-bc05-e75864ba0831",
+        "title": "売渡対象株式の取得完了",
+        "summary": "事後開示はRoodhalsgans 1が4月16日に対象株式を取得したと記載。資料は4月16日付、IR一覧への掲載は4月20日。",
+        "url": "https://mamezo.tech/cms/wp-content/uploads/2026/05/2026.04.20os.pdf"
+      }
+    ]
+  },
+  {
+    "id": "67835368-bc16-4f3c-9a1e-6955622df011",
+    "code": "4320",
+    "slug": "4320-tracking-202609",
+    "patch": {
+      "short_reason": "Mergermarketのスポンサー選定・入札報道から、会社の検討説明とTOB成立を追跡。",
+      "status_note": "9/18 TOB成立を発表。決済・上場廃止の完了は未確認。",
+      "public_status": "offer_succeeded",
+      "status_event_ids": [
+        "e98d85d1-213b-4102-b8a8-11bfd1dea8e1"
+      ],
+      "report_state": "reported",
+      "report_note": "",
+      "reports": [
+        {
+          "outlet_id": "mergermarket",
+          "event_id": "d6b373df-9e5c-45c7-bca3-8c012af66410",
+          "source_name": "CEホールディングス：当社に関する一部報道について",
+          "source_url": "https://www.ce-hd.co.jp/wp-content/uploads/2026/05/houdou20260515.pdf",
+          "method": "company",
+          "access": "unread",
+          "checked_on": "2026-09-29",
+          "reported_on": "2026-05-14",
+          "scope_note": "5/15会社開示で前日のMergermarket報道への言及を確認。有料原文は未閲覧。"
+        }
+      ],
+      "statements": [
+        {
+          "event_id": "d6b373df-9e5c-45c7-bca3-8c012af66410",
+          "subject": "CEHD",
+          "text": "前日のスポンサー選定の入札報道に対し、会社は非公開化を含め検討しているが決定なしと説明。",
+          "tags": [
+            "consideration_acknowledged",
+            "no_decision",
+            "not_company_announcement"
+          ]
+        }
+      ],
+      "event_dates": []
+    },
+    "expected_events": [
+      {
+        "id": "d6b373df-9e5c-45c7-bca3-8c012af66410",
+        "title": "非公開化を含む施策の検討を説明",
+        "summary": "前日のスポンサー選定の入札報道に対し、会社は非公開化を含め検討しているが決定なしと説明。",
+        "url": "https://www.ce-hd.co.jp/wp-content/uploads/2026/05/houdou20260515.pdf"
+      },
+      {
+        "id": "e98d85d1-213b-4102-b8a8-11bfd1dea8e1",
+        "title": "SK-03によるTOB成立を公表",
+        "summary": "9月17日に買付期間が終了し、応募株数が下限を上回ったと会社が発表。",
+        "url": "https://www.ce-hd.co.jp/wp-content/uploads/2026/09/20260918_tob_result.pdf"
+      }
+    ]
+  }
+]

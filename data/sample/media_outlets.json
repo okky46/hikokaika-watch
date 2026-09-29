@@ -1,0 +1,20 @@
+[
+  {
+    "id": "demo-1",
+    "name": "デモ経済新聞",
+    "aliases": [],
+    "is_active": true
+  },
+  {
+    "id": "demo-2",
+    "name": "サンプル通信",
+    "aliases": [],
+    "is_active": true
+  },
+  {
+    "id": "demo-3",
+    "name": "架空タイムズ",
+    "aliases": [],
+    "is_active": true
+  }
+]

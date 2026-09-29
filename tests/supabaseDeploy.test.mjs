@@ -16,7 +16,7 @@ async function database() {
     create schema auth;create table auth.users(id uuid primary key);
     create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
     create function auth.jwt() returns jsonb language sql stable as $$select '{}'::jsonb$$;`);
-  for(const file of plan.files)await db.exec(file.sql);
+  for(const file of plan.files.filter(f=>plan.baseline.files.some(b=>b.name===f.name)))await db.exec(file.sql);
   return db;
 }
 
@@ -35,17 +35,17 @@ test('既存DBを照合して履歴のみ採用。新SQLは1回だけ実行し�
     await db.exec(`insert into auth.users values('${user}');insert into user_global_notes(user_id,body) values('${user}','KEEP_ME');`);
     const authBefore=(await db.query("select pg_get_functiondef('is_admin()'::regprocedure) as value")).rows[0].value;
     await db.exec(sql(plan));await db.exec(sql(plan));
-    assert.equal((await db.query('select count(*) from site_deploy.migrations')).rows[0].count,6);
+    assert.equal((await db.query('select count(*) from site_deploy.migrations')).rows[0].count,plan.files.length);
     assert.equal((await db.query('select body from user_global_notes')).rows[0].body,'KEEP_ME');
     assert.equal((await db.query("select pg_get_functiondef('is_admin()'::regprocedure) as value")).rows[0].value,authBefore);
-    const next=append('0009_test.sql',"create table public.deploy_test(id integer); insert into public.deploy_test values(1); -- quote ' \\ $site_deploy$\n");
+    const next=append('0090_test.sql',"create table public.deploy_test(id integer); insert into public.deploy_test values(1); -- quote ' \\ $site_deploy$\n");
     await db.exec(sql(next));await db.exec(sql(next));
     assert.equal((await db.query('select count(*) from deploy_test')).rows[0].count,1);
     for(const role of ['anon','authenticated','service_role']){
       await db.exec(`set role ${role}`);await assert.rejects(db.query('select * from site_deploy.migrations'));await db.exec('reset role');
     }
     await assert.rejects(db.exec(sql(plan)),/HW_HISTORY_MISMATCH/);
-    await assert.rejects(db.exec(sql(append('0009_test.sql','select 1;'))),/HW_HISTORY_MISMATCH/);
+    await assert.rejects(db.exec(sql(append('0090_test.sql','select 1;'))),/HW_HISTORY_MISMATCH/);
     assert.equal((await db.query('select count(*) from deploy_test')).rows[0].count,1);
   }finally{await db.close();}
 });
@@ -61,13 +61,13 @@ test('更新途中の失敗、RLS解除、認証関数変更、COMMITで全更�
       "create policy leak on user_case_notes for select using(true);",
     ];
     for(const migration of badSql){
-      await assert.rejects(db.exec(sql(append('0009_failure.sql',migration))));
+      await assert.rejects(db.exec(sql(append('0090_failure.sql',migration))));
       assert.equal((await db.query("select to_regclass('public.must_rollback') as table_name")).rows[0].table_name,null);
-      assert.equal((await db.query('select count(*) from site_deploy.migrations')).rows[0].count,6);
+      assert.equal((await db.query('select count(*) from site_deploy.migrations')).rows[0].count,plan.files.length);
       await db.exec(sql(plan));
     }
-    const first=append('0009_good.sql','create table public.must_rollback(id int);');
-    await assert.rejects(db.exec(sql(append('0010_bad.sql','select 1/0;',first))));
+    const first=append('0090_good.sql','create table public.must_rollback(id int);');
+    await assert.rejects(db.exec(sql(append('0091_bad.sql','select 1/0;',first))));
     assert.equal((await db.query("select to_regclass('public.must_rollback') as table_name")).rows[0].table_name,null);
   }finally{await db.close();}
 });
@@ -100,7 +100,7 @@ test('API成功後にも履歴を確認。サーバーでキー順が変わっ�
     calls.push(JSON.parse(options.body));
     return Response.json(calls.length===1?[]:plan.files.map(f=>({sha256:f.sha256,name:f.name})),{status:201});
   };
-  assert.equal(await deployDatabase(productionConfig(env),{fetchImpl}),6);
+  assert.equal(await deployDatabase(productionConfig(env),{fetchImpl}),plan.files.length);
   assert.equal(calls[0].read_only,false);assert.equal(calls[1].read_only,true);
   await assert.rejects(deployDatabase(productionConfig(env),{fetchImpl:async()=>Response.json([])}),/履歴/);
 });

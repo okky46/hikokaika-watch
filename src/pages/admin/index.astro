@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import TrackingEditor from '../../components/TrackingEditor.astro';
 import ArticleAdmin from '../../components/ArticleAdmin.astro';
 import { CASE_STATUS, EVENT_TYPE, STATUS_ORDER } from '../../lib/status';
 import { COMMENT_STANCE_LABELS, COMMENT_TAGS, COMMENT_TAG_ORDER } from '../../lib/commentTags';
@@ -44,6 +45,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   </section>
 
   <div id="ad-main" hidden>
+    <div class="stock-links"><button type="button" class="btn btn--primary" id="start-stock">銘柄を追加</button><button type="button" class="btn" id="start-article">記事を書く</button></div>
     <nav class="section" aria-label="管理メニュー" style="display:flex; gap:0.4rem; flex-wrap:wrap;">
       <button class="btn" data-tab="inbox">収集候補</button>
       <button class="btn" data-tab="companies">会社</button>
@@ -113,24 +115,22 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       <h2 class="section-title">案件の登録・編集</h2>
       <div class="card" style="margin-bottom:0.8rem">
         <form id="case-form" onsubmit="return false">
-          <p class="small">記事・報道イベントなしでも登録できます。会社が未登録の場合は、<button type="button" class="btn" data-tab="companies">会社を登録</button>してから戻ってください。</p>
+          <p class="small">記事・報道イベントなしでも登録できます。会社が未登録なら <button type="button" class="btn" data-create-company="cases">会社を追加してここへ戻る</button></p>
           <input type="hidden" id="ca-id" />
           <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:0.6rem;">
             <div class="form-row"><label for="ca-company">会社 *</label><select id="ca-company" required><option value="">会社を選択</option></select></div>
             <div class="form-row"><label for="ca-title">案件タイトル *</label><input type="text" id="ca-title" required placeholder="〇〇、MBOによる非公開化" /></div>
             <div class="form-row"><label for="ca-slug">スラッグ *(URL: /cases/スラッグ/)</label><input type="text" id="ca-slug" required placeholder="1234-company-name" pattern="[a-z0-9\-]+" /></div>
-            <div class="form-row"><label for="ca-status">ステータス *</label><select id="ca-status"></select></div>
-            <div class="form-row"><label for="ca-first">最初の観測報道日時</label><input type="datetime-local" id="ca-first" /></div>
           </div>
           <div class="form-row"><label for="ca-summary">概要</label><textarea id="ca-summary" style="min-height:4.5rem"></textarea></div>
           <div class="form-row"><label for="ca-tracking-reason">追跡のきっかけ（公開用。噂を確認済み報道と断定しない）</label><textarea id="ca-tracking-reason"></textarea></div>
           <div class="editor-grid"><div class="form-row"><label for="ca-tracking-start">追跡開始日（不明なら空欄）</label><input type="date" id="ca-tracking-start"/></div><div class="form-row"><label for="ca-last-checked">最終確認日</label><input type="date" id="ca-last-checked"/></div></div>
           <div class="form-row"><label for="ca-verification">確認状況・未確認事項（公開用）</label><textarea id="ca-verification"></textarea></div>
-          <label class="filter-check"><input type="checkbox" id="ca-visible" /> 次の再ビルドで公開する（記事は自動作成しません）</label>
+          <TrackingEditor/>
           <div style="display:flex; gap:0.6rem; margin-top:0.6rem; flex-wrap:wrap;">
-            <button type="button" class="btn btn--primary" id="ca-save">保存</button>
+            <button type="button" class="btn btn--primary" id="ca-save">下書きを保存</button>
             <button type="button" class="btn" id="ca-clear">クリア(新規)</button>
-            <button type="button" class="btn" id="ca-preview">プレビュー</button>
+            <button type="button" class="btn" id="ca-preview">入力内容をプレビュー</button>
             <span class="small muted" id="ca-status-msg" aria-live="polite"></span>
           </div>
         </form>
@@ -301,9 +301,13 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 </script>
 
 <script>
-  import { dateOnlyToIso, eventDateLabel } from '../../lib/tracking';
+  import { dateOnlyToIso } from '../../lib/tracking';
   import { formatDate } from '../../lib/format';
   import { getSupabase } from '../../lib/supabaseBrowser';
+  import { setupTrackingAdmin } from '../../lib/trackingAdmin';
+  import { TRACKING_STATUS } from '../../lib/trackingProfile';
+  import type { TrackingEdition } from '../../lib/trackingProfile';
+  import { publicEventDate } from '../../lib/trackingDates';
   import { setupArticleAdmin } from '../../lib/articleAdmin';
   import { buildLargeShareholdingMetadata } from '../../lib/noteMetadataHelpers';
   import { hasDailyCloseConflict } from '../../lib/priceHelpers';
@@ -319,6 +323,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
   const supabase = getSupabase();
   const articleAdmin = supabase ? setupArticleAdmin(supabase) : null;
+  let companyReturn: 'cases'|'articles'|null=null;
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
   const esc = (s: unknown) =>
     String(s ?? '').replace(/[&<>"']/g, (ch) =>
@@ -376,7 +381,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     }
     let message = '';
     if (stance === 'acknowledged' && currentCase.status === 'rumored') {
-      message = '提案: 案件ステータスを「会社が検討を認めた段階」に変更できます。';
+      message = '会社説明を確認し、提案受領・検討・協議を区別して状況タグを更新してください。';
     }
     if (stance === 'denied' && !['announced', 'completed', 'withdrawn'].includes(currentCase.status)) {
       message = '提案: 案件ステータスを「会社が明確に否定」に変更できます。';
@@ -402,12 +407,27 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   let pendingMfaFactorId: string | null = null;
   let companies: any[] = [];
   let cases: any[] = [];
+  let trackingEditions: TrackingEdition[] = [];
   let inboxItems: any[] = [];
   let filteredInboxItems: any[] = [];
   const selectedInboxIds = new Set<string>();
   let inboxBulkRejecting = false;
   let currentInboxIdForCase: string | null = null;
   let currentInboxIdForEvent: string | null = null;
+
+  const trackingAdmin = supabase ? setupTrackingAdmin(supabase, {
+    companies:()=>companies,cases:()=>cases,
+    onReset:()=>{currentInboxIdForCase=null;currentInboxIdForEvent=null;},
+    afterSave:async(_id,approved)=>{
+      if(approved && currentInboxIdForCase) {const ok=await approvePendingInboxItem(currentInboxIdForCase,'ca-status-msg');if(ok){currentInboxIdForCase=null;await loadInbox();}}
+      await loadCases();renderCaseSelects();renderCaseTable();
+    }
+  }) : null;
+  $('start-stock').addEventListener('click',()=>{if(trackingAdmin?.reset())showTab('cases');});
+  $('start-article').addEventListener('click',()=>{showTab('articles');$('ar-new').click();});
+  document.addEventListener('click',e=>{const b=(e.target as HTMLElement).closest<HTMLButtonElement>('[data-create-company]');if(!b)return;
+    companyReturn=b.dataset.createCompany as 'cases'|'articles';$('co-clear').click();showTab('companies');$('co-code').focus();
+  });
 
   // ---------------- 認証・管理者判定 ----------------
   async function init() {
@@ -480,11 +500,12 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     if (name === 'inbox') loadInbox();
     if (name === 'corrections') loadCorrections();
     if (name === 'analytics') loadAnalytics();
+    if (name === 'articles') void articleAdmin?.refreshCompanies();
   }
   document.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-tab]');
     if (btn) showTab(btn.dataset.tab ?? 'cases');
-    if ((e.target as HTMLElement).closest('[data-go-case-edit]')) showTab('cases');
+    if ((e.target as HTMLElement).closest('[data-go-case-edit]')) {const c=cases.find(x=>x.id===$<HTMLSelectElement>('ev-case-select').value);if(c)void trackingAdmin?.open(c);showTab('cases');}
   });
 
   async function loadAnalytics() {
@@ -716,9 +737,11 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
   function renderCompanySelects() {
     const sel = $<HTMLSelectElement>('ca-company');
+    const selected=sel.value;
     sel.innerHTML = '<option value="">会社を選択</option>' + companies
       .map((c) => `<option value="${c.id}">${esc(c.security_code)} ${esc(c.name_ja)}</option>`)
       .join('');
+    sel.value=selected;
   }
 
   function renderCompanyTable() {
@@ -737,28 +760,20 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   }
 
   $('co-save')?.addEventListener('click', async () => {
-    const id = $<HTMLInputElement>('co-id').value;
-    const row: any = {
-      security_code: $<HTMLInputElement>('co-code').value.trim(),
-      name_ja: $<HTMLInputElement>('co-name').value.trim(),
-      market: $<HTMLInputElement>('co-market').value.trim() || null,
-      industry: $<HTMLInputElement>('co-industry').value.trim() || null,
-      is_active: $<HTMLInputElement>('co-active').checked,
-    };
-    if (!row.security_code || !row.name_ja) {
-      $('co-status').textContent = '証券コードと会社名は必須です';
-      return;
-    }
-    const q = id
-      ? supabase!.from('companies').update(row).eq('id', id)
-      : supabase!.from('companies').insert(row);
-    const { error } = await q;
-    $('co-status').textContent = error ? `保存エラー: ${error.message}` : '保存しました';
-    if (!error) {
-      await loadCompanies();
-      renderCompanySelects();
-      renderCompanyTable();
-    }
+    const button=$<HTMLButtonElement>('co-save');if(button.disabled)return;button.disabled=true;
+    try {
+      const id=$<HTMLInputElement>('co-id').value;
+      const row={security_code:normalizeSecurityCode($<HTMLInputElement>('co-code').value),name_ja:$<HTMLInputElement>('co-name').value.trim(),market:$<HTMLInputElement>('co-market').value.trim()||null,industry:$<HTMLInputElement>('co-industry').value.trim()||null,is_active:$<HTMLInputElement>('co-active').checked};
+      if(!row.security_code||!row.name_ja)throw new Error('証券コードと会社名は必須です');
+      const q=id?supabase!.from('companies').update(row).eq('id',id):supabase!.from('companies').insert(row);
+      const {data,error}=await q.select('id').single();if(error)throw new Error(error.message);
+      $<HTMLInputElement>('co-id').value=data.id;
+      await loadCompanies();renderCompanySelects();renderCompanyTable();await articleAdmin?.refreshCompanies();
+      $('co-status').textContent='保存しました。同じ会社の修正として再保存できます。';
+      if(companyReturn==='cases'){trackingAdmin?.selectCompany(data.id);showTab('cases');}
+      if(companyReturn==='articles'){articleAdmin?.selectCompany(data.id);showTab('articles');}
+      companyReturn=null;
+    }catch(e){$('co-status').textContent=e instanceof Error?e.message:String(e);}finally{button.disabled=false;}
   });
 
   $('co-clear')?.addEventListener('click', () => {
@@ -774,6 +789,9 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       .order('updated_at', { ascending: false });
     if (error) $('ca-status-msg').textContent = `読込エラー: ${error.message}`;
     cases = data ?? [];
+    const editions = await supabase!.from('tracking_editions').select('*');
+    if(editions.error)throw new Error(`分類の読込エラー: ${editions.error.message}`);
+    trackingEditions=editions.data;
   }
 
   function caseLabel(c: any): string {
@@ -785,15 +803,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     const options = '<option value="">案件を選択</option>' + cases
       .map((c) => `<option value="${c.id}">${esc(caseLabel(c))}</option>`)
       .join('');
-    $<HTMLSelectElement>('ev-case-select').innerHTML = options;
-    $<HTMLSelectElement>('pr-case-select').innerHTML = options;
-    const statusSel = $<HTMLSelectElement>('ca-status');
-    const currentStatus = statusSel.value;
-    statusSel.innerHTML = Object.entries(statusDefs)
-      .map(([k, v]) => `<option value="${k}">${esc(v.label)}</option>`)
-      .join('');
-    const restoredStatus = preserveSelectValueIfValid(currentStatus, Object.keys(statusDefs));
-    if (restoredStatus) statusSel.value = restoredStatus;
+    for(const id of ['ev-case-select','pr-case-select']) {const sel=$<HTMLSelectElement>(id);const old=sel.value;sel.innerHTML=options;sel.value=old;}
     const evType = $<HTMLSelectElement>('ev-type');
     const currentEventType = evType.value;
     evType.innerHTML = Object.entries(eventTypeDefs)
@@ -808,10 +818,12 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     $('case-admin-table').querySelector('tbody')!.innerHTML = cases
       .map((c) => {
         const co = companies.find((x) => x.id === c.company_id);
+        const edition=trackingEditions.find(e=>e.case_id===c.id);
+        const status=edition?.published?.public_status ?? edition?.draft?.public_status;
         return `<tr>
           <td class="code">${esc(co?.security_code ?? '?')}</td>
           <td>${esc(c.title)}<div class="small muted mono">/cases/${esc(c.slug)}/</div></td>
-          <td>${badge(statusDefs[c.status], c.status)}</td>
+          <td>${status?`<span class="badge badge--${TRACKING_STATUS[status].tone}">${TRACKING_STATUS[status].label}</span>`:badge(statusDefs[c.status], c.status)}</td>
           <td>${c.is_visible ? '公開対象（反映は未確認）' : '<span class="badge badge--pause">下書き</span>'}</td>
           <td class="nowrap">${fmtDate(c.updated_at)}</td>
           <td><button type="button" class="btn" data-edit-case="${c.id}">編集</button></td>
@@ -819,58 +831,6 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       })
       .join('');
   }
-
-  $('ca-save')?.addEventListener('click', async () => {
-    if (!($('case-form') as HTMLFormElement).reportValidity()) return;
-    const id = $<HTMLInputElement>('ca-id').value;
-    const visible = $<HTMLInputElement>('ca-visible').checked;
-    const row: any = {
-      company_id: $<HTMLSelectElement>('ca-company').value,
-      title: $<HTMLInputElement>('ca-title').value.trim(),
-      slug: $<HTMLInputElement>('ca-slug').value.trim(),
-      status: $<HTMLSelectElement>('ca-status').value,
-      summary: $<HTMLTextAreaElement>('ca-summary').value.trim(),
-      tracking_reason: $<HTMLTextAreaElement>('ca-tracking-reason').value.trim(),
-      tracking_started_on: $<HTMLInputElement>('ca-tracking-start').value || null,
-      last_checked_on: $<HTMLInputElement>('ca-last-checked').value || null,
-      verification_note: $<HTMLTextAreaElement>('ca-verification').value.trim(),
-      first_reported_at: localToIso($<HTMLInputElement>('ca-first').value),
-      is_visible: visible,
-    };
-    if (!row.company_id || !row.title || !row.slug) {
-      $('ca-status-msg').textContent = '会社・タイトル・スラッグは必須です';
-      return;
-    }
-    // 初回公開時にサイト掲載日時を自動設定
-    const existing = cases.find((c) => c.id === id);
-    if (existing?.site_published_at && row.slug !== existing.slug) { $('ca-status-msg').textContent = '公開済みのURLは変更できません'; return; }
-    if (visible && !existing?.site_published_at) row.site_published_at = new Date().toISOString();
-    const q = id
-      ? supabase!.from('cases').update(row).eq('id', id).select('id').single()
-      : supabase!.from('cases').insert(row).select('id').single();
-    const { data: savedCase, error } = await q;
-    $('ca-status-msg').textContent = error ? `保存エラー: ${error.message}` : visible ? '保存済み・公開待ちです。公開処理から再ビルドしてください。' : '非公開で保存しました。既に公開済みの場合は再ビルドで取り下げが反映されます。';
-    if (!error) {
-      if (savedCase?.id) $<HTMLInputElement>('ca-id').value = savedCase.id;
-      if (currentInboxIdForCase) {
-        const approved = await approvePendingInboxItem(currentInboxIdForCase, 'ca-status-msg');
-        if (approved) {
-          currentInboxIdForCase = null;
-          await loadInbox();
-        }
-      }
-      await loadCases();
-      renderCaseSelects();
-      renderCaseTable();
-    }
-  });
-
-  $('ca-clear')?.addEventListener('click', () => {
-    $<HTMLInputElement>('ca-id').value = '';
-    currentInboxIdForCase = null;
-    currentInboxIdForEvent = null;
-    ($('case-form') as HTMLFormElement).reset();
-  });
 
   // ---------------- 出来事 ----------------
   let events: any[] = [];
@@ -896,7 +856,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     $('event-table').querySelector('tbody')!.innerHTML = events
       .map(
         (e) => `<tr>
-          <td class="nowrap">${esc(eventDateLabel(e))}</td>
+          <td class="nowrap">${esc(publicEventDate(e,trackingEditions.find(t=>t.case_id===e.case_id)?.published?.event_dates.find(d=>d.event_id===e.id)).label)}</td>
           <td>${badge(eventTypeDefs[e.event_type], e.event_type)}</td>
           <td>${esc(e.title)}${e.metadata?.corrected ? ' <span class="badge badge--stop">訂正あり</span>' : ''}</td>
           <td>${esc(e.source_name)}</td>
@@ -908,6 +868,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   }
 
   $('ev-case-select')?.addEventListener('change', async () => {
+    $('ev-clear').click();
     $('ev-status-suggestion').innerHTML = '';
     await loadEvents();
     updateEventStatusSuggestion();
@@ -967,6 +928,15 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       return;
     }
     const existing = events.find((e) => e.id === id);
+    if(id&&!existing){$('ev-status').textContent='対象の出来事を読み直してから編集してください';return;}
+    const profile=trackingEditions.find(e=>e.case_id===row.case_id)?.published;
+    if(existing&&profile?.event_dates.some(d=>d.event_id===id)){
+      row.occurred_at=existing.occurred_at;
+      row.metadata={...row.metadata,...(existing.metadata?.date_precision?{date_precision:existing.metadata.date_precision}:{})};
+    }
+    if(!visible&&profile&&(profile.status_event_ids.includes(id)||profile.reports.some(r=>r.event_id===id)||profile.statements.some(s=>s.event_id===id)||profile.event_dates.some(d=>d.event_id===id))){
+      $('ev-status').textContent='公開中の分類がこの出来事を参照しています。先に追跡銘柄の根拠・日付指定から外して再承認するか、銘柄全体を非公開にしてください。';return;
+    }
     // PR #8適用済みDBの既存レコードに限って日付精度を同期する。
     const dateChanged = (row.occurred_at ? Date.parse(row.occurred_at) : null) !== (existing?.occurred_at ? Date.parse(existing.occurred_at) : null);
     if (existing && 'date_precision' in existing && (dateChanged || dateOnly || existing.date_precision === 'date')) {
@@ -1014,6 +984,8 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     currentInboxIdForCase = null;
     ($('event-form') as HTMLFormElement).reset();
     $<HTMLInputElement>('ev-occurred').type = 'datetime-local';
+    $<HTMLInputElement>('ev-occurred').disabled=false;
+    $<HTMLInputElement>('ev-date-only').disabled=false;
     $('ev-correction-row').hidden = true;
     $('ev-status').textContent = '';
     $('ev-status-suggestion').innerHTML = '';
@@ -1117,10 +1089,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     if (inboxNew) {
       const item = inboxItems.find((x) => x.id === inboxNew.dataset.inboxNewCase);
       if (!item) return;
-      currentInboxIdForEvent = null;
-      currentInboxIdForCase = null;
-      $<HTMLInputElement>('ca-id').value = '';
-      ($('case-form') as HTMLFormElement).reset();
+      if(!trackingAdmin?.reset())return;
       const companyId = resolveInboxCompanyId(companies, item.security_code);
       if (!companyId) {
         $<HTMLSelectElement>('ca-company').value = '';
@@ -1130,7 +1099,8 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       $<HTMLSelectElement>('ca-company').value = companyId;
       $<HTMLInputElement>('ca-title').value = item.title;
       $<HTMLInputElement>('ca-slug').value = (normalizeSecurityCode(item.security_code) ? `${normalizeSecurityCode(item.security_code).toLowerCase()}-` : '') + 'new-case';
-      $<HTMLSelectElement>('ca-status').value = item.suggested_event_type === 'company_comment' ? 'commented' : 'rumored';
+      trackingAdmin?.proposeSlug();
+      trackingAdmin?.markDirty();
       $<HTMLTextAreaElement>('ca-summary').value = normalizeHttpUrl(item.url) ?? '';
       currentInboxIdForCase = item.id;
       showTab('cases');
@@ -1174,20 +1144,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     if (ca) {
       const c = cases.find((x) => x.id === ca.dataset.editCase);
       if (!c) return;
-      currentInboxIdForCase = null;
-      currentInboxIdForEvent = null;
-      $<HTMLInputElement>('ca-id').value = c.id;
-      $<HTMLSelectElement>('ca-company').value = c.company_id;
-      $<HTMLInputElement>('ca-title').value = c.title;
-      $<HTMLInputElement>('ca-slug').value = c.slug;
-      $<HTMLSelectElement>('ca-status').value = c.status;
-      $<HTMLTextAreaElement>('ca-summary').value = c.summary ?? '';
-      $<HTMLTextAreaElement>('ca-tracking-reason').value = c.tracking_reason ?? '';
-      $<HTMLInputElement>('ca-tracking-start').value = c.tracking_started_on ?? '';
-      $<HTMLInputElement>('ca-last-checked').value = c.last_checked_on ?? '';
-      $<HTMLTextAreaElement>('ca-verification').value = c.verification_note ?? '';
-      $<HTMLInputElement>('ca-first').value = isoToLocal(c.first_reported_at);
-      $<HTMLInputElement>('ca-visible').checked = c.is_visible;
+      if(await trackingAdmin?.open(c)){currentInboxIdForCase=null;currentInboxIdForEvent=null;}
       return;
     }
 
@@ -1203,6 +1160,10 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       $<HTMLInputElement>('ev-date-only').checked = dateOnly;
       $<HTMLInputElement>('ev-occurred').type = dateOnly ? 'date' : 'datetime-local';
       $<HTMLInputElement>('ev-occurred').value = dateOnly ? formatDate(x.occurred_at).replaceAll('/', '-') : isoToLocal(x.occurred_at);
+      const dateOverride=trackingEditions.find(e=>e.case_id===x.case_id)?.published?.event_dates.some(d=>d.event_id===x.id)??false;
+      $<HTMLInputElement>('ev-occurred').disabled=dateOverride;
+      $<HTMLInputElement>('ev-date-only').disabled=dateOverride;
+      $('ev-status').textContent=dateOverride?'公開用の日付精度が設定されています。日付の修正は「追跡銘柄」→「日付の精度」で行い、下書き保存・公開承認してください。':'';
       $<HTMLInputElement>('ev-title').value = x.title;
       $<HTMLTextAreaElement>('ev-summary').value = x.summary ?? '';
       $<HTMLInputElement>('ev-source-name').value = x.source_name ?? '';
@@ -1237,50 +1198,6 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   });
 
   // ---------------- プレビュー ----------------
-  $('ca-preview')?.addEventListener('click', async () => {
-    const id = $<HTMLInputElement>('ca-id').value;
-    if (!id) {
-      $('ca-status-msg').textContent = '一覧から案件を選択(編集)してからプレビューしてください';
-      return;
-    }
-    const c = cases.find((x) => x.id === id);
-    const co = companies.find((x) => x.id === c.company_id);
-    const [{ data: evs }, { data: prs }] = await Promise.all([
-      supabase!.from('case_events').select('*').eq('case_id', id).order('occurred_at'),
-      supabase!.from('price_snapshots').select('*').eq('case_id', id).order('price_date', { ascending: false }),
-    ]);
-    const priceHtml = (prs ?? [])
-      .map(
-        (p) =>
-          `<div class="price-card"><p class="price-card__label">${esc(priceTypeLabel[p.price_type] ?? p.price_type)}</p><p class="price-card__value">${Number(p.price).toLocaleString('ja-JP')}円</p><p class="price-card__date">${esc(p.price_date)}</p></div>`,
-      )
-      .join('');
-    const evHtml = (evs ?? [])
-      .map(
-        (e) => `
-        <li class="timeline__item"><article class="event-card">
-          <div class="event-card__head">
-            ${badge(eventTypeDefs[e.event_type], e.event_type)}
-            <span class="event-card__date">${esc(eventDateLabel(e))}</span>
-            ${e.is_visible ? '' : '<span class="badge badge--pause">非公開</span>'}
-            ${e.metadata?.corrected ? '<span class="badge badge--stop">訂正あり</span>' : ''}
-          </div>
-          <h3 class="event-card__title">${esc(e.title)}</h3>
-          <p class="event-card__summary">${esc(e.summary ?? '')}</p>
-          <div class="event-card__meta"><span>出典: ${esc(e.source_name)}</span></div>
-        </article></li>`,
-      )
-      .join('');
-    $('preview-body').innerHTML = `
-      <p class="case-head__company"><span class="mono">${esc(co?.security_code ?? '')}</span> ${esc(co?.market ?? '')}</p>
-      <h3 style="margin:0 0 0.4rem">${esc(co?.name_ja ?? '')} — ${esc(c.title)} ${badge(statusDefs[c.status], c.status)} ${c.is_visible ? '' : '<span class="badge badge--pause">案件自体が下書き</span>'}</h3>
-      <p>${esc(c.summary ?? '')}</p>
-      <div class="price-grid" style="margin-bottom:0.8rem">${priceHtml}</div>
-      <ol class="timeline">${evHtml}</ol>`;
-    $('preview-panel').hidden = false;
-    $('preview-panel').scrollIntoView({ behavior: 'smooth' });
-  });
-
   $('preview-close')?.addEventListener('click', () => {
     $('preview-panel').hidden = true;
   });

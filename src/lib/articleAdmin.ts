@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { emptyArticle, formatArticleSources, parseArticleSources, parseArticleContent, parseResearchDraft } from './articles';
+import { emptyArticle, parseArticleContent, parseResearchDraft } from './articles';
 import type { ArticleContent, RawArticle } from './articles';
 
 type EditorArticle = RawArticle & {draft: ArticleContent; revision: number};
@@ -20,7 +20,7 @@ export function setupArticleAdmin(supabase: SupabaseClient) {
   function buttons() {
     for (const field of document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('#article-form input, #article-form textarea')) field.disabled=busy;
     value('import').disabled=busy;
-    for (const id of ['ar-new','ar-reload','ar-save','ar-import-run']) element<HTMLButtonElement>(id).disabled=busy;
+    for (const id of ['ar-new','ar-reload','ar-save','ar-import-run','ar-source-add']) element<HTMLButtonElement>(id).disabled=busy;
     element<HTMLButtonElement>('ar-publish').disabled=busy || !selected || dirty;
     element<HTMLButtonElement>('ar-unpublish').disabled=busy || !selected?.published || dirty;
   }
@@ -32,16 +32,34 @@ export function setupArticleAdmin(supabase: SupabaseClient) {
       label.append(input, ` ${c.security_code} ${c.name_ja}${c.is_active ? '' : '（非アクティブ・公開では非表示）'}`); container.append(label);
     }
   }
+  function renderSources(sources:ArticleContent['sources']) {
+    element('ar-sources').replaceChildren();sources.forEach(addSource);
+  }
+  function addSource(source={name:'',url:'',published_on:'',checked_on:''}) {
+    const row=document.createElement('fieldset');row.dataset.sourceRow='';row.className='editor-grid section';
+    for(const [key,label,type] of [['name','出典名','text'],['url','URL','url'],['published_on','公表日（不明なら空欄）','date'],['checked_on','確認日','date']] as const) {
+      const l=document.createElement('label'),f=document.createElement(key==='name'?'textarea':'input');l.textContent=label;if(f instanceof HTMLInputElement)f.type=type;f.dataset.sourceKey=key;f.value=source[key];l.append(f);row.append(l);
+    }
+    const remove=document.createElement('button');remove.type='button';remove.className='btn';remove.textContent='この出典を削除';remove.onclick=()=>{if(busy)return;row.remove();markDirty();};row.append(remove);element('ar-sources').append(row);
+  }
+  function markDirty(){pendingPublication=null;element('ar-confirm').hidden=true;dirty=true;buttons();message('未保存の変更があります。公開承認の前に下書きを保存してください。');}
+  element('ar-source-add').addEventListener('click',()=>{if(busy)return;addSource();markDirty();});
+  async function refreshCompanies() {
+    const {data,error}=await supabase.from('companies').select('id,security_code,name_ja,is_active').order('security_code');
+    if(error){element('ar-list-status').textContent='関連銘柄の更新に失敗: '+error.message;return false;}
+    const ids=companyIds();companies=data as Company[];renderCompanies(ids);buttons();return true;
+  }
+  function selectCompany(id:string){const ids=[...new Set([...companyIds(),id])];renderCompanies(ids);markDirty();}
   function fill(row:EditorArticle|null, content=emptyArticle(), ids:string[]=[]) {
     pendingPublication=null; element('ar-confirm').hidden=true;
     selected=row; for (const key of fields) value(key).value=content[key];
     value('slug').value=row?.slug ?? ''; value('slug').readOnly=Boolean(row?.first_published_at);
-    value('sources').value=formatArticleSources(content.sources);
+    renderSources(content.sources);
     renderCompanies(ids); dirty=false; element('ar-preview-body').hidden=true; buttons();
   }
   function read() {
     const content:Record<string,unknown>={}; for (const key of fields) content[key]=value(key).value;
-    content.sources=parseArticleSources(value('sources').value);
+    content.sources=[...element('ar-sources').querySelectorAll('[data-source-row]')].map(row=>Object.fromEntries([...row.querySelectorAll<HTMLInputElement|HTMLTextAreaElement>('[data-source-key]')].map(f=>[f.dataset.sourceKey!,f.value.trim()])));
     return parseArticleContent(content);
   }
   const companyIds=()=>[...document.querySelectorAll<HTMLInputElement>('input[name="article-company"]:checked')].map(c=>c.value);
@@ -70,7 +88,7 @@ export function setupArticleAdmin(supabase: SupabaseClient) {
     element('ar-list-status').textContent=`保存済み ${rows.length}件（下書きを含む）`;
     renderCompanies(companyIds());return true;
   }
-  element('article-form').addEventListener('input',()=>{pendingPublication=null;element('ar-confirm').hidden=true;dirty=true;buttons();message('未保存の変更があります。公開承認の前に下書きを保存してください。');});
+  element('article-form').addEventListener('input',markDirty);
   element('ar-new').addEventListener('click',()=>{if(discard()){fill(null);message('新規記事です。');}});
   element('ar-reload').addEventListener('click',()=>{if(discard())void task(async()=>{if(await reload()){fill(null);message('一覧を再読込しました。編集する記事を選択してください。');}});});
   element('ar-save').addEventListener('click',()=>void task(async()=>{
@@ -127,5 +145,5 @@ export function setupArticleAdmin(supabase: SupabaseClient) {
     for(const row of rows){const live=manifest.articles.find((a:{id:string;version:string})=>a.id===row.id);const state=document.querySelector<HTMLElement>(`[data-article-state="${row.id}"]`);if(state)state.textContent=row.published?(live?.version===row.publication_version?' 公開反映済み（この環境）':' 公開待ち／別の公開版が表示中'):(live?' 非公開への反映待ち':' 下書き・非公開（この環境で確認済み）');}
     element('ar-list-status').textContent=`この環境 ${location.origin} のビルド日時: ${manifest.generatedAt}。本番URLでも確認してください。`;
   }));
-  return {reload};
+  return {reload,refreshCompanies,selectCompany};
 }
