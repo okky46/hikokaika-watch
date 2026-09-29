@@ -2,12 +2,13 @@
 import Base from '../layouts/Base.astro';
 import TrackingTable from '../components/TrackingTable.astro';
 import TrackingLegend from '../components/TrackingLegend.astro';
+import RecentMovements from '../components/RecentMovements.astro';
 import AdSlot from '../components/AdSlot.astro';
 import { loadPublicData } from '../lib/publicData';
 import { PUBLIC_TRACKING_STATUS, validDate } from '../lib/trackingProfile';
 import { formatDate } from '../lib/format';
 import { STATEMENT_FILTERS } from '../lib/trackingSearch';
-const { cases, mediaOutlets, isSampleData } = await loadPublicData();
+const { cases, details, mediaOutlets, isSampleData, generatedAt } = await loadPublicData();
 const latestCheckedOn=cases.map(c=>c.lastCheckedOn).filter((date):date is string=>!!date && validDate(date)).sort().at(-1);
 const activeMedia = new Set(cases.flatMap(c=>c.search.media));
 const media = [...mediaOutlets.filter(m=>m.is_active || activeMedia.has(m.id)), {id:'none',name:'報道なし'}, ...(activeMedia.has('unreviewed') ? [{id:'unreviewed',name:'媒体を確認中'}] : [])];
@@ -23,6 +24,7 @@ const stages=[{id:'',label:'すべて'},{id:'pre',label:'正式発表前'},{id:'
     <h1>噂の、その後を追う。</h1>
     <p class="muted">非公開化をめぐる噂・報道と、その後の会社説明を時系列で確認。<a class="small" href="/guidelines/">掲載基準</a></p>
   </section>
+  <RecentMovements cases={details} generatedAt={generatedAt}/>
   <section class="section" aria-label="銘柄の検索・絞り込み">
     <form class="card tracking-filters" id="filter-form" role="search">
       <div class="filter-topline">

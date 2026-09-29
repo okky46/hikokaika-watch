@@ -1,0 +1,36 @@
+---
+import type { CaseDetail } from '../lib/types';
+import { recentMovements } from '../lib/recentMovements';
+import { eventTypeDef } from '../lib/status';
+interface Props { cases: CaseDetail[]; generatedAt: string }
+const { asOf, items } = recentMovements(Astro.props.cases, new Date(Astro.props.generatedAt));
+---
+<section class="recent-movements" aria-labelledby="recent-movements-title">
+  <div class="recent-movements__head">
+    <h2 id="recent-movements-title">最近動いた案件</h2>
+    <span class="small muted"><time datetime={asOf}>{asOf.replaceAll('-', '/')}</time>時点 · 直近30日の公表</span>
+  </div>
+  {items.length ? <ul class="recent-movements__list">{items.map(({ slug, companyName, securityCode, event }) =>
+    <li><a class="recent-movement" href={`/cases/${encodeURIComponent(slug)}/#event-${encodeURIComponent(event.id)}`}>
+      <span class="recent-movement__meta"><time datetime={event.date.start!}>{event.date.start!.replaceAll('-', '/')}</time><span>{eventTypeDef(event.eventType).label}{event.corrected && '・訂正あり'}</span></span>
+      <span class="recent-movement__company"><strong>{companyName}</strong><span class="small muted">{securityCode}</span><span class="recent-movement__arrow" aria-hidden="true">→</span></span>
+      <span class="recent-movement__title">{event.title}</span>
+    </a></li>
+  )}</ul> : <p class="small muted recent-movements__empty">この期間に公表された出来事の掲載はありません。</p>}
+</section>
+<style>
+  .recent-movements { margin: 1rem 0 1.25rem; }
+  .recent-movements__head { display: flex; align-items: baseline; flex-wrap: wrap; gap: .25rem 1rem; margin-bottom: .5rem; }
+  h2 { font-size: 1rem; margin: 0; }
+  .recent-movements__list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); list-style: none; padding: 0; margin: 0; gap: .65rem; }
+  .recent-movement { display: flex; flex-direction: column; height: 100%; padding: .7rem .8rem; border: 1px solid var(--color-line); border-radius: var(--radius); background: var(--color-surface); color: var(--color-ink); text-decoration: none; overflow-wrap: anywhere; }
+  .recent-movement:visited { color: var(--color-ink); }
+  .recent-movement:hover { border-color: var(--color-primary); background: #f8fafc; }
+  .recent-movement:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
+  .recent-movement__meta { display: flex; flex-wrap: wrap; gap: .2rem .65rem; color: var(--color-ink-soft); font-size: .75rem; }
+  .recent-movement__company { display: flex; align-items: baseline; flex-wrap: wrap; gap: .3rem .5rem; margin: .25rem 0; }
+  .recent-movement__arrow { margin-left: auto; }
+  .recent-movement__title { font-size: .85rem; }
+  .recent-movements__empty { margin: 0; }
+  @media (max-width: 760px) { .recent-movements__list { grid-template-columns: 1fr; gap: .4rem; } .recent-movement { padding: .55rem .75rem; } }
+</style>
