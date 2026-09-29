@@ -8,6 +8,25 @@ const event='30000000-0000-4000-8000-000000000001';
 const report={outlet_id:'nikkei',event_id:event,source_name:'確認用',source_url:'https://example.com/report',method:'direct',access:'partial',checked_on:'2026-09-29',reported_on:'2026-01-01',scope_note:'公開部分で確認'};
 const profile=()=>({...emptyTrackingProfile(),title:'検証',short_reason:'検証',last_checked_on:'2026-09-29',report_state:'reported',reports:[report]});
 
+test('噂・正式発表・否定中止・完了を別の配色にし、古い入札情報で否定や完了を強調しない',()=>{
+  assert.equal(trackingVisual({...profile(),report_state:'none',reports:[]}).tone,'rumor');
+  assert.equal(trackingVisual(profile()).tone,'reported');
+  for(const public_status of ['announced','offer_open','offer_succeeded']) {
+    assert.equal(trackingVisual({...profile(),public_status}).tone,'announced');
+  }
+  for(const [statuses,tone] of [
+    [['consideration_denied','report_denied','consideration_ended','withdrawn','failed'],'stopped'],
+    [['delisted','privatized'],'complete'],
+  ]) {
+    for(const public_status of statuses) {
+      assert.equal(trackingVisual({...profile(),public_status,bidding:{stage:'final_round',event_id:event}}).tone,tone);
+    }
+  }
+  assert.equal(trackingVisual({...profile(),public_status:'comment'}).tone,'neutral');
+  assert.equal(trackingVisual({...profile(),public_status:'consideration',status_note:'決定した事実はない'}).tone,'process');
+  assert.equal(trackingVisual(null).tone,'neutral');
+});
+
 test('180日を超えたときだけ淡色。更新日・確認日は経過期間をリセットしない',()=>{
   const p=profile();const activity={latestOn:'2026-01-01',undated:false};
   assert.equal(trackingVisual(p,activity,'2026-06-30').stale,false);

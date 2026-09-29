@@ -904,24 +904,28 @@ body:has(.case-section-nav) :is(#timeline,#evidence,#related-articles,#note-sect
 .tracking-legend { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: .6rem 1rem; background: white; border: 1px solid var(--color-line); border-radius: var(--radius); padding: .7rem 1rem; }
 .stage-legend { display: flex; gap: 1.15rem; list-style: none; padding: 0; margin: 0; }
 .stage-legend li { flex: 1; position: relative; font-size: .72rem; text-align: center; padding-top: .75rem; color: var(--color-ink-soft); }
-.stage-legend li::before { content: ''; height: .35rem; border-radius: .3rem; position: absolute; inset: 0 0 auto; background: var(--legend-color); }
+.stage-legend li::before { content: ''; height: .35rem; border: 1px solid var(--status-line); border-radius: .3rem; position: absolute; inset: 0 0 auto; background: var(--status-bg); }
 .stage-legend li:not(:last-child)::after { content: '›'; position: absolute; top: -.6rem; right: -.8rem; font-size: 1rem; }
-.legend-rumor { --legend-color: #ced5de; }.legend-reported { --legend-color: #ffdc9b; }.legend-process { --legend-color: #f89c62; }.legend-announced { --legend-color: #91bdf4; }.legend-complete { --legend-color: #86cea1; }
 .legend-help { font-size: .75rem; max-width: 30rem; }
 .legend-help summary { cursor: pointer; }
 .legend-help[open] { grid-column: 1 / -1; grid-row: 3; }
-.legend-intensity { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: .25rem .4rem; margin: 0; color: var(--color-ink-soft); }
+.legend-secondary { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: .5rem 1rem; }
+.legend-outcomes { display: flex; gap: .4rem; margin: 0; }
+.legend-outcomes .badge { font-size: .7rem; }
+.legend-intensity { display: flex; align-items: center; flex-wrap: wrap; gap: .25rem .4rem; margin: 0; color: var(--color-ink-soft); }
 .intensity-swatches { display: inline-flex; gap: .15rem; }.intensity-swatches i { width: .9rem; height: .45rem; background: #fff0dd; }.intensity-swatches i:nth-child(2) { background: #ffc18d; }.intensity-swatches i:nth-child(3) { background: #e87835; }
 .tracking-badge { background: var(--status-bg); border-color: var(--status-line); color: var(--status-fg); }
-.tracking-badge--neutral { --status-bg: #eceff3; --status-line: #d4dce4; --status-fg: #475569; }
-.tracking-badge--reported { --status-bg: #ffe6b7; --status-line: #f2ce89; --status-fg: #724600; }
+.tracking-badge--neutral { --status-bg: #fff; --status-line: #d4dce4; --status-fg: #475569; --quiet-bg: #fff; --quiet-line: #e1e5e9; --quiet-fg: #475569; }
+.tracking-badge--rumor { --status-bg: #e5edf5; --status-line: #c1d0df; --status-fg: #344c65; --quiet-bg: #f3f6fa; --quiet-line: #dce4ed; --quiet-fg: #475c72; }
+.tracking-badge--reported { --status-bg: #ffe6b7; --status-line: #f2ce89; --status-fg: #724600; --quiet-bg: #fff9eb; --quiet-line: #efe3c7; --quiet-fg: #715629; }
 .tracking-badge--process, .tracking-badge--first_round { --status-bg: #ffdbba; --status-line: #efb384; --status-fg: #783700; }
 .tracking-badge--second_round { --status-bg: #ffb982; --status-line: #dc9864; --status-fg: #702c00; }
 .tracking-badge--final_round { --status-bg: #c64b0b; --status-line: #ac4008; --status-fg: #fff; }
-.tracking-badge--announced { --status-bg: #dbeafe; --status-line: #b6ccf5; --status-fg: #1d4ed8; }
-.tracking-badge--complete { --status-bg: #d1f0e0; --status-line: #a8ddc2; --status-fg: #065f46; }
-.tracking-badge.is-quiet { background: #fff7ec; border-color: #e9dccc; color: #6d4c29; }
-.tracking-badge--neutral.is-quiet { background: #f5f6f7; border-color: #e1e5e9; color: #475569; }
+.tracking-badge--process, .tracking-badge--first_round, .tracking-badge--second_round, .tracking-badge--final_round { --quiet-bg: #fff3e9; --quiet-line: #edd5c3; --quiet-fg: #795032; }
+.tracking-badge--announced { --status-bg: #d1f0e0; --status-line: #a8ddc2; --status-fg: #065f46; }
+.tracking-badge--stopped { --status-bg: #e5e7eb; --status-line: #cbd0d7; --status-fg: #4b5563; }
+.tracking-badge--complete { --status-bg: #fff; --status-line: #dde3e9; --status-fg: #596675; }
+.tracking-badge.is-quiet { background: var(--quiet-bg); border-color: var(--quiet-line); color: var(--quiet-fg); }
 .tracking-table .case-link, .tracking-table .case-link:visited { color: var(--color-ink); }
 .process-note { display: block; margin-top: .25rem; color: var(--color-ink-soft); }
 .tracking-table .activity-note, .activity-note { color: var(--color-ink-soft); margin: .25rem 0 0; }
