@@ -3,9 +3,11 @@ import Base from '../layouts/Base.astro';
 import TrackingTable from '../components/TrackingTable.astro';
 import AdSlot from '../components/AdSlot.astro';
 import { loadPublicData } from '../lib/publicData';
-import { PUBLIC_TRACKING_STATUS } from '../lib/trackingProfile';
+import { PUBLIC_TRACKING_STATUS, validDate } from '../lib/trackingProfile';
+import { formatDate } from '../lib/format';
 import { STATEMENT_FILTERS } from '../lib/trackingSearch';
 const { cases, mediaOutlets, isSampleData } = await loadPublicData();
+const latestCheckedOn=cases.map(c=>c.lastCheckedOn).filter((date):date is string=>!!date && validDate(date)).sort().at(-1);
 const activeMedia = new Set(cases.flatMap(c=>c.search.media));
 const media = [...mediaOutlets.filter(m=>m.is_active || activeMedia.has(m.id)), {id:'none',name:'報道なし'}, ...(activeMedia.has('unreviewed') ? [{id:'unreviewed',name:'媒体を確認中'}] : [])];
 const searchData=JSON.stringify(cases.map(c=>({...c.search,slug:c.slug}))).replaceAll('<','\\u003c');
@@ -51,6 +53,7 @@ const hasHomeAd = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT && homeAdSlot);
       <noscript><p class="notice">検索にはJavaScriptが必要です。すべての銘柄は下の一覧から閲覧できます。</p></noscript>
     </form>
     <p class="small muted">公表日が分かる直近の出来事を基準に並べます。日付未確認のみの銘柄は、その後にサイト登録順で表示します。</p>
+    <p class="list-checked small"><strong>最終確認日: {latestCheckedOn ? <time datetime={latestCheckedOn}>{formatDate(latestCheckedOn)}</time> : '未確認'}</strong><span class="muted">掲載銘柄の確認日のうち最新。各銘柄の確認日は詳細に記載しています。</span></p>
     <TrackingTable cases={cases}/>
     {hasHomeAd && <AdSlot placement="home-between-sections" slotId={homeAdSlot}/>}
   </section>

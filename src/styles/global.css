@@ -780,6 +780,9 @@ select {
 .tracking-intro { max-width: 64rem; }
 .stock-links { display: flex; flex-wrap: wrap; gap: .6rem 1rem; margin: .7rem 0; }
 .tracking-table { table-layout: fixed; width: 100%; }
+.tracking-table .clickable-rows tr { cursor: pointer; }
+.tracking-table .clickable-rows tr:focus-within { background: #f6f8fb; }
+.list-checked { display: flex; flex-wrap: wrap; gap: .25rem .8rem; align-items: baseline; }
 .tracking-table td { vertical-align: top; white-space: normal; overflow-wrap: anywhere; }
 .tracking-table p { margin: 0 0 .5rem; }
 .tracking-table .stock-links { font-size: .78rem; gap: .3rem .7rem; }

@@ -7,7 +7,16 @@ export function setupTrackingList(personalMatch:(id:string)=>boolean, clearPerso
   const data=JSON.parse(document.getElementById('tracking-search-data')!.textContent!) as (SearchCase & {slug:string})[];
   const cases=new Map(data.map(c=>[c.id,c]));
   const rows=[...document.querySelectorAll<HTMLTableRowElement>('#tracking-table tbody tr')];
-  const body=document.querySelector('#tracking-table tbody')!;
+  const body=document.querySelector<HTMLTableSectionElement>('#tracking-table tbody')!;
+  // Keep native links/buttons and text selection usable; keyboard users retain the company link.
+  body.classList.add('clickable-rows');
+  body.addEventListener('click',e=>{
+    if(e.defaultPrevented || e.button!==0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    const target=e.target;
+    if(!(target instanceof Element) || target.closest('a,button,input,select,textarea,label,summary,[role="button"],[role="link"],[contenteditable]')) return;
+    if(window.getSelection()?.toString()) return;
+    target.closest('tr')?.querySelector<HTMLAnchorElement>('a.case-link')?.click();
+  });
   const media=[...form.querySelectorAll<HTMLInputElement>('[name=media]')];
   const allowedMedia=media.map(m=>m.value);
   const input=(key:string)=>form.elements.namedItem(key) as HTMLInputElement;
