@@ -3,5 +3,10 @@ import { externalStockLinks } from '../lib/tracking';
 interface Props { code: string }
 ---
 <nav class="stock-links" aria-label="銘柄の外部情報">
-  {externalStockLinks(Astro.props.code).map(link => <a href={link.url} target="_blank" rel="noopener noreferrer">{link.label} ↗</a>)}
+  {externalStockLinks(Astro.props.code).map((link,index) => <a class="stock-link" href={link.url} target="_blank" rel="noopener noreferrer" aria-label={`${link.label}（新しいタブ）`}>
+    <svg class="stock-link__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      {index===0 ? <><path d="M4 4v16h16"/><path d="m7 14 4-4 4 2 5-6"/></> : index===1 ? <><path d="M5 20V10h4v10M10 20V4h4v16M15 20v-7h4v7M3 20h18"/></> : <><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h5M8 17h3"/></>}
+    </svg>
+    <span>{link.label}</span><span class="stock-link__arrow" aria-hidden="true">↗</span>
+  </a>)}
 </nav>

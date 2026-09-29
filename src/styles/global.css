@@ -779,6 +779,53 @@ select {
 /* 追跡DB: 書体・既存の基本サイズは変更せず配置を整理する。 */
 .tracking-intro { max-width: 64rem; }
 .stock-links { display: flex; flex-wrap: wrap; gap: .6rem 1rem; margin: .7rem 0; }
+.stock-links .stock-link { display: inline-flex; align-items: center; gap: .65rem; min-height: 44px; padding: .6rem .85rem; border: 1px solid var(--color-line); border-radius: .6rem; background: var(--color-surface); color: var(--color-ink); text-decoration: none; font-size: .85rem; font-weight: 600; }
+.stock-links .stock-link:hover { border-color: var(--color-primary); background: #edf2f7; }
+.stock-link__icon { flex: none; color: var(--color-primary); }
+.stock-link__arrow { margin-left: auto; color: var(--color-ink-soft); }
+
+/* 銘柄詳細: 要点をまとめ、移動先はタブ風のページ内ナビで区別する。 */
+.case-breadcrumb { display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; }
+.case-breadcrumb a { color: var(--color-ink-soft); text-decoration: none; padding: .35rem 0; }
+.case-breadcrumb a:hover { color: var(--color-primary); text-decoration: underline; }
+.case-overview { padding: 1.3rem; border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-card); }
+.case-overview__heading { display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 1rem; }
+.case-overview__eyebrow { color: var(--color-ink-soft); font-size: .75rem; margin: 0 0 .4rem; }
+.case-overview h1 { margin-bottom: .45rem; }
+.case-overview__identity { display: flex; align-items: center; flex-wrap: wrap; gap: .3rem 1rem; }
+.case-overview__identity a { color: var(--color-primary); text-decoration: none; }
+.case-overview__identity a:hover { text-decoration: underline; }
+.case-overview__personal { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
+.case-overview__personal:has(#fav-btn[hidden]) { display: none; }
+.case-overview__summary { display: grid; grid-template-columns: minmax(0,1.25fr) minmax(0,1fr); gap: 1.3rem; margin-top: 1.2rem; border-top: 1px solid var(--color-line); padding-top: 1.2rem; }
+.case-overview__summary h2 { font-size: .78rem; color: var(--color-ink-soft); margin: 0 0 .65rem; }
+.case-overview__summary p { margin: 0 0 .6rem; }
+.case-overview__summary .media-chips { margin-bottom: 0; }
+.case-overview__summary .media-chip { color: var(--color-ink-soft); text-decoration: none; }
+.case-overview__summary .media-chip:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.case-overview__status { background: #f4f7fa; border-left: 3px solid var(--color-primary); border-radius: 0 .5rem .5rem 0; padding: .8rem 1rem; }
+.case-overview__status .status-note { margin: .65rem 0 0; }
+.case-overview .stock-links { margin: 1.2rem 0 0; padding-top: 1rem; border-top: 1px solid var(--color-line); gap: .6rem; }
+.case-section-nav { position: sticky; top: .5rem; z-index: 5; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: .3rem; padding: .35rem; margin: 1.2rem 0; border: 1px solid var(--color-line); border-radius: .75rem; background: #e9eef4; box-shadow: var(--shadow-card); }
+.case-section-nav a { display: flex; align-items: center; justify-content: center; gap: .45rem; min-height: 44px; padding: .5rem .4rem; color: var(--color-ink-soft); text-decoration: none; font-size: .88rem; font-weight: 700; border-radius: .5rem; }
+.case-section-nav a:hover { background: #fff; color: var(--color-primary); }
+.case-section-nav a[aria-current="location"] { background: var(--color-primary); color: #fff; box-shadow: 0 2px 5px #1f3a5f26; }
+.case-section-nav__count { font-size: .7rem; padding: 0 .4rem; border-radius: 1rem; background: #ffffffb3; color: var(--color-primary); }
+.case-section-nav a[aria-current] .case-section-nav__count { background: #ffffff26; color: #fff; }
+body:has(.case-section-nav) :is(#timeline,#evidence,#related-articles,#note-section,[id^="event-"]) { scroll-margin-top: 5.5rem; }
+@media (max-width: 640px) {
+  .case-overview { padding: 1rem; }
+  .case-overview__summary { grid-template-columns: minmax(0,1fr); gap: .8rem; }
+  .case-overview .stock-links { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .case-overview .stock-link:last-child { grid-column: 1 / -1; }
+  .case-overview .stock-link { padding: .55rem .6rem; gap: .4rem; }
+  .case-section-nav a { font-size: .8rem; gap: .2rem; }
+  .case-section-nav__count { display: none; }
+}
+@media (max-width: 350px) {
+  .case-section-nav { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  body:has(.case-section-nav) :is(#timeline,#evidence,#related-articles,#note-section,[id^="event-"]) { scroll-margin-top: 9rem; }
+}
 .tracking-table { table-layout: fixed; width: 100%; }
 .tracking-table .clickable-rows tr { cursor: pointer; }
 .tracking-table .clickable-rows tr:focus-within { background: #f6f8fb; }
