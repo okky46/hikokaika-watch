@@ -1,6 +1,5 @@
 ---
 import TrackingStatus from './TrackingStatus.astro';
-import { formatDate } from '../lib/format';
 import { externalStockLinks } from '../lib/tracking';
 import type { CaseListItem } from '../lib/types';
 interface Props { cases: CaseListItem[] }
@@ -8,12 +7,11 @@ const { cases } = Astro.props;
 ---
 <div class="table-wrap">
   <table class="case-table tracking-table" id="tracking-table">
-    <thead><tr><th scope="col">銘柄</th><th scope="col">媒体・噂の概要</th><th scope="col">今の状況</th><th scope="col">直近の変化</th></tr></thead>
+    <thead><tr><th scope="col">銘柄</th><th scope="col">媒体・噂の概要</th><th scope="col">今の状況</th></tr></thead>
     <tbody>{cases.map(c => <tr data-case-id={c.id}>
       <td data-label="銘柄"><div class="tracking-company"><div><span class="mono small muted">{c.securityCode}</span><br/><a class="case-link" href={`/cases/${c.slug}/`}>{c.companyName}</a></div><button type="button" class="fav-toggle" data-fav-toggle={c.id} aria-pressed="false" aria-label={`${c.companyName}をお気に入りに登録`} title="お気に入り(ログインが必要です)">☆</button></div><a class="small muted" href={externalStockLinks(c.securityCode)[0]?.url} target="_blank" rel="noopener noreferrer nofollow">株探 ↗</a></td>
       <td data-label="媒体・噂の概要"><div class="media-chips">{c.media.slice(0,2).map(m=><a class="media-chip" href={`/cases/${c.slug}/#evidence`}>{m.name}</a>)}{c.media.length>2 && <a class="media-chip" href={`/cases/${c.slug}/#evidence`}>ほか{c.media.length-2}媒体</a>}</div><p>{c.tracking?.short_reason || c.trackingReason}</p></td>
-      <td data-label="今の状況"><TrackingStatus profile={c.tracking}/></td>
-      <td data-label="直近の変化">{c.latestEvent ? <><span class="small muted">{c.latestEvent.dateLabel}</span><p><a class="event-link" href={`/cases/${c.slug}/#event-${c.latestEvent.id}`}>{c.latestEvent.title}</a></p></> : <p class="muted">日付を確認できた出来事はありません</p>}<p class="period-match small" hidden></p><span class="small muted">最終確認: {formatDate(c.lastCheckedOn)}</span></td>
+      <td data-label="今の状況"><TrackingStatus profile={c.tracking}/><p class="period-match small" hidden></p></td>
     </tr>)}</tbody>
   </table>
   <p class="empty-state" id="empty-state" hidden>条件に一致する銘柄はありません。<button type="button" class="btn" data-clear-search>条件をすべて解除</button></p>

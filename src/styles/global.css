@@ -780,10 +780,6 @@ select {
 .tracking-intro { max-width: 64rem; }
 .stock-links { display: flex; flex-wrap: wrap; gap: .6rem 1rem; margin: .7rem 0; }
 .tracking-table { table-layout: fixed; width: 100%; }
-.tracking-table th:nth-child(1) { width: 20%; }
-.tracking-table th:nth-child(2) { width: 28%; }
-.tracking-table th:nth-child(3) { width: 23%; }
-.tracking-table th:nth-child(5) { width: 3rem; }
 .tracking-table td { vertical-align: top; white-space: normal; overflow-wrap: anywhere; }
 .tracking-table p { margin: 0 0 .5rem; }
 .tracking-table .stock-links { font-size: .78rem; gap: .3rem .7rem; }
@@ -803,9 +799,8 @@ select {
 }
 /* 噂の概要を優先し、根拠は詳細で展開。既存フォント指定は維持。 */
 .tracking-table th:nth-child(1) { width: 20%; }
-.tracking-table th:nth-child(2) { width: 31%; }
-.tracking-table th:nth-child(3) { width: 20%; }
-.tracking-table th:nth-child(4) { width: 29%; }
+.tracking-table th:nth-child(2) { width: 43%; }
+.tracking-table th:nth-child(3) { width: 37%; }
 .tracking-company { display: flex; justify-content: space-between; gap: .5rem; align-items: start; }
 .case-link, .case-head h1 a { color: var(--color-ink); }
 .case-link:hover, .case-head h1 a:hover { text-decoration: underline; }

@@ -6,6 +6,7 @@ import type { TrackingStage, PublicTrackingStatus } from './trackingProfile.ts';
 export interface SearchEvent { id: string; title: string; date: PublicEventDate }
 export interface SearchCase {
   id: string; code: string; name: string; reason: string; media: string[];
+  aliases?: string[];
   stage: TrackingStage | 'unreviewed'; status: PublicTrackingStatus | 'unreviewed'; statementTags: string[];
   registeredOn: string; updatedAt: string; events: SearchEvent[];
 }
@@ -15,6 +16,10 @@ export interface SearchFilters {
 }
 export const defaultSearch = (): SearchFilters => ({ q:'', media:[], stage:'', status:'', statement:'', from:'', to:'', includeIssues:false, sort:'event' });
 export const normalizeQuery = (value: string) => value.normalize('NFKC').trim().toLocaleLowerCase('ja');
+/** Published titles can contain the full name while the displayed company name is abbreviated. */
+export function companySearchAliases(name: string, title: string): string[] {
+  return [...new Set([title, name.replace(/HD$/i, 'ホールディングス'), name.replace(/ホールディングス$/, 'HD')])];
+}
 export const STATEMENT_FILTERS = {
   proposal_received:'提案受領', consideration_acknowledged:'検討に言及', strategic_options_under_review:'選択肢を検討',
   discussions_ongoing:'協議に言及', no_decision:'決定事実なし', not_under_consideration:'検討を否定',
@@ -49,7 +54,7 @@ export function matchingEvents(c: SearchCase, f: SearchFilters): SearchEvent[] {
 }
 export function matchesCase(c: SearchCase, f: SearchFilters, withoutMedia = false): boolean {
   const q=normalizeQuery(f.q);
-  return (!q || normalizeQuery(`${c.code} ${c.name} ${c.reason}`).includes(q)) &&
+  return (!q || normalizeQuery(`${c.code} ${c.name} ${(c.aliases ?? []).join(' ')} ${c.reason}`).includes(q)) &&
     (!f.stage || c.stage===f.stage) && (!f.status || c.status===f.status) &&
     (!f.statement || c.statementTags.includes(f.statement)) &&
     (withoutMedia || !f.media.length || f.media.some(m=>c.media.includes(m))) &&

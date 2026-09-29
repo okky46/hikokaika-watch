@@ -64,7 +64,7 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
       {c.market && <span> / {c.market}</span>}
       {c.industry && <span> / {c.industry}</span>}
     </p>
-    <h1><a href={`/companies/${c.securityCode}/`}>{c.companyName}</a> — {c.title}</h1>
+    <h1><a href={`/companies/${c.securityCode}/`}>{c.companyName}</a>（{c.securityCode}）の経過</h1>
     <div style="display:flex; align-items:center; gap:0.7rem; flex-wrap:wrap;">
 
       <button
@@ -101,7 +101,7 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
       {c.verificationNote && <p>{c.verificationNote}</p>}
     </details>
   </section>
-  <p class="small"><a href="#timeline">経過タイムライン</a>　<a href="#related-articles">関連記事</a>　<a href="/mypage/">ログインしてメモ・お気に入りを利用</a></p>
+  <p class="small"><a href="#timeline">経過タイムライン</a>　<a href="#related-articles">関連記事</a>　<a href="/mypage/" id="personal-note-link">ログインしてメモ・お気に入りを利用</a></p>
 
   <section class="section" aria-label="出来事タイムライン" id="timeline">
     <h2 class="section-title">経過タイムライン</h2>
@@ -168,7 +168,7 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
       </div>
       <div style="display:flex; gap:0.6rem; align-items:center; margin-top:0.5rem;">
         <button type="button" class="btn btn--primary" id="note-save">メモを保存</button>
-        <span class="small muted" id="note-count">0 / 1,000文字</span><span class="small muted" id="note-status" aria-live="polite"></span>
+        <span class="small muted" id="note-count">入力：0文字</span><span class="small muted" id="note-status" aria-live="polite"></span>
       </div>
     </div>
   </section>
@@ -187,7 +187,7 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
 
 <script>
   import { getSupabase } from '../../lib/supabaseBrowser';
-  import { chooseNoteSaveBody, parseStructuredNote } from '../../lib/noteMetadataHelpers';
+  import { chooseNoteSaveBody, parseStructuredNote, textLength } from '../../lib/noteMetadataHelpers';
   import type { LoadedNoteFormat, SaveNoteResult, StructuredNotePayload } from '../../lib/noteMetadataHelpers';
 
   const back=document.getElementById('return-to-results') as HTMLAnchorElement;
@@ -244,6 +244,9 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
 
     favBtn.hidden = false;
     noteSection.hidden = false;
+    const personalLink=document.getElementById('personal-note-link') as HTMLAnchorElement;
+    personalLink.href='#note-section';
+    personalLink.textContent='自分のメモを書く';
 
     const [{ data: fav }, { data: note }] = await Promise.all([
       supabase
@@ -315,7 +318,9 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
     const el = document.getElementById('note-count');
     if (!el) return;
     const saveBody = buildSaveNoteBody();
-    el.textContent = `${saveBody.length} / 1,000文字${saveBody.ok ? '' : '（超過）'}`;
+    const n=currentNotePayload();
+    const entered=[n.scenario,n.targetPrice,n.exitCondition,n.nextCheckDate,n.freeText].reduce((total,text)=>total+textLength(text),0);
+    el.textContent = `入力：${entered}文字${saveBody.ok ? '' : '（保存上限を超えています。入力を短くしてください）'}`;
   };
   noteBody?.addEventListener('input', updateNoteCount);
   noteScenario?.addEventListener('input', updateNoteCount);

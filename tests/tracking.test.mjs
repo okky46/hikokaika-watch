@@ -4,12 +4,18 @@ import fs from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
 import { emptyTrackingProfile, parseTrackingProfile, publicTrackingStatus } from '../src/lib/trackingProfile.ts';
 import { publicEventDate, lastTwelveMonths, matchesDate } from '../src/lib/trackingDates.ts';
-import { matchesCase, defaultSearch, readSearch, searchParams, compareCases } from '../src/lib/trackingSearch.ts';
+import { matchesCase, defaultSearch, readSearch, searchParams, compareCases, companySearchAliases } from '../src/lib/trackingSearch.ts';
 import { assemble } from '../src/lib/publicData.ts';
 
 const admin='10000000-0000-4000-8000-000000000001', user='10000000-0000-4000-8000-000000000002';
 const company='20000000-0000-4000-8000-000000000001', event='30000000-0000-4000-8000-000000000001';
 const rumor=()=>({...emptyTrackingProfile(),title:'市場の噂から追跡',short_reason:'Mergermarketとの話はあるが未確認',last_checked_on:'2026-09-29',report_state:'none',report_note:'管理者が把握した市場の噂。報道は未確認。'});
+
+test('会社の略称・正式名称・公開タイトルで探せる',()=>{
+  const c={id:'a',code:'4320',name:'CEHD',reason:'非公開化',aliases:companySearchAliases('CEHD','CEホールディングスの経過'),media:[],stage:'pre',status:'rumor',statementTags:[],registeredOn:'',updatedAt:'',events:[]};
+  for(const q of ['CEHD','CEホールディングス','ＣＥホールディングス','4320'])assert.ok(matchesCase(c,{...defaultSearch(),q}));
+  assert.ok(!matchesCase(c,{...defaultSearch(),q:'他社'}));
+});
 
 test('噂と確認済み観測報道を表示・検索で区別し、会社説明を優先する',()=>{
   const p=rumor();
