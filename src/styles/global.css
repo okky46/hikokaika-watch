@@ -801,3 +801,37 @@ select {
   .tracking-table td { border: 0; padding: .5rem 0; }
   .tracking-table td[data-label]::before { content: attr(data-label); display: block; color: var(--color-ink-soft); font-size: .78rem; margin-bottom: .25rem; }
 }
+/* 噂の概要を優先し、根拠は詳細で展開。既存フォント指定は維持。 */
+.tracking-table th:nth-child(1) { width: 20%; }
+.tracking-table th:nth-child(2) { width: 31%; }
+.tracking-table th:nth-child(3) { width: 20%; }
+.tracking-table th:nth-child(4) { width: 29%; }
+.tracking-company { display: flex; justify-content: space-between; gap: .5rem; align-items: start; }
+.case-link, .case-head h1 a { color: var(--color-ink); }
+.case-link:hover, .case-head h1 a:hover { text-decoration: underline; }
+.media-chips { display: flex; flex-wrap: wrap; gap: .35rem; margin: .2rem 0 .7rem; }
+.media-chip { display: inline-block; padding: .15rem .45rem; border: 1px solid var(--color-line); border-radius: .25rem; color: var(--color-ink-soft); background: #f6f7f8; font-size: .78rem; }
+.tracking-table .status-note, .status-note { margin-top: .5rem; }
+.tracking-filters { margin: 1rem 0; }
+.media-filter { border: 0; border-top: 1px solid var(--color-line); padding: .8rem 0; margin: .8rem 0; }
+.media-filter legend { padding-right: .6rem; }
+.media-options { display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; }
+.media-options label { display: inline-flex; gap: .35rem; align-items: center; }
+.search-more { border-top: 1px solid var(--color-line); padding: .8rem 0; }
+.search-more summary, .evidence-details summary { cursor: pointer; }
+.search-more[open] summary, .evidence-details[open] summary { margin-bottom: 1rem; }
+.active-filters { display: flex; flex-wrap: wrap; gap: .4rem; }
+.period-match { border-left: 2px solid var(--color-line); padding-left: .6rem; }
+.evidence-list { padding-left: 1.2rem; }
+.evidence-list li { margin: .8rem 0; overflow-wrap: anywhere; }
+.evidence-list p { margin: .35rem 0; }
+.tracking-current { display: flex; flex-wrap: wrap; gap: .7rem; align-items: baseline; margin: .8rem 0; }
+.tracking-current .status-note { margin: 0; }
+:target { scroll-margin-top: 1rem; }
+.timeline__item:target .event-card { outline: 2px solid var(--color-ink-soft); outline-offset: 3px; }
+.tracking-filters :focus-visible, .tracking-table :focus-visible, .evidence-details :focus-visible { outline: 2px solid var(--color-ink-soft); outline-offset: 3px; }
+@media (max-width: 760px) {
+  .tracking-table tr[hidden], .tracking-table td [hidden] { display: none !important; }
+  .tracking-table td:first-child::before { display: none; }
+  .media-options label { min-height: 2rem; }
+}

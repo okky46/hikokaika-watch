@@ -133,6 +133,10 @@ export interface PricePoint {
 
 /** 一覧・検索用のビューモデル(トップページに JSON 埋め込みされる) */
 export interface CaseListItem {
+  tracking: import('./trackingProfile').TrackingProfile | null;
+  publicationVersion: string | null;
+  media: { id: string; name: string }[];
+  search: import('./trackingSearch').SearchCase;
   id: string;
   slug: string;
   title: string;
@@ -182,6 +186,7 @@ export interface CaseListItem {
 
 /** タイムライン表示用の出来事 */
 export interface CaseEventView {
+  date: import('./trackingDates').PublicEventDate;
   id: string;
   eventType: EventType;
   occurredAt: string | null;
@@ -217,6 +222,7 @@ export interface PublicCompany {
 }
 
 export interface PublicData {
+  mediaOutlets: import('./trackingProfile').MediaOutlet[];
   articles: import('./articles').PublicArticle[];
   companies: PublicCompany[];
   cases: CaseListItem[];

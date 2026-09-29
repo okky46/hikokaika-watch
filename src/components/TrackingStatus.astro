@@ -1,0 +1,9 @@
+---
+import { PUBLIC_TRACKING_STATUS, publicTrackingStatus } from '../lib/trackingProfile';
+import type { TrackingProfile } from '../lib/trackingProfile';
+interface Props { profile: TrackingProfile | null }
+const {profile}=Astro.props;
+const status=profile ? PUBLIC_TRACKING_STATUS[publicTrackingStatus(profile)] : null;
+---
+<span class={`badge badge--${status?.tone ?? 'pause'}`}>{status?.label ?? '状況を確認中'}</span>
+{profile?.status_note && <p class="status-note small">{profile.status_note}</p>}

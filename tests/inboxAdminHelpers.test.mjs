@@ -117,6 +117,7 @@ describe('inbox candidate filtering and bulk helpers', () => {
 // 管理画面のDOM密結合部分は、誤承認・重複insert防止に必要な安全レールをソース上で検証する。
 describe('admin inbox approval source guards', () => {
   const source = fs.readFileSync('src/pages/admin/index.astro', 'utf8');
+  const tracking = fs.readFileSync('src/lib/trackingAdmin.ts','utf8');
 
   it('既存案件・イベント編集やフォームクリア時にinbox追跡IDを解除する', () => {
     assert.match(source, /data-edit-case[^]*currentInboxIdForCase = null;[^]*currentInboxIdForEvent = null;/);
@@ -128,13 +129,13 @@ describe('admin inbox approval source guards', () => {
   it('inbox承認更新エラーや対象行なしでは追跡IDを解除しない', () => {
     assert.match(source, /\.eq\('status', 'pending'\)[^]*\.select\('id'\)/);
     assert.match(source, /\(data \?\? \[\]\)\.length !== 1/);
-    assert.match(source, /if \(approved\) \{\s*currentInboxIdForCase = null;/);
+    assert.match(source, /if\(approved && currentInboxIdForCase\)[^]*if\(ok\)\{currentInboxIdForCase=null;/);
     assert.match(source, /if \(approved\) \{\s*currentInboxIdForEvent = null;/);
   });
 
   it('承認失敗後の再保存で重複insertしないよう保存後IDをフォームへ保持する', () => {
     assert.match(source, /insert\(row\)\.select\('id'\)\.single\(\)/);
-    assert.match(source, /savedCase\?\.id\) \$<HTMLInputElement>\('ca-id'\)\.value = savedCase\.id/);
+    assert.match(tracking, /current=\{[^]*id:r\.data\.id[^]*input\('ca-id'\)\.value=current\.id;[^]*await options\.afterSave/);
     assert.match(source, /savedEvent\?\.id\) \$<HTMLInputElement>\('ev-id'\)\.value = savedEvent\.id/);
   });
 
@@ -142,7 +143,9 @@ describe('admin inbox approval source guards', () => {
     assert.match(source, /if \(!companyId\) \{\s*\$<HTMLSelectElement>\('ca-company'\)\.value = '';\s*\$\(`inbox-status-\$\{item\.id\}`\)\.textContent = '証券コードに一致する会社が見つかりません。先に会社を登録してから再度起票してください。';\s*return;\s*\}/);
   });
 
-  it('案件一覧セレクト再描画後も有効な案件ステータスを復元する', () => {
-    assert.match(source, /const currentStatus = statusSel\.value;[^]*const restoredStatus = preserveSelectValueIfValid\(currentStatus, Object\.keys\(statusDefs\)\);[^]*if \(restoredStatus\) statusSel\.value = restoredStatus;/);
+  it('案件セレクト再描画が編集中の新しい状況タグを上書きしない', () => {
+    const render=source.slice(source.indexOf('  function renderCaseSelects()'),source.indexOf('  function renderCaseTable()'));
+    assert.doesNotMatch(render,/tp-status|ca-status/);
+    assert.match(render,/const old=sel.value;sel.innerHTML=options;sel.value=old/);
   });
 });

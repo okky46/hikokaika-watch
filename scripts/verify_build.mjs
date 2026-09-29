@@ -12,7 +12,9 @@ for(const file of files.filter(f=>/\.(html|json|xml|js)$/.test(f))){
 const read=file=>fs.readFileSync(`dist/${file}`,'utf8');
 assert.ok(!fs.existsSync('dist/articles/unpublished-secret'));
 assert.match(read('cases/999z-tracking/index.html'),/公開されている出来事はまだありません/);
-assert.match(read('cases/999z-tracking/index.html'),/追跡中（未確定）/);
+assert.match(read('cases/999z-tracking/index.html'),/噂段階/);
+assert.match(read('cases/999z-tracking/index.html'),/報道なし/);
+assert.ok(!files.some(f=>/local-admin-check|__adminCheckClient/.test(f)), 'local test harness must not ship');
 const trackingDescription=read('cases/999z-tracking/index.html').match(/<meta name="description" content="([^"]*)"/)?.[1];
 assert.match(trackingDescription,/追跡開始から現在まで/);
 assert.doesNotMatch(trackingDescription,/観測報道から/);

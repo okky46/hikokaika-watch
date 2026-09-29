@@ -19,10 +19,9 @@
       <div class="form-row"><label for="ar-unknowns">未確認事項</label><textarea id="ar-unknowns"></textarea></div>
     </div>
     <p class="small muted">本文はプレーンテキストとして表示します。HTMLは実行されません。未読の有料記事の内容や、非公開化の実現を断定しないでください。</p>
-    <div class="form-row"><label for="ar-sources">出典（1行ごとに「出典名 | https://URL | 公表日 | 確認日」。日付はYYYY-MM-DD、公表日不明は空欄）</label><textarea id="ar-sources" placeholder="会社IR | https://example.com/ir/ | 2026-09-01 | 2026-09-29"></textarea></div>
-    <p class="small muted">文字としての「|」は <code>\|</code>、バックスラッシュは <code>\\</code>、改行は <code>\n</code> と入力します。JSON取込・再読込時は自動変換します。</p>
+    <fieldset><legend>出典</legend><p class="small muted">名前・URL・日付を個別に入力します。記号や改行のエスケープ操作は不要です。</p><div id="ar-sources"></div><button type="button" class="btn" id="ar-source-add">出典を追加</button></fieldset>
     <p class="small muted">出典URLは通常の英数字ドメインまたはIPアドレスに対応しています。国際化ドメイン（日本語ドメイン等）は未対応です。</p>
-    <fieldset><legend>関連銘柄（複数選択可）</legend><p class="small muted">会社単位の関連付けです。同じ会社の各追跡ページに関連記事として表示します。</p><div id="ar-companies" class="editor-grid"></div></fieldset>
+    <fieldset><legend>関連銘柄（複数選択可）</legend><p class="small muted">会社単位の関連付けです。同じ会社の各追跡ページに関連記事として表示します。</p><div id="ar-companies" class="editor-grid"></div><button type="button" class="btn" data-create-company="articles">会社を追加してこの記事へ戻る</button></fieldset>
     <div class="form-row"><label for="ar-correction_note">訂正履歴（前の履歴を残して追記）</label><textarea id="ar-correction_note" rows="2"></textarea></div>
     <div class="stock-links">
       <button type="button" class="btn btn--primary" id="ar-save">下書きを保存</button>

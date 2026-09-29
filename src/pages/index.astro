@@ -3,164 +3,70 @@ import Base from '../layouts/Base.astro';
 import TrackingTable from '../components/TrackingTable.astro';
 import AdSlot from '../components/AdSlot.astro';
 import { loadPublicData } from '../lib/publicData';
-import { CASE_STATUS, STATUS_ORDER } from '../lib/status';
-import { formatDate, reportYear } from '../lib/format';
-const { cases, allSourceNames, isSampleData } = await loadPublicData();
-const years = [...new Set(cases.map(c => reportYear(c.firstReportedAt)).filter((y): y is number => y !== null))].sort((a,b) => b-a);
-const preCases = cases.filter(c => c.isPreAnnouncement);
-const postCases = cases.filter(c => !c.isPreAnnouncement);
+import { PUBLIC_TRACKING_STATUS } from '../lib/trackingProfile';
+import { STATEMENT_FILTERS } from '../lib/trackingSearch';
+const { cases, mediaOutlets, isSampleData } = await loadPublicData();
+const activeMedia = new Set(cases.flatMap(c=>c.search.media));
+const media = [...mediaOutlets.filter(m=>m.is_active || activeMedia.has(m.id)), {id:'none',name:'報道なし'}, ...(activeMedia.has('unreviewed') ? [{id:'unreviewed',name:'媒体を確認中'}] : [])];
+const searchData=JSON.stringify(cases.map(c=>({...c.search,slug:c.slug}))).replaceAll('<','\\u003c');
+const years=[...new Set(cases.flatMap(c=>c.search.events.map(e=>e.date.start?.slice(0,4)).filter((x):x is string=>!!x)))].sort().reverse();
 const homeAdSlot = import.meta.env.PUBLIC_ADSENSE_SLOT_HOME ?? '';
 const hasHomeAd = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT && homeAdSlot);
 ---
-<Base title="非公開化ウォッチ" description="以前、非公開化の噂になっていた銘柄は今どうなっている？ 非公開化・MBO・親子上場解消の追跡理由、会社の発表とその後の経過を時系列で整理するデータベース。" path="/" hasAdSlots={hasHomeAd}>
+<Base title="非公開化ウォッチ" description="以前、非公開化の噂になっていた銘柄は今どうなっている？ 非公開化・MBO・親子上場解消の噂、報道、会社説明とその後を時系列で追うデータベース。" path="/" hasAdSlots={hasHomeAd}>
   {isSampleData && <p class="notice">開発・デモ用の<strong>架空のサンプルデータ</strong>です。実在の企業・報道とは関係ありません。</p>}
   <section class="tracking-intro" aria-label="サービス概要">
     <h1>非公開化ウォッチ</h1>
     <p>以前、非公開化の噂になっていた銘柄。<strong>今どうなっている？</strong></p>
-    <p class="muted">市場観測をきっかけにした追跡対象と、確認できた報道・会社発表、その後の経過を記録しています。掲載は非公開化の決定や実現可能性を示すものではありません。</p>
-    <p class="small"><a href="/articles/">公表資料に基づく記事・調査ノート</a>　<a href="/mypage/">お気に入り・自分専用メモ</a></p>
+    <p class="muted">どの媒体・どんな噂で注目され、その後どう変わったかを記録します。「報道なし」は当サイトで報道を確認できていない銘柄を含みます。掲載は非公開化の決定や実現可能性を示すものではありません。</p>
+    <p class="small"><a href="/articles/">記事・調査ノート</a>　<a href="/mypage/">お気に入り・自分専用メモ</a></p>
   </section>
   <section class="section" aria-label="銘柄の検索・絞り込み">
     <h2 class="section-title">追跡銘柄 <span class="small muted">全{cases.length}件</span></h2>
-    <p class="small muted">記録の更新が新しい順。記事や報道イベントのない追跡対象も含みます。サイト更新: {formatDate(cases[0]?.lastUpdatedAt)}</p>
-    <div class="stock-links" aria-label="主要絞り込み">
-      <button type="button" class="btn btn--primary" data-quick-filter="all">すべて</button>
-      <button type="button" class="btn" data-quick-filter="acknowledged">会社が検討を認めた</button>
-      <button type="button" class="btn" data-quick-filter="announced">正式発表あり</button>
-    </div>
-    <form class="filter-bar card" id="filter-form" style="margin-bottom:0.8rem" onsubmit="return false">
-      <div class="filter-field filter-field--wide">
-        <label for="f-q">会社名・証券コード</label>
-        <input type="search" id="f-q" placeholder="例: デモ精機 / 0001" autocomplete="off" />
+    <form class="card tracking-filters" id="filter-form" role="search">
+      <div class="filter-bar">
+        <div class="filter-field filter-field--wide"><label for="f-q">会社名・証券コード・噂</label><input name="q" type="search" id="f-q" maxlength="150" placeholder="会社名・コードなど" autocomplete="off"/></div>
+        <div class="filter-field"><label for="f-stage">段階</label><select id="f-stage" name="stage"><option value="">すべて</option><option value="pre">正式発表前</option><option value="post">正式発表後</option><option value="closed">完了・終了</option><option value="unreviewed">分類確認中</option></select></div>
+        <div class="filter-field"><label for="f-sort">並び順</label><select id="f-sort" name="sort"><option value="event">出来事が新しい順</option><option value="registered">サイト登録が新しい順</option><option value="updated">編集が新しい順</option><option value="code">証券コード順</option></select></div>
       </div>
-      <div class="filter-field">
-        <label for="f-status">ステータス</label>
-        <select id="f-status">
-          <option value="">すべて</option>
-          {STATUS_ORDER.map((s) => (
-            <option value={s}>{CASE_STATUS[s].label}</option>
-          ))}
-        </select>
+      <fieldset class="media-filter"><legend>媒体 <span class="small muted">複数選択可・いずれかを含む</span></legend><div class="media-options">{media.map(m=><label><input type="checkbox" name="media" value={m.id} data-label={m.name}/>{m.name} <span class="muted small">(<span data-media-count={m.id}>{cases.filter(c=>c.search.media.includes(m.id)).length}</span>)</span></label>)}</div></fieldset>
+      <details class="search-more"><summary>期間・会社説明で絞り込む</summary>
+        <div class="filter-bar">
+          <div class="filter-field"><label for="f-status">今の状況</label><select name="status" id="f-status"><option value="">すべて</option>{Object.entries(PUBLIC_TRACKING_STATUS).map(([id,s])=><option value={id}>{s.label}</option>)}<option value="unreviewed">状況を確認中</option></select></div>
+          <div class="filter-field"><label for="f-statement">過去を含む会社説明</label><select name="statement" id="f-statement"><option value="">すべて</option>{Object.entries(STATEMENT_FILTERS).map(([id,label])=><option value={id}>{label}</option>)}</select></div>
+          <div class="filter-field"><label for="f-from">出来事の開始日</label><input id="f-from" name="from" type="date"/></div>
+          <div class="filter-field"><label for="f-to">終了日</label><input id="f-to" name="to" type="date"/></div>
+          <div class="filter-field"><label for="f-year">年を指定</label><select id="f-year"><option value="">年を選ぶ</option>{years.map(y=><option value={y}>{y}年</option>)}</select></div><button type="button" class="btn" id="last-twelve-months">直近12か月</button>
+        </div>
+        <label class="filter-check"><input type="checkbox" name="issues"/>号数だけの情報を参考年月で含める</label>
+        <p class="small muted">期間内に出来事が1件でもある銘柄を表示します。媒体は案件全体、状況は最新の確認内容です。号数は公表月を意味しません。</p>
+        <p class="notice" id="date-error" hidden>終了日は開始日以降にしてください。</p>
+      </details>
+      <div class="filter-bar">
+        <label class="filter-check" data-login-only hidden><input type="checkbox" id="f-fav"/>お気に入りのみ</label>
+        <div class="filter-field" data-login-only hidden><label for="f-intensity">関心度</label><select id="f-intensity"><option value="">すべて</option><option value="3">3: 最重要</option><option value="2">2: 注目</option><option value="1">1: 経過確認</option></select></div>
+        <button type="button" class="btn" data-clear-search>条件をすべて解除</button><span id="filter-count" aria-live="polite">{cases.length}件</span>
       </div>
-      <div class="filter-field">
-        <label for="f-source">報道媒体</label>
-        <select id="f-source">
-          <option value="">すべて</option>
-          {allSourceNames.map((s) => (
-            <option value={s}>{s}</option>
-          ))}
-        </select>
-      </div>
-      <div class="filter-field">
-        <label for="f-year">報道年</label>
-        <select id="f-year">
-          <option value="">すべて</option>
-          {years.map((y) => (
-            <option value={String(y)}>{y}年</option>
-          ))}
-        </select>
-      </div>
-      <div class="filter-field">
-        <label for="f-formal">正式発表</label>
-        <select id="f-formal">
-          <option value="">すべて</option>
-          <option value="1">あり</option>
-          <option value="0">なし</option>
-        </select>
-      </div>
-      <label class="filter-check" data-login-only hidden>
-        <input type="checkbox" id="f-fav" /> お気に入りのみ
-      </label>
-      <div class="filter-field" data-login-only hidden>
-        <label for="f-intensity">関心度</label>
-        <select id="f-intensity">
-          <option value="">すべて</option>
-          <option value="3">3: 最重要</option>
-          <option value="2">2: 注目</option>
-          <option value="1">1: 経過確認</option>
-        </select>
-      </div>
-      <span class="filter-count" id="filter-count" aria-live="polite"></span>
+      <div id="active-filters" class="active-filters" aria-label="適用中の条件"></div>
+      <p id="search-warning" class="notice" hidden>URLの未対応・不正な条件を除いて表示しています。</p>
+      <noscript><p class="notice">検索にはJavaScriptが必要です。すべての銘柄は下の一覧から閲覧できます。</p></noscript>
     </form>
-
-
-    <h3 class="section-title">正式発表前の追跡対象</h3>
-    <TrackingTable cases={preCases} section="pre"/>
+    <p class="small muted">公表日が分かる直近の出来事を基準に並べます。日付未確認のみの銘柄は、その後にサイト登録順で表示します。</p>
+    <TrackingTable cases={cases}/>
     {hasHomeAd && <AdSlot placement="home-between-sections" slotId={homeAdSlot}/>}
-    <h3 class="section-title">正式発表後の経過</h3>
-    <TrackingTable cases={postCases} section="post"/>
   </section>
-  <section class="section card">
-    <h2 class="section-title">このデータベースの読み方</h2>
-    <p>銘柄の登録と記事の公開は別です。追跡対象への登録は、特定媒体による報道の存在や非公開化の裏付けを意味しません。未読の有料記事の内容は断定せず、確認できた範囲と未確認事項を分けて記録します。</p>
-    <p class="small"><a href="/guidelines/">掲載基準・FAQ</a>　<a href="/disclaimer/">免責事項</a></p>
-  </section>
+  <section class="section card"><h2 class="section-title">このデータベースの読み方</h2><p>銘柄の登録と記事の公開は別です。市場の噂だけでも追跡対象として掲載し、確認できた報道・会社発表を時系列で追加します。有料記事の原文を未閲覧の場合は、確認できた範囲を詳細に示します。</p><p class="small"><a href="/guidelines/">掲載基準・FAQ</a>　<a href="/disclaimer/">免責事項</a></p></section>
+  <script is:inline type="application/json" id="tracking-search-data" set:html={searchData}/>
 </Base>
 <script>
   import { getSupabase } from '../lib/supabaseBrowser';
-
-  // ---------- 絞り込み(すべてページ内で完結。外部リクエストなし) ----------
-  // 発表前・発表後の2テーブルに対して同じ条件で絞り込む。
-  const form = document.getElementById('filter-form') as HTMLFormElement;
-  const rows = [...document.querySelectorAll<HTMLTableRowElement>('.case-table tbody tr')];
-  const countEl = document.getElementById('filter-count')!;
-  const emptyElPre = document.getElementById('empty-state-pre')!;
-  const emptyElPost = document.getElementById('empty-state-post')!;
-  const rowsPre = [...document.querySelectorAll<HTMLTableRowElement>('#case-table-pre tbody tr')];
-  const rowsPost = [...document.querySelectorAll<HTMLTableRowElement>('#case-table-post tbody tr')];
-
-  const q = document.getElementById('f-q') as HTMLInputElement;
-  const status = document.getElementById('f-status') as HTMLSelectElement;
-  const source = document.getElementById('f-source') as HTMLSelectElement;
-  const year = document.getElementById('f-year') as HTMLSelectElement;
-  const formal = document.getElementById('f-formal') as HTMLSelectElement;
-  let quickFilter = 'all';
-  const favOnly = document.getElementById('f-fav') as HTMLInputElement;
-  const intensitySel = document.getElementById('f-intensity') as HTMLSelectElement;
-
-  /** case_id -> intensity(ログイン時のみ) */
-  let favorites = new Map<string, number>();
-  let loggedIn = false;
-
-  function applyFilters() {
-    const qv = q.value.trim().toLowerCase();
-    let visible = 0;
-    for (const row of rows) {
-      const d = row.dataset;
-      let ok = true;
-      if (qv) {
-        ok =
-          (d.name ?? '').toLowerCase().includes(qv) ||
-          (d.code ?? '').toLowerCase().includes(qv);
-      }
-      if (ok && quickFilter === 'acknowledged') ok = d.acknowledged === '1';
-      if (ok && quickFilter === 'announced') ok = d.formal === '1';
-      if (ok && status.value) ok = d.status === status.value;
-      if (ok && source.value) ok = (d.sources ?? '').split('|').includes(source.value);
-      if (ok && year.value) ok = d.year === year.value;
-      if (ok && formal.value) ok = d.formal === formal.value;
-      if (ok && favOnly.checked) ok = favorites.has(d.caseId ?? '');
-      if (ok && intensitySel.value) {
-        ok = favorites.get(d.caseId ?? '') === Number(intensitySel.value);
-      }
-      row.hidden = !ok;
-      if (ok) visible++;
-    }
-    countEl.textContent = `${visible} / ${rows.length} 件`;
-    emptyElPre.hidden = rowsPre.some((row) => !row.hidden);
-    emptyElPost.hidden = rowsPost.some((row) => !row.hidden);
-  }
-
-  document.addEventListener('click', (e) => {
-    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-quick-filter]');
-    if (!btn) return;
-    quickFilter = btn.dataset.quickFilter ?? 'all';
-    for (const b of document.querySelectorAll<HTMLButtonElement>('[data-quick-filter]')) b.classList.toggle('btn--primary', b === btn);
-    applyFilters();
-  });
-  form.addEventListener('input', applyFilters);
-  applyFilters();
-
+  import { setupTrackingList } from '../lib/trackingList';
+  const favOnly=document.getElementById('f-fav') as HTMLInputElement;
+  const intensitySel=document.getElementById('f-intensity') as HTMLSelectElement;
+  let favorites=new Map<string,number>();
+  let loggedIn=false;
+  const clearPersonal=()=>{favOnly.checked=false;intensitySel.value='';};
+  const applyFilters=setupTrackingList(id=>(!favOnly.checked||favorites.has(id))&&(!intensitySel.value||favorites.get(id)===Number(intensitySel.value)),clearPersonal);
   // ---------- お気に入り(ログイン時のみ Supabase に接続) ----------
   const supabase = getSupabase();
 
@@ -228,5 +134,8 @@ const hasHomeAd = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT && homeAdSlot);
     applyFilters();
   });
 
+  supabase?.auth.onAuthStateChange((event) => {
+    if(event==='SIGNED_OUT') { loggedIn=false;favorites.clear();clearPersonal();document.querySelectorAll<HTMLElement>('[data-login-only]').forEach(el=>el.hidden=true);renderFavButtons();applyFilters(); }
+  });
   initFavorites();
 </script>
