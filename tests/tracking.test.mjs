@@ -98,6 +98,7 @@ test('実DB: 噂銘柄の下書き/公開分離、版競合、参照整合性、
     const policies=()=>db.query("select * from pg_policies where tablename in ('user_case_notes','user_global_notes','user_case_favorites') order by tablename,policyname");
     const before=(await policies()).rows;
     await db.exec(fs.readFileSync('supabase/migrations/0009_tracking_editions.sql','utf8'));
+    await db.exec(fs.readFileSync('supabase/migrations/0011_tracking_bidding.sql','utf8'));
     assert.deepEqual((await policies()).rows,before);
     const session=async(role,id='')=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec(`set role ${role}`);};
     const save=async(id,p,rev=null)=>(await db.query("select save_tracking_draft($1,$2,'rumor-only',$3,$4) as result",[id,company,p,rev])).rows[0].result;
@@ -123,6 +124,15 @@ test('実DB: 噂銘柄の下書き/公開分離、版競合、参照整合性、
     const considered={...rumor(),public_status:'consideration',status_note:'未決定（9/29会社説明時点）',status_event_ids:[event],statements:[{event_id:event,subject:'対象会社',text:'非公開化を含む選択肢を検討・未決定',tags:['consideration_acknowledged','no_decision']}]};
     saved=await save(id,considered,saved.revision);approved=await publish(id,saved.revision);
     for(const invalid of [{...considered,public_status:' consideration '},{...considered,statements:[{...considered.statements[0],tags:[null]}]},{...considered,event_dates:[{event_id:event,precision:'datetime',value:'2026-09-29T24:00:00Z',issue_label:''}]}]) await assert.rejects(save(id,invalid,approved.revision));
+    const bidding={...considered,report_state:'reported',reports:[{outlet_id:'nikkei',event_id:event,source_name:'検証用',source_url:'https://example.com/report',method:'company',access:'unread',checked_on:'2026-09-29',reported_on:'2026-09-28',scope_note:'入札に関する報道の存在を会社開示で確認'}],bidding:{stage:'second_round',event_id:event}};
+    saved=await save(id,bidding,approved.revision);
+    await session('service_role');snapshot=(await db.query('select read_published_tracking() as r')).rows[0].r;
+    assert.equal(snapshot.editions[0].published.bidding,undefined);
+    await session('authenticated',admin);approved=await publish(id,saved.revision);
+    await session('service_role');snapshot=(await db.query('select read_published_tracking() as r')).rows[0].r;
+    assert.deepEqual(snapshot.editions[0].published.bidding,bidding.bidding);
+    await session('authenticated',admin);
+    for(const change of [{bidding:{stage:'invented',event_id:event}},{bidding:{stage:'first_round',event_id:''}},{reports:[{...bidding.reports[0],event_id:''}]},{public_status:'withdrawn'}]) await assert.rejects(save(id,{...bidding,...change},approved.revision));
     await db.query('update case_events set is_visible=false where id=$1',[event]);
     await assert.rejects(publish(id,approved.revision),/出来事/);
     await session('service_role');await assert.rejects(db.query('select read_published_tracking()'),/出来事/);

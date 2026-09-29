@@ -33,6 +33,9 @@ export function publicTrackingStatus(p: Pick<TrackingProfile,'public_status'|'re
     ? 'reported' : p.public_status;
 }
 export type TrackingStage = 'pre' | 'post' | 'closed';
+/** Explicit editorial classification, never inferred from keywords or report counts. */
+export const BIDDING_STAGE = { first_round:'一次入札の報道', second_round:'二次入札の報道', final_round:'最終入札の報道' } as const;
+export const BIDDING_ELIGIBLE_STATUSES = ['rumor','proposal','consideration','discussions','comment'] as const;
 export const REPORT_METHOD = { direct: '原報道を直接確認', company: '会社開示で言及を確認', secondary: '二次報道で言及を確認' } as const;
 export const REPORT_ACCESS = { full: '本文確認', partial: '公開部分のみ確認', unread: '原文未閲覧' } as const;
 export const DATE_PRECISION = { datetime: '日時', date: '日付のみ', month: '公表年月のみ', issue: '号数のみ', unknown: '日付不明' } as const;
@@ -71,6 +74,7 @@ export interface TrackingProfile {
   report_note: string;
   reports: ReportEvidence[];
   event_dates: EventDateOverride[];
+  bidding?: { stage: keyof typeof BIDDING_STAGE; event_id: string };
 }
 export interface TrackingEdition {
   case_id: string;
@@ -111,7 +115,7 @@ function choice<T extends string>(value: unknown, choices: readonly T[]): T {
   return value as T;
 }
 const textKeys = ['title','summary','tracking_reason','tracking_started_on','last_checked_on','verification_note','short_reason','status_note','report_note'] as const;
-const profileKeys = [...textKeys,'public_status','status_event_ids','statements','report_state','reports','event_dates'];
+const profileKeys = [...textKeys,'public_status','status_event_ids','statements','report_state','reports','event_dates','bidding'];
 export function parseTrackingProfile(value: unknown, publish = false): TrackingProfile {
   const s = object(value, profileKeys);
   const out = {} as TrackingProfile;
@@ -149,6 +153,12 @@ export function parseTrackingProfile(value: unknown, publish = false): TrackingP
     return result;
   });
   if (new Set(out.event_dates.map(x => x.event_id)).size !== out.event_dates.length) throw new Error('日付設定が重複しています');
+  if (s.bidding !== undefined) {
+    const b = object(s.bidding, ['stage','event_id']);
+    out.bidding = { stage:choice(b.stage, Object.keys(BIDDING_STAGE) as (keyof typeof BIDDING_STAGE)[]), event_id:id(b.event_id) };
+    if (!(BIDDING_ELIGIBLE_STATUSES as readonly string[]).includes(out.public_status)) throw new Error('入札段階は正式発表前の進行中の状況だけに設定できます');
+    if (out.report_state !== 'reported' || !out.reports.some(r => r.event_id === out.bidding!.event_id)) throw new Error('入札段階には確認済み媒体の根拠と結び付いた出来事が必要です');
+  }
   if ((out.report_state === 'reported') !== (out.reports.length > 0)) throw new Error('媒体の分類と根拠が一致しません');
   if (publish && (!out.title || !out.short_reason || !out.last_checked_on || out.report_state === 'unreviewed')) throw new Error('公開にはタイトル・噂の概要・確認日・媒体分類が必要です');
   if (publish && out.report_state === 'none' && !out.report_note) throw new Error('報道なしとして登録する内容・確認範囲を入力してください');
@@ -172,7 +182,7 @@ export function applyPublishedProfile(c: RawCase, p: TrackingProfile): RawCase {
 }
 export function validateProfileReferences(p: TrackingProfile, c: RawCase, events: RawEvent[], outlets: MediaOutlet[]): void {
   const ids = new Set(events.filter(e => e.case_id === c.id && e.is_visible).map(e => e.id));
-  for (const ref of [...p.status_event_ids, ...p.statements.map(x => x.event_id), ...p.reports.map(x => x.event_id).filter(Boolean), ...p.event_dates.map(x => x.event_id)]) {
+  for (const ref of [...p.status_event_ids, ...p.statements.map(x => x.event_id), ...p.reports.map(x => x.event_id).filter(Boolean), ...p.event_dates.map(x => x.event_id), ...(p.bidding ? [p.bidding.event_id] : [])]) {
     if (!ids.has(ref)) throw new Error(`公開分類が非公開・別案件・削除済みの出来事を参照しています: ${c.slug}`);
   }
   const mediaIds = new Set(outlets.map(o => o.id));

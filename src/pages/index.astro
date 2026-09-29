@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import TrackingTable from '../components/TrackingTable.astro';
+import TrackingLegend from '../components/TrackingLegend.astro';
 import AdSlot from '../components/AdSlot.astro';
 import { loadPublicData } from '../lib/publicData';
 import { PUBLIC_TRACKING_STATUS, validDate } from '../lib/trackingProfile';
@@ -14,24 +15,25 @@ const searchData=JSON.stringify(cases.map(c=>({...c.search,slug:c.slug}))).repla
 const years=[...new Set(cases.flatMap(c=>c.search.events.map(e=>e.date.start?.slice(0,4)).filter((x):x is string=>!!x)))].sort().reverse();
 const homeAdSlot = import.meta.env.PUBLIC_ADSENSE_SLOT_HOME ?? '';
 const hasHomeAd = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT && homeAdSlot);
+const stages=[{id:'',label:'すべて'},{id:'pre',label:'正式発表前'},{id:'post',label:'正式発表後'},{id:'closed',label:'完了・終了'},{id:'unreviewed',label:'分類確認中'}];
 ---
 <Base title="非公開化ウォッチ" description="以前、非公開化の噂になっていた銘柄は今どうなっている？ 非公開化・MBO・親子上場解消の噂、報道、会社説明とその後を時系列で追うデータベース。" path="/" hasAdSlots={hasHomeAd}>
   {isSampleData && <p class="notice">開発・デモ用の<strong>架空のサンプルデータ</strong>です。実在の企業・報道とは関係ありません。</p>}
   <section class="tracking-intro" aria-label="サービス概要">
-    <h1>非公開化ウォッチ</h1>
-    <p>以前、非公開化の噂になっていた銘柄。<strong>今どうなっている？</strong></p>
-    <p class="small muted">噂・報道と、その後の会社説明を記録します。掲載は非公開化の決定や実現可能性を示すものではありません。<a href="/guidelines/">掲載基準</a></p>
+    <h1>噂の、その後を追う。</h1>
+    <p class="muted">非公開化をめぐる噂・報道と、その後の会社説明を時系列で確認。<a class="small" href="/guidelines/">掲載基準</a></p>
   </section>
   <section class="section" aria-label="銘柄の検索・絞り込み">
-    <h2 class="section-title">追跡銘柄 <span class="small muted">全{cases.length}件</span></h2>
     <form class="card tracking-filters" id="filter-form" role="search">
-      <div class="filter-bar">
+      <div class="filter-topline">
+        <fieldset class="stage-options"><legend class="sr-only">段階</legend>{stages.map(s=><label class:list={['stage-option',{'stage-option--unreviewed':s.id==='unreviewed' && !cases.some(c=>c.search.stage==='unreviewed')}]}><input type="radio" name="stage" value={s.id} checked={s.id===''} data-label={s.label}/><span>{s.label}<small>{s.id ? cases.filter(c=>c.search.stage===s.id).length : cases.length}</small></span></label>)}</fieldset>
+        <label class="favorite-filter" data-login-only hidden><input type="checkbox" id="f-fav"/><span>☆ お気に入り</span></label>
+      </div>
+      <div class="filter-bar primary-filters">
         <div class="filter-field filter-field--wide"><label for="f-q">会社名・証券コード・噂</label><input name="q" type="search" id="f-q" maxlength="150" placeholder="会社名・コードなど" autocomplete="off"/></div>
         <div class="filter-field"><label for="f-status">今の状況</label><select name="status" id="f-status"><option value="">すべて</option>{Object.entries(PUBLIC_TRACKING_STATUS).map(([id,s])=><option value={id}>{s.label}</option>)}<option value="unreviewed">状況を確認中</option></select></div>
-        <div class="filter-field"><label for="f-stage">段階</label><select id="f-stage" name="stage"><option value="">すべて</option><option value="pre">正式発表前</option><option value="post">正式発表後</option><option value="closed">完了・終了</option><option value="unreviewed">分類確認中</option></select></div>
-        <div class="filter-field"><label for="f-sort">並び順</label><select id="f-sort" name="sort"><option value="event">出来事が新しい順</option><option value="registered">サイト登録が新しい順</option><option value="updated">編集が新しい順</option><option value="code">証券コード順</option></select></div>
       </div>
-      <fieldset class="media-filter"><legend>媒体 <span class="small muted">複数選択可・いずれかを含む</span></legend><div class="media-options">{media.map(m=><label><input type="checkbox" name="media" value={m.id} data-label={m.name}/>{m.name} <span class="muted small">(<span data-media-count={m.id}>{cases.filter(c=>c.search.media.includes(m.id)).length}</span>)</span></label>)}</div></fieldset>
+      <fieldset class="media-filter"><legend>媒体 <span class="small muted">複数選択可</span></legend><div class="media-options">{media.map(m=><label><input type="checkbox" name="media" value={m.id} data-label={m.name}/><span class="media-choice"><span class="media-choice-check" aria-hidden="true">✓</span>{m.name}<small data-media-count={m.id}>{cases.filter(c=>c.search.media.includes(m.id)).length}</small></span></label>)}</div></fieldset>
       <details class="search-more"><summary>期間・会社説明で絞り込む</summary>
         <div class="filter-bar">
           <div class="filter-field"><label for="f-statement">過去を含む会社説明</label><select name="statement" id="f-statement"><option value="">すべて</option>{Object.entries(STATEMENT_FILTERS).map(([id,label])=><option value={id}>{label}</option>)}</select></div>
@@ -42,18 +44,15 @@ const hasHomeAd = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT && homeAdSlot);
         <label class="filter-check"><input type="checkbox" name="issues"/>号数だけの情報を参考年月で含める</label>
         <p class="small muted">期間内に出来事が1件でもある銘柄を表示します。媒体は案件全体、状況は最新の確認内容です。号数は公表月を意味しません。</p>
         <p class="notice" id="date-error" hidden>終了日は開始日以降にしてください。</p>
+        <div class="filter-field" data-login-only hidden><label for="f-intensity">お気に入りの関心度</label><select id="f-intensity"><option value="">すべて</option><option value="3">3: 最重要</option><option value="2">2: 注目</option><option value="1">1: 経過確認</option></select></div>
       </details>
-      <div class="filter-bar">
-        <label class="filter-check" data-login-only hidden><input type="checkbox" id="f-fav"/>お気に入りのみ</label>
-        <div class="filter-field" data-login-only hidden><label for="f-intensity">関心度</label><select id="f-intensity"><option value="">すべて</option><option value="3">3: 最重要</option><option value="2">2: 注目</option><option value="1">1: 経過確認</option></select></div>
-        <button type="button" class="btn" data-clear-search>条件をすべて解除</button><span id="filter-count" aria-live="polite">{cases.length}件</span>
-      </div>
-      <div id="active-filters" class="active-filters" aria-label="適用中の条件"></div>
+      <div class="filter-actions"><div id="active-filters" class="active-filters" aria-label="適用中の条件"></div><button type="button" class="btn small" data-clear-search data-clear-main hidden>条件をすべて解除</button></div>
       <p id="search-warning" class="notice" hidden>URLの未対応・不正な条件を除いて表示しています。</p>
       <noscript><p class="notice">検索にはJavaScriptが必要です。すべての銘柄は下の一覧から閲覧できます。</p></noscript>
     </form>
-    <p class="small muted">公表日が分かる直近の出来事を基準に並べます。日付未確認のみの銘柄は、その後にサイト登録順で表示します。</p>
-    <p class="list-checked small"><strong>最終確認日: {latestCheckedOn ? <time datetime={latestCheckedOn}>{formatDate(latestCheckedOn)}</time> : '未確認'}</strong><span class="muted">掲載銘柄の確認日のうち最新。各銘柄の確認日は詳細に記載しています。</span></p>
+    <div class="list-toolbar"><div><h2 class="section-title">追跡銘柄 <span class="small muted" id="filter-count" aria-live="polite">全{cases.length}件</span></h2><div class="list-checked small"><strong>最終確認日: {latestCheckedOn ? <time datetime={latestCheckedOn}>{formatDate(latestCheckedOn)}</time> : '未確認'}</strong><details class="list-help"><summary aria-label="確認日と並び順について">ⓘ</summary><p>掲載銘柄の確認日のうち最新です。全銘柄を同日に確認した意味ではありません。個別の確認日は詳細に記載しています。</p><p>標準では公表日が分かる直近の出来事順。日付未確認のみの銘柄は、その後にサイト登録順で表示します。</p></details></div></div><div class="filter-field"><label class="sr-only" for="f-sort">並び順</label><select id="f-sort" name="sort" form="filter-form"><option value="event">出来事が新しい順</option><option value="registered">サイト登録が新しい順</option><option value="updated">編集が新しい順</option><option value="code">証券コード順</option></select></div></div>
+    <TrackingLegend/>
+    <p class="metrics-pending small muted">株価・指標の「—」はデータ未取得です。公開用の取得元を確認中です。</p>
     <TrackingTable cases={cases}/>
     {hasHomeAd && <AdSlot placement="home-between-sections" slotId={homeAdSlot}/>}
   </section>

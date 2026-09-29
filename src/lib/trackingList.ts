@@ -58,11 +58,17 @@ export function setupTrackingList(personalMatch:(id:string)=>boolean, clearPerso
     const chips=document.getElementById('active-filters')!;chips.replaceChildren();
     const add=(label:string,clear:()=>void)=>{const b=document.createElement('button');b.type='button';b.className='btn small';b.textContent=`${label} ×`;b.setAttribute('aria-label',`${label}の条件を解除`);b.onclick=()=>{clear();commit();};chips.append(b);};
     if(filters.q)add(`検索: ${filters.q}`,()=>input('q').value='');
-    for(const key of ['stage','status','statement'] as const) if(filters[key])add((input(key) as unknown as HTMLSelectElement).selectedOptions[0].text,()=>input(key).value='');
+    if(filters.stage) add(form.querySelector<HTMLInputElement>('[name="stage"]:checked')!.dataset.label!,()=>input('stage').value='');
+    for(const key of ['status','statement'] as const) if(filters[key])add((input(key) as unknown as HTMLSelectElement).selectedOptions[0].text,()=>input(key).value='');
     for(const m of media.filter(m=>m.checked))add(m.dataset.label!,()=>m.checked=false);
     if(filters.from||filters.to)add(`期間: ${filters.from||'指定なし'}〜${filters.to||'指定なし'}`,()=>{input('from').value='';input('to').value='';});
     if(filters.includeIssues)add('号数の参考年月を含む',()=>input('issues').checked=false);
     if(filters.sort!=='event')add(`並び順: ${(input('sort') as unknown as HTMLSelectElement).selectedOptions[0].text}`,()=>input('sort').value='event');
+    const fav=document.getElementById('f-fav') as HTMLInputElement;
+    const intensity=document.getElementById('f-intensity') as HTMLSelectElement;
+    if(fav.checked)add('お気に入り',()=>fav.checked=false);
+    if(intensity.value)add(`関心度: ${intensity.selectedOptions[0].text}`,()=>intensity.value='');
+    document.querySelector<HTMLElement>('[data-clear-main]')!.hidden=!chips.childElementCount;
     try {sessionStorage.setItem('tracking-public-search',searchParams(filters));}catch{}
   }
   function commit(replace=false) {
@@ -78,6 +84,8 @@ export function setupTrackingList(personalMatch:(id:string)=>boolean, clearPerso
     clearTimeout(timer);
     if(target.name==='q')timer=setTimeout(()=>commit(true),300);else commit();
   });
+  // form-associated controls outside <form> do not bubble input events through it.
+  input('sort').addEventListener('change',()=>{clearTimeout(timer);commit();});
   document.querySelectorAll('[data-clear-search]').forEach(b=>b.addEventListener('click',()=>{form.reset();clearPersonal();commit();input('q').focus();}));
   document.getElementById('last-twelve-months')!.addEventListener('click',()=>{const range=lastTwelveMonths();input('from').value=range.from;input('to').value=range.to;commit();});
   document.getElementById('f-year')!.addEventListener('change',e=>{const year=(e.target as HTMLSelectElement).value;if(year){input('from').value=year+'-01-01';input('to').value=year+'-12-31';commit();}(e.target as HTMLSelectElement).value='';});

@@ -11,6 +11,7 @@
 import { applyPublishedProfile, parseTrackingProfile, validateProfileReferences, TRACKING_STATUS, publicTrackingStatus } from './trackingProfile.ts';
 import type { TrackingEdition, MediaOutlet } from './trackingProfile.ts';
 import { publicEventDate, timelineDateKey } from './trackingDates.ts';
+import { trackingActivity, firstReportLabel } from './trackingVisual.ts';
 import { compareCases, latestDatedEvent, companySearchAliases } from './trackingSearch.ts';
 import type { SearchCase } from './trackingSearch.ts';
 import { createClient } from '@supabase/supabase-js';
@@ -249,7 +250,15 @@ export function assemble(raw: RawData): PublicData {
       statementTags:[...new Set(profile?.statements.flatMap(s=>s.tags) ?? [])],registeredOn:c.site_published_at ?? '',updatedAt:lastUpdatedAt,
       events:eventViews.map(e=>({id:e.id,title:e.title,date:e.date}))};
     const latest = latestDatedEvent(search);
+    // Unlinked report evidence still counts as a public event; checked_on is not its date.
+    const unlinkedReportDates = (profile?.reports ?? []).filter(r=>!r.event_id).map(r=>
+      publicEventDate({occurred_at:null} as RawEvent, {
+        event_id:'', precision:r.reported_on?'date':'unknown', value:r.reported_on, issue_label:'',
+      }),
+    );
     details.push({
+      firstReport:firstReportLabel(profile,firstReportedAt,eventViews.filter(e=>['observation_report','follow_up_report'].includes(e.eventType))),
+      activity:trackingActivity([...eventViews.map(e=>e.date), ...unlinkedReportDates]),
       tracking:profile, publicationVersion:edition?.publication_version ?? null, media, search,
       id: c.id,
       slug: c.slug,

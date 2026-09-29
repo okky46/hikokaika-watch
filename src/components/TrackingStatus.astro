@@ -1,9 +1,31 @@
 ---
-import { PUBLIC_TRACKING_STATUS, publicTrackingStatus } from '../lib/trackingProfile';
 import type { TrackingProfile } from '../lib/trackingProfile';
-interface Props { profile: TrackingProfile | null }
-const {profile}=Astro.props;
-const status=profile ? PUBLIC_TRACKING_STATUS[publicTrackingStatus(profile)] : null;
+import { trackingVisual } from '../lib/trackingVisual';
+import type { TrackingActivity } from '../lib/trackingVisual';
+interface Props { profile: TrackingProfile | null; activity?: TrackingActivity }
+const {profile, activity}=Astro.props;
+const visual=trackingVisual(profile,activity);
 ---
-<span class={`badge badge--${status?.tone ?? 'pause'}`}>{status?.label ?? '状況を確認中'}</span>
+<div class="tracking-status" data-status-tone={visual.tone} data-quiet-eligible={String(visual.eligible)} data-activity={activity ? JSON.stringify(activity) : undefined}>
+<span class:list={['badge','tracking-badge',`tracking-badge--${visual.tone}`,{'is-quiet':visual.stale}]}>{visual.label}</span>
+{visual.processLabel && <span class="process-note small">{visual.processLabel}</span>}
 {profile?.status_note && <p class="status-note small">{profile.status_note}</p>}
+<p class="activity-note small" hidden={!visual.stale}>{visual.staleLabel}</p>
+</div>
+<script>
+  import { quietDays } from '../lib/trackingVisual';
+  import type { TrackingActivity } from '../lib/trackingVisual';
+  function refreshActivity() {
+    document.querySelectorAll<HTMLElement>('.tracking-status[data-activity]').forEach(el=>{
+      const days=quietDays(JSON.parse(el.dataset.activity!) as TrackingActivity,el.dataset.quietEligible==='true');
+      el.querySelector('.tracking-badge')?.classList.toggle('is-quiet',days!==null);
+      const note=el.querySelector<HTMLElement>('.activity-note')!;
+      note.hidden=days===null;note.textContent=days===null?'':`続報未確認・${days}日`;
+    });
+  }
+  refreshActivity();
+  window.addEventListener('pageshow',refreshActivity);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshActivity();});
+  // No network request: keep a long-open static page accurate across JST midnight.
+  setInterval(refreshActivity,60000);
+</script>
