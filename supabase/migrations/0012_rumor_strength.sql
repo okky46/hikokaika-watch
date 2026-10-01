@@ -1,4 +1,4 @@
--- Optional editorial rumor strength. Existing profiles remain unassessed.
+-- Optional editorial color strengths for rumor/report/consideration, independent of bidding.
 -- Existing IDs, publication procedures, Auth and private-note RLS are unchanged.
 -- The deployment runner owns the transaction.
 create or replace function public.validate_tracking_profile(payload jsonb, for_publication boolean, tracking_id uuid) returns void
@@ -7,10 +7,12 @@ declare k text; r jsonb; v text; ref text; refs text[] := '{}'; max_length integ
 begin
   if payload is null or jsonb_typeof(payload)<>'object' then raise exception '入力形式が不正です'; end if;
   if exists(select 1 from jsonb_object_keys(payload) x where x not in
-    ('title','summary','tracking_reason','tracking_started_on','last_checked_on','verification_note','short_reason','status_note','public_status','status_event_ids','statements','report_state','report_note','reports','event_dates','bidding','rumor_strength')) then raise exception '未対応の項目があります'; end if;
-  if payload ? 'rumor_strength' then
-    if jsonb_typeof(payload->'rumor_strength') is distinct from 'string' or payload->>'rumor_strength' not in ('weak','medium','strong') then raise exception '噂の強度が不正です'; end if;
-  end if;
+    ('title','summary','tracking_reason','tracking_started_on','last_checked_on','verification_note','short_reason','status_note','public_status','status_event_ids','statements','report_state','report_note','reports','event_dates','bidding','rumor_strength','reported_strength','process_strength')) then raise exception '未対応の項目があります'; end if;
+  foreach k in array array['rumor_strength','reported_strength','process_strength'] loop
+    if payload ? k then
+      if jsonb_typeof(payload->k) is distinct from 'string' or payload->>k not in ('weak','medium','strong') then raise exception '色の強度が不正です'; end if;
+    end if;
+  end loop;
   foreach k in array array['title','summary','tracking_reason','tracking_started_on','last_checked_on','verification_note','short_reason','status_note','report_note'] loop
     max_length := case when k='title' then 240 when k in ('short_reason','status_note') then 300 else 6000 end;
     v:=public.tracking_text(payload,k,max_length);

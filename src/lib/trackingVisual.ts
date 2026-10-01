@@ -20,18 +20,19 @@ export function trackingVisual(profile: TrackingProfile | null, activity?: Track
   const key = profile ? publicTrackingStatus(profile) : 'unreviewed';
   const status = key === 'unreviewed' ? null : PUBLIC_TRACKING_STATUS[key];
   const bidding = profile?.bidding;
+  const strengthTone = (base: string, strength: string | undefined) => strength === 'strong' ? `${base}_strong` : strength === 'medium' ? `${base}_medium` : base;
   let tone = 'neutral';
-  if (key === 'rumor') tone = profile?.rumor_strength === 'strong' ? 'rumor_strong' : profile?.rumor_strength === 'medium' ? 'rumor_medium' : 'rumor';
-  if (key === 'reported') tone = 'reported';
+  if (key === 'rumor') tone = strengthTone('rumor', profile?.rumor_strength);
+  if (key === 'reported') tone = strengthTone('reported', profile?.reported_strength);
   // Receiving a proposal or merely commenting is not an acknowledgement of consideration.
   const acknowledged = ['consideration','discussions'].includes(key);
-  if (['proposal','comment'].includes(key) && profile?.report_state === 'reported') tone = 'reported';
-  if (acknowledged) tone = 'process';
+  if (['proposal','comment'].includes(key) && profile?.report_state === 'reported') tone = strengthTone('reported', profile?.reported_strength);
+  if (acknowledged) tone = strengthTone('process', profile?.process_strength);
   if (status?.stage === 'post') tone = 'announced';
   if (key === 'privatized' || key === 'delisted') tone = 'complete';
   if (['consideration_denied','report_denied','consideration_ended','withdrawn','failed'].includes(key)) tone = 'stopped';
   const activeBidding = bidding && profile?.report_state === 'reported' && ['reported','proposal','consideration','discussions','comment'].includes(key) ? bidding : null;
-  if (activeBidding) tone = acknowledged ? activeBidding.stage : `reported_${activeBidding.stage}`;
+  // Bidding remains an optional factual annotation; it never selects color intensity.
   const eligible = ['reported','proposal','consideration','discussions','comment','rumor'].includes(key);
   const days = quietDays(activity, eligible, today);
   const stale = days !== null;

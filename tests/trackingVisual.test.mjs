@@ -58,7 +58,7 @@ test('入札段階は明示入力と媒体の根拠が必要。文言や報道�
   assert.equal(trackingVisual({...profile(),short_reason:'最終入札の噂'}).tone,'reported');
   for(const stage of ['first_round','second_round','final_round']) {
     const p=parseTrackingProfile({...profile(),bidding:{stage,event_id:event}},true);
-    assert.equal(trackingVisual(p).tone,`reported_${stage}`);
+    assert.equal(trackingVisual(p).tone,'reported');
     assert.equal(trackingVisual(p).label,'観測報道あり');
     assert.match(trackingVisual(p).processLabel,/入札の報道/);
     assert.match(trackingVisual({...p,public_status:'proposal'}).processLabel,/入札の報道/);
@@ -83,14 +83,14 @@ test('噂の3段階は管理者設定だけを使い、公開ラベルは同じ�
   for(const rumor_strength of ['',null,3,' strong ','guessed',{},['strong']])assert.throws(()=>parseTrackingProfile({...p,rumor_strength}));
 });
 
-test('会社の検討・協議への言及だけがオレンジ。入札の続報でも色系統と主タグを保つ',()=>{
+test('色の強弱は各3段階を独立して設定でき、入札や報道件数とは連動しない',()=>{
   for(const public_status of ['rumor','proposal','comment','consideration','discussions']) {
     const p={...profile(),public_status};
     const acknowledged=['consideration','discussions'].includes(public_status);
     assert.equal(trackingVisual(p).tone,acknowledged?'process':'reported');
     for(const stage of ['first_round','second_round','final_round']){
       const visual=trackingVisual({...p,bidding:{stage,event_id:event}});
-      assert.equal(visual.tone,acknowledged?stage:`reported_${stage}`);
+      assert.equal(visual.tone,acknowledged?'process':'reported');
       assert.equal(visual.label,trackingVisual(p).label);
       assert.match(visual.processLabel,/入札の報道/);
     }
@@ -100,13 +100,33 @@ test('会社の検討・協議への言及だけがオレンジ。入札の続�
     assert.deepEqual(trackingVisual({...p,bidding:{stage:'final_round',event_id:event}}),trackingVisual(p));
   }
   assert.equal(trackingVisual({...profile(),public_status:'consideration',status_note:'続報3件'}).tone,'process');
+  for(const [key,base,p] of [
+    ['rumor_strength','rumor',{...profile(),report_state:'none',reports:[],report_note:'未確認'}],
+    ['reported_strength','reported',profile()],
+    ['process_strength','process',{...profile(),public_status:'consideration',status_event_ids:[event]}],
+  ]) {
+    for(const strength of ['weak','medium','strong']) {
+      const saved=parseTrackingProfile({...p,[key]:strength},true);
+      const visual=trackingVisual(saved);
+      assert.equal(saved[key],strength);
+      assert.equal(visual.tone,base+(strength==='weak'?'':`_${strength}`));
+      assert.equal(visual.label,trackingVisual(p).label);
+      if(base!=='rumor')for(const stage of ['first_round','second_round','final_round'])assert.equal(trackingVisual({...saved,bidding:{stage,event_id:event}}).tone,visual.tone);
+    }
+    for(const value of [null,4,'',' strong ',{},['strong']])assert.throws(()=>parseTrackingProfile({...p,[key]:value},true));
+  }
+  const p={...profile(),rumor_strength:'strong',reported_strength:'medium',process_strength:'weak'};
+  assert.equal(trackingVisual(p).tone,'reported_medium');
+  assert.equal(trackingVisual({...p,public_status:'consideration'}).tone,'process');
+  assert.equal(trackingVisual({...p,report_state:'none',reports:[]}).tone,'rumor_strong');
+  for(const public_status of ['announced','consideration_denied','delisted'])assert.equal(trackingVisual({...p,public_status}).tone,trackingVisual({...profile(),public_status}).tone);
 });
 
-test('各配色・180日超の淡色でも文字コントラスト4.5以上、強度・入札段階を塗り分ける',()=>{
+test('各色3段階・180日超の淡色でも文字コントラスト4.5以上、強度を塗り分ける',()=>{
   const css=fs.readFileSync('src/styles/global.css','utf8');
   const luminance=hex=>{const rgb=hex.slice(1).length===3?hex.slice(1).split('').map(x=>x+x):hex.slice(1).match(/../g);return rgb.map(x=>parseInt(x,16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0);};
   const colors=tone=>Object.fromEntries([...css.match(new RegExp(`\\.tracking-badge--${tone} \\{([^}]+)`))[1].matchAll(/--([\w-]+):\s*(#[\da-f]+);/g)].map(m=>[m[1],m[2]]));
-  const groups=[['rumor','rumor_medium','rumor_strong'],['reported','reported_first_round','reported_second_round','reported_final_round'],['process','first_round','second_round','final_round']];
+  const groups=['rumor','reported','process'].map(t=>[t,`${t}_medium`,`${t}_strong`]);
   for(const tones of [...groups,['neutral','announced','stopped','complete']]) {
     for(const tone of tones) {
       const c=colors(tone);

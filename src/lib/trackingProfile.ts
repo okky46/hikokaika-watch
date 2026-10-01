@@ -37,6 +37,7 @@ export type TrackingStage = 'pre' | 'post' | 'closed';
 export const BIDDING_STAGE = { first_round:'一次入札の報道', second_round:'二次入札の報道', final_round:'最終入札の報道' } as const;
 /** Editorial strength only; never a probability or an inferred fact. Omission means unassessed. */
 export const RUMOR_STRENGTH = { weak:'弱', medium:'中', strong:'強' } as const;
+export const COLOR_STRENGTH_FIELDS = { rumor_strength:'噂（紫）', reported_strength:'観測報道（黄色）', process_strength:'検討・協議（オレンジ）' } as const;
 export const BIDDING_ELIGIBLE_STATUSES = ['rumor','proposal','consideration','discussions','comment'] as const;
 export const REPORT_METHOD = { direct: '原報道を直接確認', company: '会社開示で言及を確認', secondary: '二次報道で言及を確認' } as const;
 export const REPORT_ACCESS = { full: '本文確認', partial: '公開部分のみ確認', unread: '原文未閲覧' } as const;
@@ -78,6 +79,8 @@ export interface TrackingProfile {
   event_dates: EventDateOverride[];
   bidding?: { stage: keyof typeof BIDDING_STAGE; event_id: string };
   rumor_strength?: keyof typeof RUMOR_STRENGTH;
+  reported_strength?: keyof typeof RUMOR_STRENGTH;
+  process_strength?: keyof typeof RUMOR_STRENGTH;
 }
 export interface TrackingEdition {
   case_id: string;
@@ -118,11 +121,13 @@ function choice<T extends string>(value: unknown, choices: readonly T[]): T {
   return value as T;
 }
 const textKeys = ['title','summary','tracking_reason','tracking_started_on','last_checked_on','verification_note','short_reason','status_note','report_note'] as const;
-const profileKeys = [...textKeys,'public_status','status_event_ids','statements','report_state','reports','event_dates','bidding','rumor_strength'];
+const profileKeys = [...textKeys,'public_status','status_event_ids','statements','report_state','reports','event_dates','bidding',...Object.keys(COLOR_STRENGTH_FIELDS)];
 export function parseTrackingProfile(value: unknown, publish = false): TrackingProfile {
   const s = object(value, profileKeys);
   const out = {} as TrackingProfile;
-  if (s.rumor_strength !== undefined) out.rumor_strength = choice(s.rumor_strength, Object.keys(RUMOR_STRENGTH) as (keyof typeof RUMOR_STRENGTH)[]);
+  for (const key of Object.keys(COLOR_STRENGTH_FIELDS) as (keyof typeof COLOR_STRENGTH_FIELDS)[]) {
+    if (s[key] !== undefined) out[key] = choice(s[key], Object.keys(RUMOR_STRENGTH) as (keyof typeof RUMOR_STRENGTH)[]);
+  }
   for (const k of textKeys) out[k] = string(s[k], k === 'title' ? 240 : k === 'short_reason' || k === 'status_note' ? 300 : 6000);
   for (const k of ['tracking_started_on','last_checked_on'] as const) if (out[k] && !validDate(out[k])) throw new Error('日付が不正です');
   out.public_status = choice(s.public_status, Object.keys(TRACKING_STATUS) as TrackingStatus[]);
