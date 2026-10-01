@@ -21,20 +21,23 @@ export function trackingVisual(profile: TrackingProfile | null, activity?: Track
   const status = key === 'unreviewed' ? null : PUBLIC_TRACKING_STATUS[key];
   const bidding = profile?.bidding;
   let tone = 'neutral';
-  if (key === 'rumor') tone = 'rumor';
+  if (key === 'rumor') tone = profile?.rumor_strength === 'strong' ? 'rumor_strong' : profile?.rumor_strength === 'medium' ? 'rumor_medium' : 'rumor';
   if (key === 'reported') tone = 'reported';
-  if (['proposal','consideration','discussions'].includes(key)) tone = 'process';
-  if (key === 'comment') tone = 'neutral'; // A comment does not itself confirm progress.
+  // Receiving a proposal or merely commenting is not an acknowledgement of consideration.
+  const acknowledged = ['consideration','discussions'].includes(key);
+  if (['proposal','comment'].includes(key) && profile?.report_state === 'reported') tone = 'reported';
+  if (acknowledged) tone = 'process';
   if (status?.stage === 'post') tone = 'announced';
   if (key === 'privatized' || key === 'delisted') tone = 'complete';
   if (['consideration_denied','report_denied','consideration_ended','withdrawn','failed'].includes(key)) tone = 'stopped';
-  if (bidding && ['rumor','reported','proposal','consideration','discussions','comment'].includes(key)) tone = bidding.stage;
+  const activeBidding = bidding && profile?.report_state === 'reported' && ['reported','proposal','consideration','discussions','comment'].includes(key) ? bidding : null;
+  if (activeBidding) tone = acknowledged ? activeBidding.stage : `reported_${activeBidding.stage}`;
   const eligible = ['reported','proposal','consideration','discussions','comment','rumor'].includes(key);
   const days = quietDays(activity, eligible, today);
   const stale = days !== null;
   return {
-    label: bidding && key === 'reported' ? BIDDING_STAGE[bidding.stage] : status?.label ?? '状況を確認中',
-    processLabel: bidding && key !== 'reported' ? BIDDING_STAGE[bidding.stage] : '',
+    label: status?.label ?? '状況を確認中',
+    processLabel: activeBidding ? BIDDING_STAGE[activeBidding.stage] : '',
     tone, stale, eligible,
     staleLabel: stale ? `続報未確認・${days}日` : '',
   };
