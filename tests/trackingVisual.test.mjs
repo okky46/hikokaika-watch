@@ -122,7 +122,7 @@ test('色の強弱は各3段階を独立して設定でき、入札や報道件�
   for(const public_status of ['announced','consideration_denied','delisted'])assert.equal(trackingVisual({...p,public_status}).tone,trackingVisual({...profile(),public_status}).tone);
 });
 
-test('各色3段階・180日超の淡色でも文字コントラスト4.5以上、強度を塗り分ける',()=>{
+test('各色3段階は明るい背景と濃い文字を維持し、淡色時もコントラスト7以上',()=>{
   const css=fs.readFileSync('src/styles/global.css','utf8');
   const luminance=hex=>{const rgb=hex.slice(1).length===3?hex.slice(1).split('').map(x=>x+x):hex.slice(1).match(/../g);return rgb.map(x=>parseInt(x,16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0);};
   const colors=tone=>Object.fromEntries([...css.match(new RegExp(`\\.tracking-badge--${tone} \\{([^}]+)`))[1].matchAll(/--([\w-]+):\s*(#[\da-f]+);/g)].map(m=>[m[1],m[2]]));
@@ -132,7 +132,9 @@ test('各色3段階・180日超の淡色でも文字コントラスト4.5以上�
       const c=colors(tone);
       for(const prefix of ['status','quiet'])if(c[`${prefix}-bg`]){
         const a=luminance(c[`${prefix}-bg`]),b=luminance(c[`${prefix}-fg`]);
-        assert.ok((Math.max(a,b)+.05)/(Math.min(a,b)+.05)>=4.5,`${tone} ${prefix}`);
+        const editable=groups.some(g=>g.includes(tone));
+        assert.ok((Math.max(a,b)+.05)/(Math.min(a,b)+.05)>=(editable?7:4.5),`${tone} ${prefix}`);
+        if(editable){assert.ok(a>=.55,`${tone} background stays light`);assert.ok(b<.06,`${tone} text stays dark`);}
       }
     }
   }

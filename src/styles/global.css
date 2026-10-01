@@ -916,15 +916,16 @@ body:has(.case-section-nav) :is(#timeline,#evidence,#related-articles,#note-sect
 .intensity-swatches { display: inline-flex; gap: .15rem; }.intensity-swatches i { width: .9rem; height: .45rem; background: var(--status-bg); border: 1px solid var(--status-line); }
 .tracking-badge { background: var(--status-bg); border-color: var(--status-line); color: var(--status-fg); }
 .tracking-badge--neutral { --status-bg: #fff; --status-line: #d4dce4; --status-fg: #475569; --quiet-bg: #fff; --quiet-line: #e1e5e9; --quiet-fg: #475569; }
-.tracking-badge--rumor { --status-bg: #f0e8fa; --status-line: #d8c4ed; --status-fg: #593478; --quiet-bg: #f8f4fc; --quiet-line: #e7dbf3; --quiet-fg: #634679; }
-.tracking-badge--rumor_medium { --status-bg: #ddc5f1; --status-line: #b995d9; --status-fg: #4d256c; --quiet-bg: #f0e5f8; --quiet-line: #d9c2eb; --quiet-fg: #593478; }
-.tracking-badge--rumor_strong { --status-bg: #bd91de; --status-line: #9a68c1; --status-fg: #36144f; --quiet-bg: #e4cff3; --quiet-line: #c6a6df; --quiet-fg: #4d256c; }
-.tracking-badge--reported { --status-bg: #fff3bc; --status-line: #e8d78c; --status-fg: #615000; --quiet-bg: #fffbeb; --quiet-line: #eee4bb; --quiet-fg: #665624; }
-.tracking-badge--reported_medium { --status-bg: #e8cb52; --status-line: #c3a731; --status-fg: #483900; --quiet-bg: #f5eab5; --quiet-line: #dfcf90; --quiet-fg: #594800; }
-.tracking-badge--reported_strong { --status-bg: #c7aa2d; --status-line: #a18a20; --status-fg: #322700; --quiet-bg: #e9dc9d; --quiet-line: #cabb76; --quiet-fg: #483900; }
-.tracking-badge--process { --status-bg: #ffc18e; --status-line: #e99c5d; --status-fg: #6b2b00; --quiet-bg: #fff0e3; --quiet-line: #ebccb2; --quiet-fg: #753e15; }
-.tracking-badge--process_medium { --status-bg: #e88539; --status-line: #c76821; --status-fg: #421600; --quiet-bg: #ffd3af; --quiet-line: #dfaa82; --quiet-fg: #5c2200; }
-.tracking-badge--process_strong { --status-bg: #b8490a; --status-line: #993b06; --status-fg: #fff; --quiet-bg: #f5bd92; --quiet-line: #d99a6c; --quiet-fg: #4a1b00; }
+/* Keep text dark at every intensity; stronger states use brighter tints and clearer borders. */
+.tracking-badge--rumor { --status-bg: #f5effb; --status-line: #ddd0ed; --status-fg: #3f2554; --quiet-bg: #faf7fd; --quiet-line: #e8def1; --quiet-fg: #3f2554; }
+.tracking-badge--rumor_medium { --status-bg: #eadcf6; --status-line: #bea0d6; --status-fg: #3f2554; --quiet-bg: #f4ecfa; --quiet-line: #d7c1e7; --quiet-fg: #3f2554; }
+.tracking-badge--rumor_strong { --status-bg: #dcc3ed; --status-line: #9970b8; --status-fg: #3f2554; --quiet-bg: #ecddf6; --quiet-line: #bfa1d5; --quiet-fg: #3f2554; }
+.tracking-badge--reported { --status-bg: #fff8db; --status-line: #e8dcaa; --status-fg: #453800; --quiet-bg: #fffced; --quiet-line: #efe6c5; --quiet-fg: #453800; }
+.tracking-badge--reported_medium { --status-bg: #fbedaf; --status-line: #d0b950; --status-fg: #453800; --quiet-bg: #fff7d6; --quiet-line: #e2d397; --quiet-fg: #453800; }
+.tracking-badge--reported_strong { --status-bg: #f2da80; --status-line: #a88c28; --status-fg: #453800; --quiet-bg: #f9edb8; --quiet-line: #ccba6e; --quiet-fg: #453800; }
+.tracking-badge--process { --status-bg: #fff1e3; --status-line: #ecd2b8; --status-fg: #532700; --quiet-bg: #fff8f0; --quiet-line: #efe0d0; --quiet-fg: #532700; }
+.tracking-badge--process_medium { --status-bg: #ffdfbf; --status-line: #dcaa77; --status-fg: #532700; --quiet-bg: #fff0df; --quiet-line: #e7c6a4; --quiet-fg: #532700; }
+.tracking-badge--process_strong { --status-bg: #ffc28e; --status-line: #bd773f; --status-fg: #532700; --quiet-bg: #ffe0c1; --quiet-line: #d3a478; --quiet-fg: #532700; }
 .tracking-badge--announced { --status-bg: #d1f0e0; --status-line: #a8ddc2; --status-fg: #065f46; }
 .tracking-badge--stopped { --status-bg: #e5e7eb; --status-line: #cbd0d7; --status-fg: #4b5563; }
 .tracking-badge--complete { --status-bg: #fff; --status-line: #dde3e9; --status-fg: #596675; }
