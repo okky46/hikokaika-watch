@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { emptyTrackingProfile, parseTrackingProfile, REPORT_METHOD, REPORT_ACCESS, DATE_PRECISION, validateProfileReferences } from './trackingProfile';
+import { emptyTrackingProfile, parseTrackingProfile, REPORT_METHOD, REPORT_ACCESS, DATE_PRECISION, validateProfileReferences, COLOR_STRENGTH_FIELDS } from './trackingProfile';
 import type { TrackingProfile, TrackingEdition, MediaOutlet } from './trackingProfile';
 import type { RawCase, RawEvent, RawCompany } from './types';
 import { STATEMENT_FILTERS } from './trackingSearch';
@@ -52,6 +52,7 @@ export function setupTrackingAdmin(db:SupabaseClient,options:Options) {
     for(const kind of ['reports','statements','dates'])el(`tp-${kind}`).replaceChildren();
     renderStatusEvents(p.status_event_ids);p.reports.forEach(report);p.statements.forEach(statement);p.event_dates.forEach(date);
     renderBiddingEvents(p.bidding?.event_id ?? '');input('tp-bidding-stage').value=p.bidding?.stage ?? '';
+    for(const key of Object.keys(COLOR_STRENGTH_FIELDS) as (keyof typeof COLOR_STRENGTH_FIELDS)[]) input(`tp-${key}`).value=p[key] ?? '';
     el('tp-edition-state').textContent=edition?.published?'公開承認済みの版があります。編集内容の反映には再承認が必要です。':current?.is_visible?'従来の公開情報があります。新しい分類は承認後に反映されます。':'新規・非公開の下書きです。';
     dirty=false;pending=null;el('tp-confirm').hidden=true;el('preview-panel').hidden=true;el('tp-diff').hidden=true;buttons();
   }
@@ -59,7 +60,7 @@ export function setupTrackingAdmin(db:SupabaseClient,options:Options) {
     const r:Record<string,unknown>={};for(const field of box.querySelectorAll<HTMLInputElement|HTMLSelectElement>('[data-key]'))r[field.dataset.key!]=field.value.trim();
     if(kind==='statements')r.tags=[...box.querySelectorAll<HTMLInputElement>('[data-tag]:checked')].map(c=>c.value);return r;
   });}
-  function read(publish=false) {const p:Record<string,unknown>={};for(const [key,id] of Object.entries(fields))p[key]=input(id).value.trim();p.status_event_ids=[...el('tp-status-events').querySelectorAll<HTMLInputElement>(':checked')].map(e=>e.value);p.reports=readRows('reports');p.statements=readRows('statements');p.event_dates=readRows('dates');if(input('tp-bidding-stage').value)p.bidding={stage:input('tp-bidding-stage').value,event_id:input('tp-bidding-event').value};return parseTrackingProfile(p,publish);}
+  function read(publish=false) {const p:Record<string,unknown>={};for(const [key,id] of Object.entries(fields))p[key]=input(id).value.trim();p.status_event_ids=[...el('tp-status-events').querySelectorAll<HTMLInputElement>(':checked')].map(e=>e.value);p.reports=readRows('reports');p.statements=readRows('statements');p.event_dates=readRows('dates');if(input('tp-bidding-stage').value)p.bidding={stage:input('tp-bidding-stage').value,event_id:input('tp-bidding-event').value};for(const key of Object.keys(COLOR_STRENGTH_FIELDS))if(input(`tp-${key}`).value)p[key]=input(`tp-${key}`).value;return parseTrackingProfile(p,publish);}
   function renderBiddingEvents(selected:string) {input('tp-bidding-event').innerHTML='<option value="">指定なし</option>'+eventOptions().map(e=>`<option value="${e.id}">${esc(e.label)}</option>`).join('');input('tp-bidding-event').value=selected;}
   async function open(c:RawCase) {
     if(busy||!discard())return false;
@@ -83,7 +84,7 @@ export function setupTrackingAdmin(db:SupabaseClient,options:Options) {
     const before=edition?.published;
     el('tp-diff-before').innerHTML=before?trackingSummaryHtml(before,media):'<p>新しい分類の公開版はありません。</p>';
     el('tp-diff-after').innerHTML=trackingSummaryHtml(p,media);
-    const labels:Record<string,string>={title:'タイトル',summary:'概要',tracking_reason:'追跡理由',tracking_started_on:'追跡開始日',last_checked_on:'確認日',verification_note:'確認状況',short_reason:'一覧の噂',status_note:'状況の補足',public_status:'状況タグ',status_event_ids:'状況の根拠',statements:'会社説明',report_state:'媒体分類',report_note:'媒体の確認範囲',reports:'媒体の根拠',event_dates:'日付精度',bidding:'入札段階と根拠'};
+    const labels:Record<string,string>={title:'タイトル',summary:'概要',tracking_reason:'追跡理由',tracking_started_on:'追跡開始日',last_checked_on:'確認日',verification_note:'確認状況',short_reason:'一覧の噂',status_note:'状況の補足',public_status:'状況タグ',status_event_ids:'状況の根拠',statements:'会社説明',report_state:'媒体分類',report_note:'媒体の確認範囲',reports:'媒体の根拠',event_dates:'日付精度',bidding:'入札段階と根拠',rumor_strength:'噂の色の強弱',reported_strength:'観測報道の色の強弱',process_strength:'検討・協議の色の強弱'};
     el('tp-diff-fields').textContent='変更項目: '+[...new Set([...Object.keys(p),...Object.keys(before ?? {})])].filter(k=>JSON.stringify(p[k as keyof TrackingProfile])!==JSON.stringify(before?.[k as keyof TrackingProfile])).map(k=>labels[k]).join('、');
     el('tp-diff').hidden=false;
   }

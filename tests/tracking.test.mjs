@@ -99,6 +99,7 @@ test('実DB: 噂銘柄の下書き/公開分離、版競合、参照整合性、
     const before=(await policies()).rows;
     await db.exec(fs.readFileSync('supabase/migrations/0009_tracking_editions.sql','utf8'));
     await db.exec(fs.readFileSync('supabase/migrations/0011_tracking_bidding.sql','utf8'));
+    await db.exec(fs.readFileSync('supabase/migrations/0012_rumor_strength.sql','utf8'));
     assert.deepEqual((await policies()).rows,before);
     const session=async(role,id='')=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec(`set role ${role}`);};
     const save=async(id,p,rev=null)=>(await db.query("select save_tracking_draft($1,$2,'rumor-only',$3,$4) as result",[id,company,p,rev])).rows[0].result;
@@ -114,15 +115,25 @@ test('実DB: 噂銘柄の下書き/公開分離、版競合、参照整合性、
     assert.equal((await db.query('select is_visible from cases where id=$1',[id])).rows[0].is_visible,false);
     await assert.rejects(db.query('update tracking_editions set published=draft'));
     await assert.rejects(publish(id,999),/別の編集/);
+    for(const strength of ['weak','medium','strong']) {
+      saved=await save(id,{...rumor(),rumor_strength:strength,reported_strength:strength,process_strength:strength},saved.revision);
+      const draft=(await db.query('select draft from tracking_editions where case_id=$1',[id])).rows[0].draft;
+      for(const key of ['rumor_strength','reported_strength','process_strength'])assert.equal(draft[key],strength);
+    }
+    for(const key of ['rumor_strength','reported_strength','process_strength'])for(const value of [null,3,'',' strong ','invented',{},['strong']])await assert.rejects(save(id,{...rumor(),[key]:value},saved.revision),/強度/);
     let approved=await publish(id,saved.revision);const version=approved.publication_version;
-    saved=await save(id,{...rumor(),title:'SECRET_DRAFT'},approved.revision);
+    saved=await save(id,{...rumor(),title:'SECRET_DRAFT',rumor_strength:'weak',reported_strength:'medium',process_strength:'weak'},approved.revision);
     await session('service_role');let snapshot=(await db.query('select read_published_tracking() as r')).rows[0].r;
     assert.equal(snapshot.editions[0].publication_version,version);assert.doesNotMatch(JSON.stringify(snapshot),/SECRET_DRAFT|"draft"/);
+    assert.equal(snapshot.editions[0].published.rumor_strength,'strong');
+    assert.equal(snapshot.editions[0].published.reported_strength,'strong');
+    assert.equal(snapshot.editions[0].published.process_strength,'strong');
     await session('authenticated',user);await db.query('insert into user_case_notes(user_id,case_id,body) values($1,$2,$3)',[user,id,'private']);
     await session('authenticated',admin);assert.equal((await db.query('select * from user_case_notes')).rows.length,0);
     await db.query("insert into case_events(id,case_id,event_type,title,is_visible) values($1,$2,'company_comment','会社が未決定と説明',true)",[event,id]);
     const considered={...rumor(),public_status:'consideration',status_note:'未決定（9/29会社説明時点）',status_event_ids:[event],statements:[{event_id:event,subject:'対象会社',text:'非公開化を含む選択肢を検討・未決定',tags:['consideration_acknowledged','no_decision']}]};
     saved=await save(id,considered,saved.revision);approved=await publish(id,saved.revision);
+    for(const key of ['rumor_strength','reported_strength','process_strength'])assert.equal((await db.query('select draft from tracking_editions where case_id=$1',[id])).rows[0].draft[key],undefined);
     for(const invalid of [{...considered,public_status:' consideration '},{...considered,statements:[{...considered.statements[0],tags:[null]}]},{...considered,event_dates:[{event_id:event,precision:'datetime',value:'2026-09-29T24:00:00Z',issue_label:''}]}]) await assert.rejects(save(id,invalid,approved.revision));
     const bidding={...considered,report_state:'reported',reports:[{outlet_id:'nikkei',event_id:event,source_name:'検証用',source_url:'https://example.com/report',method:'company',access:'unread',checked_on:'2026-09-29',reported_on:'2026-09-28',scope_note:'入札に関する報道の存在を会社開示で確認'}],bidding:{stage:'second_round',event_id:event}};
     saved=await save(id,bidding,approved.revision);
