@@ -15,19 +15,19 @@ export async function getStaticPaths() {
 interface Props { articles: import('../../lib/articles').PublicArticle[]; company: PublicCompany; isSampleData: boolean }
 const { company, isSampleData } = Astro.props;
 const title = `${company.nameJa}(${company.securityCode})の非公開化・MBO・TOB案件一覧`;
-const description = `${company.nameJa}(証券コード${company.securityCode})の非公開化・MBO・TOB関連案件を企業単位で整理。過去案件と再燃を確認できます。`;
+const description = `${company.nameJa}（証券コード${company.securityCode}）の非公開化・MBO・TOBに関する経過をまとめています。過去の案件や、再び動きがあった案件を確認できます。`;
 ---
 <Base title={title} description={description} path={`/companies/${company.securityCode}/`}>
   {isSampleData && <p class="notice">このページは開発・デモ用の<strong>架空のサンプルデータ</strong>です。</p>}
-  <nav class="small" aria-label="パンくず" style="margin-bottom:0.8rem"><a href="/">案件一覧</a> › <span class="muted">{company.nameJa}</span></nav>
+  <nav class="small" aria-label="パンくず" style="margin-bottom:0.8rem"><a href="/">追跡銘柄</a> › <span class="muted">{company.nameJa}</span></nav>
   <header class="case-head">
     <p class="case-head__company"><span class="mono">{company.securityCode}</span>{company.market && <span> / {company.market}</span>}{company.industry && <span> / {company.industry}</span>}</p>
     <h1>{company.nameJa}</h1>
   </header>
   <section class="section">
-    <h2 class="section-title">全案件一覧</h2>
+    <h2 class="section-title">この企業の案件</h2>
     {company.cases.length === 0 ? <p class="empty-state">公開中の案件はありません。</p> : (
-      <div class="table-wrap"><table class="case-table"><thead><tr><th>ステータス</th><th>案件</th><th>日付を確認できた最初の報道</th><th>最終更新</th></tr></thead><tbody>
+      <div class="table-wrap"><table class="case-table"><thead><tr><th>今の状況</th><th>案件</th><th>日付を確認できた最初の報道</th><th>最終更新</th></tr></thead><tbody>
         {company.cases.map((c) => <tr><td><TrackingStatus profile={c.tracking} /></td><td><a class="case-link" href={`/cases/${c.slug}/`}>{c.title}</a><div class="small muted">{c.summary}</div></td><td>{formatDate(c.firstReportedAt)}</td><td>{formatDate(c.lastUpdatedAt)}</td></tr>)}
       </tbody></table></div>
     )}

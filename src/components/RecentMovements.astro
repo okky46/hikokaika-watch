@@ -16,7 +16,7 @@ const { asOf, items } = recentMovements(Astro.props.cases, new Date(Astro.props.
       <span class="recent-movement__company"><strong>{companyName}</strong><span class="small muted">{securityCode}</span><span class="recent-movement__arrow" aria-hidden="true">→</span></span>
       <span class="recent-movement__title">{event.title}</span>
     </a></li>
-  )}</ul> : <p class="small muted recent-movements__empty">この期間に公表された出来事の掲載はありません。</p>}
+  )}</ul> : <p class="small muted recent-movements__empty">直近30日に公表された出来事は、まだ掲載されていません。</p>}
 </section>
 <style>
   .recent-movements { margin: 1rem 0 1.25rem; }

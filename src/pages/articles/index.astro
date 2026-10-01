@@ -7,7 +7,7 @@ const data = await loadPublicData();
 <Base title="調査記事" description="非公開化、親子上場解消、資本政策の公表資料を基に、確認できた事実と未確認事項を整理する調査記事。" path="/articles/">
   {data.isSampleData && <p class="notice">開発・デモ用の架空のサンプル記事です。</p>}
   <h1>調査記事</h1>
-  <p class="muted">非公開化・親子上場・資本政策をめぐる報道と会社発表を読み解く。</p>
+  <p class="muted">非公開化・親子上場・資本政策をめぐる報道と会社発表を読み解きます。</p>
   <p class="small"><a class="navigation-link" href="/"><span aria-hidden="true">←</span> 追跡銘柄を探す</a></p>
   <ArticleList articles={data.articles}/>
 </Base>
