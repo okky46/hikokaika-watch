@@ -134,7 +134,7 @@ const statusMap = Object.fromEntries(
 
   function caseLinkHtml(info: CaseInfo | undefined, caseId: string): string {
     if (!info) return `<span class="muted small">(非公開または削除された案件: ${escapeHtml(caseId.slice(0, 8))}…)</span>`;
-    return `<a class="case-link" href="/cases/${encodeURIComponent(info.slug)}/">${escapeHtml(info.companyName)}<span class="mono small">(${escapeHtml(info.securityCode)})</span></a> <span class="small muted">${escapeHtml(info.title)}</span>`;
+    return `<a class="case-link" href="/cases/${encodeURIComponent(info.slug)}/">${escapeHtml(info.companyName)}<span class="mono small">(${escapeHtml(info.securityCode)})</span></a>`;
   }
 
   async function loadCaseIndex() {

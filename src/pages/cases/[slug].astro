@@ -28,7 +28,7 @@ interface Props {
 
 const { detail: c, isSampleData } = Astro.props;
 
-const title = `${c.companyName}(${c.securityCode})${c.title.includes(c.companyName) ? '' : ` ${c.title}`}の経過`;
+const title = `${c.companyName}（${c.securityCode}）の経過`;
 const description = `${c.companyName}(証券コード${c.securityCode})の非公開化・MBO・TOBに関する追跡開始から現在までの経過を時系列で整理。${c.summary}`.slice(0, 155);
 
 const timelineAdSlots = [
