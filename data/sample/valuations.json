@@ -1,0 +1,128 @@
+[
+  {
+    "kind": "financials",
+    "code": "0001",
+    "name": "東洋デモ精機",
+    "industry": "機械",
+    "checkedOn": "2026-10-03",
+    "notes": "動作確認用の架空データ。EBITDAは営業利益＋減価償却費。その他調整額は確認済みのゼロ。",
+    "facts": {
+      "eps": {
+        "value": 100,
+        "period": "2026年3月期",
+        "basis": "actual",
+        "scope": "consolidated",
+        "sourceName": "架空の有価証券報告書（動作確認用）",
+        "sourceUrl": "https://example.com/sample",
+        "note": "架空の数値。株式分割調整なし。"
+      },
+      "bps": {
+        "value": 1000,
+        "period": "2026-03-31",
+        "basis": "actual",
+        "scope": "consolidated",
+        "sourceName": "架空の有価証券報告書（動作確認用）",
+        "sourceUrl": "https://example.com/sample",
+        "note": "架空の数値。株式分割調整なし。"
+      },
+      "ebitda": {
+        "value": 1500000000,
+        "period": "2026年3月期",
+        "basis": "actual",
+        "scope": "consolidated",
+        "sourceName": "架空の有価証券報告書（動作確認用）",
+        "sourceUrl": "https://example.com/sample",
+        "note": "架空の数値。株式分割調整なし。"
+      },
+      "debt": {
+        "value": 2000000000,
+        "period": "2026-03-31",
+        "basis": "actual",
+        "scope": "consolidated",
+        "sourceName": "架空の有価証券報告書（動作確認用）",
+        "sourceUrl": "https://example.com/sample",
+        "note": "架空の数値。株式分割調整なし。"
+      },
+      "cash": {
+        "value": 1000000000,
+        "period": "2026-03-31",
+        "basis": "actual",
+        "scope": "consolidated",
+        "sourceName": "架空の有価証券報告書（動作確認用）",
+        "sourceUrl": "https://example.com/sample",
+        "note": "架空の数値。株式分割調整なし。"
+      },
+      "adjustments": {
+        "value": 0,
+        "period": "2026-03-31",
+        "basis": "actual",
+        "scope": "consolidated",
+        "sourceName": "架空の有価証券報告書（動作確認用）",
+        "sourceUrl": "https://example.com/sample",
+        "note": "架空の数値。株式分割調整なし。"
+      },
+      "shares": {
+        "value": 10000000,
+        "period": "2026-03-31",
+        "basis": "actual",
+        "scope": "consolidated",
+        "sourceName": "架空の有価証券報告書（動作確認用）",
+        "sourceUrl": "https://example.com/sample",
+        "note": "架空の数値。株式分割調整なし。"
+      }
+    }
+  },
+  {
+    "kind": "comparable",
+    "code": "0099",
+    "name": "比較用デモ工業",
+    "industry": "機械",
+    "checkedOn": "2026-10-03",
+    "notes": "実在しない取引です。動作確認用。",
+    "announcedOn": "2026-06-01",
+    "priceStage": "最終TOB価格",
+    "offerPrice": 1500,
+    "sourceUrl": "https://example.com/tob",
+    "articleUrl": "",
+    "multiples": {
+      "per": {
+        "value": 15,
+        "basis": "actual",
+        "period": "2026年3月期",
+        "method": "calculated",
+        "calculation": "TOB価格1,500円÷EPS100円。",
+        "sourceUrl": "https://example.com/tob"
+      },
+      "pbr": {
+        "value": 1.5,
+        "basis": "actual",
+        "period": "2026-03-31",
+        "method": "calculated",
+        "calculation": "TOB価格1,500円÷BPS1,000円。",
+        "sourceUrl": "https://example.com/tob"
+      },
+      "evEbitda": {
+        "value": 10,
+        "basis": "actual",
+        "period": "2026年3月期",
+        "method": "disclosed",
+        "calculation": "架空の算定書に記載された倍率。",
+        "sourceUrl": "https://example.com/tob"
+      }
+    },
+    "history": [
+      {
+        "date": "2026-05-01",
+        "price": 1200,
+        "note": "架空の初回提案。",
+        "sourceUrl": "https://example.com/proposal"
+      },
+      {
+        "date": "2026-06-01",
+        "price": 1500,
+        "note": "架空の最終提案。",
+        "sourceUrl": "https://example.com/tob"
+      }
+    ]
+  }
+]

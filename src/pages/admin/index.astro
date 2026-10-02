@@ -2,6 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import TrackingEditor from '../../components/TrackingEditor.astro';
 import ArticleAdmin from '../../components/ArticleAdmin.astro';
+import ValuationAdmin from '../../components/ValuationAdmin.astro';
 import { CASE_STATUS, EVENT_TYPE, STATUS_ORDER } from '../../lib/status';
 import { COMMENT_STANCE_LABELS, COMMENT_TAGS, COMMENT_TAG_ORDER } from '../../lib/commentTags';
 
@@ -51,6 +52,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       <button class="btn" data-tab="companies">会社</button>
       <button class="btn" data-tab="cases">追跡銘柄</button>
       <button class="btn" data-tab="articles">調査記事</button>
+      <button class="btn" data-tab="valuations">財務・TOB比較</button>
       <button class="btn" data-tab="events">出来事</button>
       <button class="btn" data-tab="prices">株価</button>
       <button class="btn" data-tab="corrections">訂正履歴</button>
@@ -147,6 +149,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     </section>
 
     <ArticleAdmin/>
+    <ValuationAdmin/>
 
     <!-- ============ 出来事 ============ -->
     <section class="section" data-panel="events" hidden>
@@ -310,6 +313,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   import type { TrackingEdition } from '../../lib/trackingProfile';
   import { publicEventDate } from '../../lib/trackingDates';
   import { setupArticleAdmin } from '../../lib/articleAdmin';
+  import { setupValuationAdmin } from '../../lib/valuationAdmin';
   import { buildLargeShareholdingMetadata } from '../../lib/noteMetadataHelpers';
   import { hasDailyCloseConflict } from '../../lib/priceHelpers';
   import { filterInboxItems, inboxEmptyState, normalizeHttpUrl, normalizeSecurityCode, pendingBulkRejectIds, preserveSelectValueIfValid, resolveInboxCaseId, resolveInboxCompanyId, visibleSelectionIds } from '../../lib/inboxAdminHelpers';
@@ -324,6 +328,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
   const supabase = getSupabase();
   const articleAdmin = supabase ? setupArticleAdmin(supabase) : null;
+  const valuationAdmin = supabase ? setupValuationAdmin(supabase) : null;
   let companyReturn: 'cases'|'articles'|null=null;
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
   const esc = (s: unknown) =>
@@ -502,6 +507,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     if (name === 'corrections') loadCorrections();
     if (name === 'analytics') loadAnalytics();
     if (name === 'articles') void articleAdmin?.refreshCompanies();
+    if (name === 'valuations') void valuationAdmin?.reload();
   }
   document.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-tab]');

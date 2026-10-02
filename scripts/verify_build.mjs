@@ -6,10 +6,15 @@ const walk=dir=>fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirector
 const files=walk('dist');
 for(const file of files.filter(f=>/\.(html|json|xml|js)$/.test(f))){
   const text=fs.readFileSync(file,'utf8');
+  if(process.env.EDINET_API_KEY)assert.ok(!text.includes(process.env.EDINET_API_KEY),`${file}: EDINET credential leak`);
   assert.doesNotMatch(text,/SECRET_UNAPPROVED_ARTICLE|SECRET_DRAFT_ONLY|unpublished-secret/,`${file}: draft leak`);
   if(file.endsWith('.html')&&!file.includes(`${path.sep}admin${path.sep}`))assert.doesNotMatch(text,/第0報|aria-label="株価推移/);
 }
 const read=file=>fs.readFileSync(`dist/${file}`,'utf8');
+assert.match(read('cases/0001-toyo-demo-seiki/index.html'),/株価と倍率の試算/);
+assert.match(read('companies/0001/index.html'),/計算に使う財務数値/);
+assert.match(read('tob-comparables/index.html'),/価格・算定の経緯/);
+assert.match(read('sitemap.xml'),/tob-comparables/);
 assert.ok(!fs.existsSync('dist/articles/unpublished-secret'));
 assert.match(read('cases/999z-tracking/index.html'),/公開されている出来事はまだありません/);
 assert.match(read('cases/999z-tracking/index.html'),/噂段階/);
