@@ -1,118 +1,130 @@
 type Env = {
   CF_ANALYTICS_API_TOKEN?: string;
-  CF_ZONE_TAG?: string;
+  CF_ACCOUNT_ID?: string;
+  CF_ANALYTICS_SITE_TAG?: string;
+  CF_ANALYTICS_HOST?: string;
+  PUBLIC_SUPABASE_URL?: string;
+  PUBLIC_SUPABASE_ANON_KEY?: string;
 };
-
 type PagesContext = { request: Request; env: Env };
-
 const GRAPHQL_ENDPOINT = 'https://api.cloudflare.com/client/v4/graphql';
 const PUBLIC_UPSTREAM_ERROR = 'アクセス統計を取得できませんでした。設定と権限を確認してください。';
-
+const PRIVATE_HEADERS = { 'cache-control': 'private, no-store', vary: 'Authorization' };
 function timeHoursAgo(now: Date, hours: number): string {
   return new Date(now.getTime() - hours * 60 * 60 * 1000).toISOString();
 }
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
-
-function readMetric(value: unknown, metric: 'pageViews' | 'visits'): number | null {
-  if (!isRecord(value) || typeof value[metric] !== 'number') return null;
-  return value[metric] as number;
+function readMetric(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
 }
-
 export async function queryCloudflare(env: Env) {
   const token = env.CF_ANALYTICS_API_TOKEN;
-  const zoneTag = env.CF_ZONE_TAG;
-  if (!token || !zoneTag) {
+  const accountTag = env.CF_ACCOUNT_ID;
+  const siteTag = env.CF_ANALYTICS_SITE_TAG;
+  const host = env.CF_ANALYTICS_HOST || 'hikokaika.com';
+  if (!token || !accountTag || !siteTag) {
     return { status: 503, body: { error: 'アクセス統計のサーバー側設定が未完了です。' } };
   }
-
   const end = new Date();
   const since7 = timeHoursAgo(end, 168);
   const since30 = timeHoursAgo(end, 720);
   const until = end.toISOString();
-  const query = `query WebAnalytics($zoneTag: string!, $since7: Time!, $since30: Time!, $until: Time!) {
+  // RUM uses account/site scopes. Zone HTTP traffic includes non-page requests.
+  const query = `query WebAnalytics($accountTag: string!, $siteTag: string!, $host: string!, $since7: Time!, $since30: Time!, $until: Time!) {
     viewer {
-      zones(filter: { zoneTag: $zoneTag }) {
-        last7: httpRequestsAdaptiveGroups(filter: { datetime_geq: $since7, datetime_lt: $until, requestSource: "eyeball" }) {
-          sum { pageViews visits }
+      accounts(filter: { accountTag: $accountTag }) {
+        last7: rumPageloadEventsAdaptiveGroups(limit: 1, filter: { datetime_geq: $since7, datetime_lt: $until, siteTag: $siteTag, requestHost: $host }) {
+          count sum { visits }
         }
-        last30: httpRequestsAdaptiveGroups(filter: { datetime_geq: $since30, datetime_lt: $until, requestSource: "eyeball" }) {
-          sum { pageViews visits }
+        last30: rumPageloadEventsAdaptiveGroups(limit: 1, filter: { datetime_geq: $since30, datetime_lt: $until, siteTag: $siteTag, requestHost: $host }) {
+          count sum { visits }
         }
-        topUrls: httpRequestsAdaptiveGroups(
-          limit: 20
-          orderBy: [sum_pageViews_DESC]
-          filter: { datetime_geq: $since30, datetime_lt: $until, requestSource: "eyeball" }
-        ) {
-          dimensions { clientRequestPath }
-          sum { pageViews }
+        topUrls: rumPageloadEventsAdaptiveGroups(limit: 20, orderBy: [count_DESC], filter: { datetime_geq: $since30, datetime_lt: $until, siteTag: $siteTag, requestHost: $host }) {
+          dimensions { requestPath }
+          count
         }
       }
     }
   }`;
-
   let response: Response;
   try {
     response = await fetch(GRAPHQL_ENDPOINT, {
       method: 'POST',
       headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ query, variables: { zoneTag, since7, since30, until } }),
+      body: JSON.stringify({ query, variables: { accountTag, siteTag, host, since7, since30, until } }),
+      signal: AbortSignal.timeout(15000),
     });
-  } catch (error) {
-    console.error('Cloudflare Analytics request failed', error);
+  } catch {
+    console.error('Cloudflare Analytics request failed');
     return { status: 502, body: { error: PUBLIC_UPSTREAM_ERROR } };
   }
-
   let json: unknown;
   try {
     json = await response.json();
-  } catch (error) {
-    console.error('Cloudflare Analytics returned non-JSON', { status: response.status, error });
+  } catch {
+    console.error('Cloudflare Analytics returned non-JSON', { status: response.status });
     return { status: 502, body: { error: PUBLIC_UPSTREAM_ERROR } };
   }
-  if (!response.ok || !isRecord(json) || Array.isArray(json.errors)) {
-    console.error('Cloudflare Analytics returned an error', { status: response.status, hasGraphqlErrors: isRecord(json) && Array.isArray(json.errors) });
+  if (!response.ok || !isRecord(json) || (Array.isArray(json.errors) && json.errors.length > 0)) {
+    console.error('Cloudflare Analytics returned an error', { status: response.status });
     return { status: 502, body: { error: PUBLIC_UPSTREAM_ERROR } };
   }
-
-  const zones = isRecord(json.data) && isRecord(json.data.viewer) ? json.data.viewer.zones : null;
-  if (!Array.isArray(zones) || zones.length === 0 || !isRecord(zones[0])) {
-    console.error('Cloudflare Analytics returned no zone', { zoneCount: Array.isArray(zones) ? zones.length : null });
+  const accounts = isRecord(json.data) && isRecord(json.data.viewer) ? json.data.viewer.accounts : null;
+  if (!Array.isArray(accounts) || accounts.length !== 1 || !isRecord(accounts[0])) {
+    console.error('Cloudflare Analytics returned no account');
     return { status: 502, body: { error: PUBLIC_UPSTREAM_ERROR } };
   }
-  const zone = zones[0];
+  const account = accounts[0];
   const summaries = ['last7', 'last30'].map((key) => {
-    const groups = zone[key];
-    if (!Array.isArray(groups) || groups.length !== 1 || !isRecord(groups[0])) return null;
-    const pageViews = readMetric(groups[0].sum, 'pageViews');
-    const visits = readMetric(groups[0].sum, 'visits');
+    const groups = account[key];
+    if (!Array.isArray(groups) || groups.length > 1) return null;
+    if (groups.length === 0) return { pageViews: 0, visits: 0 };
+    const group = groups[0];
+    if (!isRecord(group) || !isRecord(group.sum)) return null;
+    const pageViews = readMetric(group.count);
+    const visits = readMetric(group.sum.visits);
     return pageViews === null || visits === null ? null : { pageViews, visits };
   });
-  const topUrlGroups = zone.topUrls;
-  if (summaries.some((summary) => summary === null) || !Array.isArray(topUrlGroups)) {
+  if (summaries.some((summary) => summary === null) || !Array.isArray(account.topUrls)) {
     console.error('Cloudflare Analytics returned an unexpected data shape');
     return { status: 502, body: { error: PUBLIC_UPSTREAM_ERROR } };
   }
   const topUrls = [] as { url: string; pageViews: number }[];
-  for (const group of topUrlGroups) {
-    if (!isRecord(group) || !isRecord(group.dimensions) || typeof group.dimensions.clientRequestPath !== 'string') {
-      console.error('Cloudflare Analytics returned an invalid URL group');
+  for (const group of account.topUrls) {
+    if (!isRecord(group) || !isRecord(group.dimensions) || typeof group.dimensions.requestPath !== 'string') {
       return { status: 502, body: { error: PUBLIC_UPSTREAM_ERROR } };
     }
-    const pageViews = readMetric(group.sum, 'pageViews');
-    if (pageViews === null) {
-      console.error('Cloudflare Analytics returned an invalid URL metric');
-      return { status: 502, body: { error: PUBLIC_UPSTREAM_ERROR } };
-    }
-    topUrls.push({ url: group.dimensions.clientRequestPath, pageViews });
+    const pageViews = readMetric(group.count);
+    if (pageViews === null) return { status: 502, body: { error: PUBLIC_UPSTREAM_ERROR } };
+    topUrls.push({ url: group.dimensions.requestPath, pageViews });
   }
-  return { status: 200, body: { summary: { last7Days: summaries[0], last30Days: summaries[1] }, topUrls } };
+  return { status: 200, body: { summary: { last7Days: summaries[0], last30Days: summaries[1] }, topUrls, generatedAt: until } };
 }
-
 export async function onRequest(context: PagesContext): Promise<Response> {
-  if (context.request.method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+  const reply = (body: unknown, status: number) => Response.json(body, { status, headers: PRIVATE_HEADERS });
+  if (context.request.method !== 'GET') return reply({ error: 'Method Not Allowed' }, 405);
+  const authorization = context.request.headers.get('authorization');
+  if (!authorization?.match(/^Bearer \S+$/)) return reply({ error: '管理者としてログインしてください。' }, 401);
+  const url = context.env.PUBLIC_SUPABASE_URL;
+  const anonKey = context.env.PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) return reply({ error: '管理者確認のサーバー側設定が未完了です。' }, 503);
+  // PostgREST verifies the user's JWT; is_admin checks the existing admin table.
+  // No service role key is used for authorization.
+  try {
+    const admin = await fetch(`${url.replace(/\/$/, '')}/rest/v1/rpc/is_admin`, {
+      method: 'POST',
+      headers: { authorization, apikey: anonKey, 'content-type': 'application/json' },
+      body: '{}',
+      signal: AbortSignal.timeout(10000),
+    });
+    if (admin.status === 401) return reply({ error: '管理者としてログインし直してください。' }, 401);
+    if (!admin.ok) return reply({ error: '管理者権限を確認できませんでした。' }, 502);
+    if (await admin.json() !== true) return reply({ error: '管理者権限が必要です。' }, 403);
+  } catch {
+    return reply({ error: '管理者権限を確認できませんでした。' }, 502);
+  }
   const result = await queryCloudflare(context.env);
-  return Response.json(result.body, { status: result.status });
+  return reply(result.body, result.status);
 }

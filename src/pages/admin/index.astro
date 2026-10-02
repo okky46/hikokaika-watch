@@ -262,7 +262,8 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     <section class="section" data-panel="analytics" hidden>
       <h2 class="section-title">アクセス統計</h2>
       <div class="card">
-        <p class="small muted">Cloudflare GraphQL Analytics API の結果を Pages Function 経由で取得します。APIトークンはクライアントへ埋め込みません。</p>
+        <p class="small muted">hikokaika.comのCloudflare Web Analyticsを表示します。直近7日・30日のページ閲覧数と訪問数、直近30日の閲覧数が多いページを確認できます。</p>
+        <p class="small muted">JavaScriptで計測した閲覧の統計です。計測を遮断した閲覧などは含まれず、集計値が後から更新される場合があります。</p>
         <button type="button" class="btn btn--primary" id="analytics-load">統計を再読み込み</button>
         <p class="small" id="analytics-status" aria-live="polite"></p>
         <div id="analytics-summary" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.6rem; margin-top:0.8rem"></div>
@@ -512,7 +513,9 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     const status = $('analytics-status');
     status.textContent = '読み込み中...';
     try {
-      const res = await fetch('/api/analytics', { credentials: 'same-origin' });
+      const { data } = await supabase!.auth.getSession();
+      if (!data.session) throw new Error('管理者としてログインしてください。');
+      const res = await fetch('/api/analytics', { credentials: 'same-origin', cache: 'no-store', headers: { Authorization: `Bearer ${data.session.access_token}` } });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
       const summary = json.summary ?? {};
@@ -525,8 +528,10 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       $('analytics-url-table').querySelector('tbody')!.innerHTML = (json.topUrls ?? [])
         .map((row: any) => `<tr><td>${esc(row.url)}</td><td class="num">${esc(row.pageViews)}</td></tr>`)
         .join('');
-      status.textContent = '読み込みました';
+      status.textContent = `読み込みました${json.generatedAt ? `（集計時刻: ${new Date(json.generatedAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} JST）` : ''}`;
     } catch (e) {
+      $('analytics-summary').innerHTML = '';
+      $('analytics-url-table').querySelector('tbody')!.innerHTML = '';
       status.textContent = `読み込みエラー: ${e instanceof Error ? e.message : String(e)}`;
     }
   }

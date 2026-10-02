@@ -1,7 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-
-const formUrl = import.meta.env.PUBLIC_REQUEST_FORM_URL ?? '';
+import { ADMIN_CONTACT_URL, ADMIN_CONTACT_HANDLE } from '../lib/contact';
 ---
 
 <Base
@@ -60,14 +59,8 @@ const formUrl = import.meta.env.PUBLIC_REQUEST_FORM_URL ?? '';
     <details>
       <summary>報道された銘柄が見つかりません。追加を依頼できますか？</summary>
       <p>
-        {formUrl ? (
-          <>
-            <a href={formUrl} target="_blank" rel="noopener noreferrer">追加掲載・訂正申請フォーム</a>
-            から、一般公開された情報源のURLを添えてお知らせください。管理者が確認したうえで掲載します。
-          </>
-        ) : (
-          '追加掲載・訂正申請フォームから、一般公開された情報源のURLを添えてお知らせください。管理者が確認したうえで掲載します。'
-        )}
+        追加掲載のご依頼は、XのDMで教えてください。
+        <a href={ADMIN_CONTACT_URL} target="_blank" rel="noopener noreferrer">管理者のX（{ADMIN_CONTACT_HANDLE}）</a>へ、一般公開された情報源のURLを添えてお知らせください。管理者が確認したうえで掲載します。
       </p>
     </details>
     <details>
@@ -85,7 +78,8 @@ const formUrl = import.meta.env.PUBLIC_REQUEST_FORM_URL ?? '';
     <details>
       <summary>掲載内容に誤りを見つけました。どう連絡すればよいですか？</summary>
       <p>
-        申請フォームの「既存情報の訂正」からご連絡ください。内容を確認して訂正し、該当する出来事に訂正済みと表示します。
+        掲載内容の誤りは、XのDMで教えてください。
+        <a href={ADMIN_CONTACT_URL} target="_blank" rel="noopener noreferrer">管理者のX（{ADMIN_CONTACT_HANDLE}）</a>へ、該当ページと訂正内容をお知らせください。内容を確認して訂正し、該当する出来事に訂正済みと表示します。
       </p>
     </details>
   </section>
