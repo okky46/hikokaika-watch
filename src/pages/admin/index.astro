@@ -117,9 +117,9 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
         <form id="case-form" onsubmit="return false">
           <p class="small">記事・報道イベントなしでも登録できます。会社が未登録なら <button type="button" class="btn" data-create-company="cases">会社を追加してここへ戻る</button></p>
           <input type="hidden" id="ca-id" />
+          <input type="hidden" id="ca-title" />
           <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:0.6rem;">
             <div class="form-row"><label for="ca-company">会社 *</label><select id="ca-company" required><option value="">会社を選択</option></select></div>
-            <div class="form-row"><label for="ca-title">案件タイトル *</label><input type="text" id="ca-title" required placeholder="〇〇、MBOによる非公開化" /></div>
             <div class="form-row"><label for="ca-slug">スラッグ *(URL: /cases/スラッグ/)</label><input type="text" id="ca-slug" required placeholder="1234-company-name" pattern="[a-z0-9\-]+" /></div>
           </div>
           <div class="form-row"><label for="ca-summary">概要</label><textarea id="ca-summary" style="min-height:4.5rem"></textarea></div>
@@ -136,7 +136,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
         </form>
       </div>
       <div class="table-wrap"><table class="case-table" id="case-admin-table">
-        <thead><tr><th>コード</th><th>案件</th><th>ステータス</th><th>公開</th><th>最終更新</th><th></th></tr></thead>
+        <thead><tr><th>コード</th><th>会社名</th><th>ステータス</th><th>公開</th><th>最終更新</th><th></th></tr></thead>
         <tbody></tbody>
       </table></div>
       <div class="card" id="preview-panel" hidden style="margin-top:1rem; border-color:var(--color-primary);">
@@ -796,7 +796,9 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
   function caseLabel(c: any): string {
     const co = companies.find((x) => x.id === c.company_id);
-    return `${co ? co.security_code + ' ' + co.name_ja : '?'} — ${c.title}`;
+    const label = co ? `${co.security_code} ${co.name_ja}` : '会社未確認';
+    const duplicate = cases.some((other) => other.id !== c.id && other.company_id === c.company_id);
+    return duplicate ? `${label}（${c.slug}）` : label;
   }
 
   function renderCaseSelects() {
@@ -823,7 +825,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
         const status=profile ? PUBLIC_TRACKING_STATUS[publicTrackingStatus(profile)] : null;
         return `<tr>
           <td class="code">${esc(co?.security_code ?? '?')}</td>
-          <td>${esc(c.title)}<div class="small muted mono">/cases/${esc(c.slug)}/</div></td>
+          <td>${esc(co?.name_ja ?? '会社未確認')}<div class="small muted mono">/cases/${esc(c.slug)}/</div></td>
           <td>${status?`<span class="badge badge--${status.tone}">${status.label}</span>`:badge(statusDefs[c.status], c.status)}</td>
           <td>${c.is_visible ? '公開対象（反映は未確認）' : '<span class="badge badge--pause">下書き</span>'}</td>
           <td class="nowrap">${fmtDate(c.updated_at)}</td>

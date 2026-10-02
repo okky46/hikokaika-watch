@@ -60,7 +60,7 @@ export function setupTrackingAdmin(db:SupabaseClient,options:Options) {
     const r:Record<string,unknown>={};for(const field of box.querySelectorAll<HTMLInputElement|HTMLSelectElement>('[data-key]'))r[field.dataset.key!]=field.value.trim();
     if(kind==='statements')r.tags=[...box.querySelectorAll<HTMLInputElement>('[data-tag]:checked')].map(c=>c.value);return r;
   });}
-  function read(publish=false) {const p:Record<string,unknown>={};for(const [key,id] of Object.entries(fields))p[key]=input(id).value.trim();p.status_event_ids=[...el('tp-status-events').querySelectorAll<HTMLInputElement>(':checked')].map(e=>e.value);p.reports=readRows('reports');p.statements=readRows('statements');p.event_dates=readRows('dates');if(input('tp-bidding-stage').value)p.bidding={stage:input('tp-bidding-stage').value,event_id:input('tp-bidding-event').value};for(const key of Object.keys(COLOR_STRENGTH_FIELDS))if(input(`tp-${key}`).value)p[key]=input(`tp-${key}`).value;return parseTrackingProfile(p,publish);}
+  function read(publish=false) {const p:Record<string,unknown>={};for(const [key,id] of Object.entries(fields))p[key]=input(id).value.trim();p.title ||= options.companies().find(c=>c.id===input('ca-company').value)?.name_ja ?? '';p.status_event_ids=[...el('tp-status-events').querySelectorAll<HTMLInputElement>(':checked')].map(e=>e.value);p.reports=readRows('reports');p.statements=readRows('statements');p.event_dates=readRows('dates');if(input('tp-bidding-stage').value)p.bidding={stage:input('tp-bidding-stage').value,event_id:input('tp-bidding-event').value};for(const key of Object.keys(COLOR_STRENGTH_FIELDS))if(input(`tp-${key}`).value)p[key]=input(`tp-${key}`).value;return parseTrackingProfile(p,publish);}
   function renderBiddingEvents(selected:string) {input('tp-bidding-event').innerHTML='<option value="">指定なし</option>'+eventOptions().map(e=>`<option value="${e.id}">${esc(e.label)}</option>`).join('');input('tp-bidding-event').value=selected;}
   async function open(c:RawCase) {
     if(busy||!discard())return false;
@@ -70,7 +70,7 @@ export function setupTrackingAdmin(db:SupabaseClient,options:Options) {
   }
   function reset(){if(busy||!discard())return false;current=null;edition=null;events=[];const p=emptyTrackingProfile();p.report_state='none';p.last_checked_on=jstToday();fill(p);options.onReset();message('記事なしで登録できます。会社を選び、噂の概要を入力してください。');return true;}
   function proposeSlug(){if(current||input('ca-slug').value)return;const co=options.companies().find(c=>c.id===input('ca-company').value);if(!co)return;
-    const base=`${co.security_code.toLowerCase()}-tracking-${jstToday().replaceAll('-','')}`;let slug=base,i=2;while(options.cases().some(c=>c.slug===slug))slug=`${base}-${i++}`;input('ca-slug').value=slug;if(!input('ca-title').value)input('ca-title').value=`${co.name_ja}の非公開化をめぐる動き`;}
+    const base=`${co.security_code.toLowerCase()}-tracking-${jstToday().replaceAll('-','')}`;let slug=base,i=2;while(options.cases().some(c=>c.slug===slug))slug=`${base}-${i++}`;input('ca-slug').value=slug;}
   function selectCompany(id:string){if(current)return;input('ca-company').value=id;proposeSlug();markDirty();}
   async function refreshEvents(){if(!current)return;const ids=[...el('tp-status-events').querySelectorAll<HTMLInputElement>(':checked')].map(e=>e.value);const es=await readEvents(current.id);events=es;renderStatusEvents(ids);for(const kind of ['reports','statements','dates'])for(const sel of el(`tp-${kind}`).querySelectorAll<HTMLSelectElement>('[data-key="event_id"]')){const selected=sel.value;sel.innerHTML='<option value="">指定なし</option>'+eventOptions().map(e=>`<option value="${e.id}">${esc(e.label)}</option>`).join('');sel.value=selected;}message('入力を保って出来事を更新しました。');}
   el('tp-media-add').addEventListener('click',()=>void task(async()=>{
@@ -84,7 +84,7 @@ export function setupTrackingAdmin(db:SupabaseClient,options:Options) {
     const before=edition?.published;
     el('tp-diff-before').innerHTML=before?trackingSummaryHtml(before,media):'<p>新しい分類の公開版はありません。</p>';
     el('tp-diff-after').innerHTML=trackingSummaryHtml(p,media);
-    const labels:Record<string,string>={title:'タイトル',summary:'概要',tracking_reason:'追跡理由',tracking_started_on:'追跡開始日',last_checked_on:'確認日',verification_note:'確認状況',short_reason:'一覧の噂',status_note:'状況の補足',public_status:'状況タグ',status_event_ids:'状況の根拠',statements:'会社説明',report_state:'媒体分類',report_note:'媒体の確認範囲',reports:'媒体の根拠',event_dates:'日付精度',bidding:'入札段階と根拠',rumor_strength:'噂の色の強弱',reported_strength:'観測報道の色の強弱',process_strength:'検討・協議の色の強弱'};
+    const labels:Record<string,string>={title:'管理用の名称',summary:'概要',tracking_reason:'追跡理由',tracking_started_on:'追跡開始日',last_checked_on:'確認日',verification_note:'確認状況',short_reason:'一覧の噂',status_note:'状況の補足',public_status:'状況タグ',status_event_ids:'状況の根拠',statements:'会社説明',report_state:'媒体分類',report_note:'媒体の確認範囲',reports:'媒体の根拠',event_dates:'日付精度',bidding:'入札段階と根拠',rumor_strength:'噂の色の強弱',reported_strength:'観測報道の色の強弱',process_strength:'検討・協議の色の強弱'};
     el('tp-diff-fields').textContent='変更項目: '+[...new Set([...Object.keys(p),...Object.keys(before ?? {})])].filter(k=>JSON.stringify(p[k as keyof TrackingProfile])!==JSON.stringify(before?.[k as keyof TrackingProfile])).map(k=>labels[k]).join('、');
     el('tp-diff').hidden=false;
   }
@@ -98,13 +98,13 @@ export function setupTrackingAdmin(db:SupabaseClient,options:Options) {
   el('ca-save').addEventListener('click',()=>void task(async()=>{
     // busy fields are disabled, so validate the model and identity explicitly.
     const p=read();const company=input('ca-company').value,slug=input('ca-slug').value.trim();
-    if(!company||!p.title||!slug)throw new Error('会社・タイトル・URLが必要です');
+    if(!company||!p.title||!slug)throw new Error('会社・URLが必要です');
     const r=await db.rpc('save_tracking_draft',{tracking_id:current?.id??null,target_company_id:company,case_slug:slug,payload:p,expected_revision:edition?.revision??null});if(r.error)throw new Error(r.error.message);
     current={...(current??{}),id:r.data.id,company_id:company,slug,title:current?.title??p.title} as RawCase;
     edition={...(edition??{published:null,publication_version:null,published_at:null}),case_id:r.data.id,draft:p,revision:r.data.revision};dirty=false;input('ca-id').value=current.id;
     await options.afterSave(current.id,false);message('下書きを保存しました。内容をプレビューし、公開を承認してください。');
   }));
-  function request(on:boolean){if(busy||dirty||!current)return;try{if(on){const p=read(true);validateProfileReferences(p,current,events,media);diff(p);}pending=on;el('tp-confirm-text').textContent=on?`「${input('ca-title').value}」の保存済み分類・説明・日付を公開版にします。反映には再ビルドが必要です。`:'銘柄を非公開に戻します。メモや記事は削除しません。反映には再ビルドが必要です。';el('tp-confirm').hidden=false;}catch(e){message(String(e));}}
+  function request(on:boolean){if(busy||dirty||!current)return;try{if(on){const p=read(true);validateProfileReferences(p,current,events,media);diff(p);}pending=on;el('tp-confirm-text').textContent=on?`「${options.companies().find(c=>c.id===input('ca-company').value)?.name_ja ?? '会社未選択'}」の保存済み分類・説明・日付を公開版にします。反映には再ビルドが必要です。`:'銘柄を非公開に戻します。メモや記事は削除しません。反映には再ビルドが必要です。';el('tp-confirm').hidden=false;}catch(e){message(String(e));}}
   el('tp-publish').addEventListener('click',()=>request(true));el('tp-unpublish').addEventListener('click',()=>request(false));
   el('tp-confirm-cancel').addEventListener('click',()=>{pending=null;el('tp-confirm').hidden=true;});
   el('tp-confirm-apply').addEventListener('click',()=>{if(pending===null||dirty||!current||!edition)return;const on=pending;pending=null;el('tp-confirm').hidden=true;void task(async()=>{
@@ -114,7 +114,7 @@ export function setupTrackingAdmin(db:SupabaseClient,options:Options) {
     await options.afterSave(current!.id,on);el('tp-edition-state').textContent=on?'公開承認済み・反映待ち':'非公開への反映待ち';message('「公開処理」で再ビルドし、このサイトへの反映を確認してください。');
   });});
   el('ca-preview').addEventListener('click',()=>{try{const p=read();diff(p);const co=options.companies().find(c=>c.id===input('ca-company').value);const dates=new Map(p.event_dates.map(d=>[d.event_id,d]));
-    el('preview-body').innerHTML=`<h3>${esc(co?.name_ja??'会社未選択')} — ${esc(p.title)}</h3>${trackingSummaryHtml(p,media)}<p>${esc(p.tracking_reason)}</p><p>${esc(p.verification_note)}</p><h4>確認した根拠</h4><ul>${p.reports.map(r=>`<li>${esc(r.source_name)} ／ ${REPORT_METHOD[r.method]}・${REPORT_ACCESS[r.access]}<p>${esc(r.scope_note)}</p></li>`).join('')}</ul><ol class="timeline">${events.map(e=>({e,date:publicEventDate(e,dates.get(e.id))})).sort((a,b)=>timelineDateKey(a.date).localeCompare(timelineDateKey(b.date))).map(({e,date})=>`<li class="timeline__item"><article class="event-card"><span>${esc(date.label)} ${e.is_visible?'':'（非公開）'}</span><h4>${esc(e.title)}</h4><p>${esc(e.summary)}</p></article></li>`).join('')}</ol>`;
+    el('preview-body').innerHTML=`<h3>${esc(co?.name_ja??'会社未選択')}${co ? `（${esc(co.security_code)}）` : ''}</h3>${trackingSummaryHtml(p,media)}<p>${esc(p.tracking_reason)}</p><p>${esc(p.verification_note)}</p><h4>確認した根拠</h4><ul>${p.reports.map(r=>`<li>${esc(r.source_name)} ／ ${REPORT_METHOD[r.method]}・${REPORT_ACCESS[r.access]}<p>${esc(r.scope_note)}</p></li>`).join('')}</ul><ol class="timeline">${events.map(e=>({e,date:publicEventDate(e,dates.get(e.id))})).sort((a,b)=>timelineDateKey(a.date).localeCompare(timelineDateKey(b.date))).map(({e,date})=>`<li class="timeline__item"><article class="event-card"><span>${esc(date.label)} ${e.is_visible?'':'（非公開）'}</span><h4>${esc(e.title)}</h4><p>${esc(e.summary)}</p></article></li>`).join('')}</ol>`;
     el('preview-panel').hidden=false;el('preview-panel').scrollIntoView({behavior:'smooth'});
   }catch(e){message(String(e));}});
   el('tp-check').addEventListener('click',()=>void task(async()=>{const r=await fetch(`/data/publication.json?check=${Date.now()}`,{cache:'no-store'});if(!r.ok)throw new Error('公開情報を取得できません');const m=await r.json();if(!Array.isArray(m.cases))throw new Error('公開情報の形式が不正です');const live=m.cases.find((c:{id:string})=>c.id===current?.id);message(edition?.published?(live?.version===edition.publication_version?'公開反映済み（この環境）':'公開待ち／別の公開版が表示中'):(live?'公開ページが残っています':'この環境では非公開です'));}));
