@@ -7,4 +7,4 @@ interface Props { articles: PublicArticle[] }
   <p class="small muted">公開: {formatDate(a.firstPublishedAt)} / 更新: {formatDate(a.publishedAt)}</p>
   <h3><a class="research-title" href={`/articles/${a.slug}/`}><span>{a.title}</span><span aria-hidden="true">→</span></a></h3><p>{a.summary}</p>
   <div class="related-links small">{a.companies.map(c => <a class="entity-link" href={`/companies/${c.securityCode}/`}>{c.nameJa}（{c.securityCode}）<span aria-hidden="true">→</span></a>)}</div>
-</li>)}</ul> : <p class="empty-state">記事はまだありません。</p>}
+</li>)}</ul> : <p class="empty-state">調査記事はまだありません。</p>}

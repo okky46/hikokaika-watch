@@ -10,7 +10,7 @@ const statusMap = Object.fromEntries(
 
 <Base
   title="マイページ"
-  description="お気に入り案件と自分専用メモの管理ページ。"
+  description="お気に入りの銘柄と、自分専用のメモを管理するページ。"
   noindex
 >
   <h1>マイページ</h1>
@@ -24,7 +24,7 @@ const statusMap = Object.fromEntries(
 
   <section class="section card" id="mp-auth">
     <div id="mp-logged-out" hidden>
-      <p>ログインして、気になる銘柄とメモを保存。</p>
+      <p>ログインすると、気になる銘柄をお気に入りに登録し、メモを保存できます。</p>
       <button type="button" class="btn btn--primary" id="mp-login">Googleでログイン</button>
     </div>
     <div id="mp-logged-in" hidden>
@@ -37,8 +37,8 @@ const statusMap = Object.fromEntries(
   </section>
 
   <div id="mp-content" hidden>
-    <section class="section" aria-label="お気に入り案件">
-      <h2 class="section-title">お気に入り案件</h2>
+    <section class="section" aria-label="お気に入りの銘柄">
+      <h2 class="section-title">お気に入りの銘柄</h2>
       <div class="filter-bar" style="margin-bottom:0.6rem">
         <div class="filter-field">
           <label for="mp-intensity-filter">関心度で絞り込み</label>
@@ -52,21 +52,21 @@ const statusMap = Object.fromEntries(
       </div>
       <div id="mp-favorites"></div>
       <p class="empty-state" id="mp-fav-empty" hidden>
-        お気に入りはまだありません。<a href="/">案件一覧</a>の ☆ から登録できます。
+        お気に入りはまだありません。<a href="/">追跡銘柄の一覧</a>の☆から登録できます。
       </p>
     </section>
 
-    <section class="section" aria-label="案件別メモ">
-      <h2 class="section-title">案件別メモ</h2>
-      <p class="small muted">メモの編集は銘柄の詳細から。チェック日を迎えた銘柄が上に並びます。</p>
+    <section class="section" aria-label="銘柄ごとのメモ">
+      <h2 class="section-title">銘柄ごとのメモ</h2>
+      <p class="small muted">メモは銘柄の詳細ページで編集できます。次のチェック日が早い順に並びます。</p>
       <div id="mp-notes"></div>
-      <p class="empty-state" id="mp-notes-empty" hidden>案件別メモはまだありません。</p>
+      <p class="empty-state" id="mp-notes-empty" hidden>銘柄ごとのメモはまだありません。</p>
     </section>
 
     <section class="section" aria-label="全体メモ">
       <h2 class="section-title">全体メモ</h2>
       <div class="card">
-        <textarea id="mp-global-note" maxlength="1000" placeholder="全体メモ(本人のみ閲覧可)"></textarea>
+        <textarea id="mp-global-note" maxlength="1000" placeholder="自分専用の全体メモ"></textarea>
         <div style="display:flex; gap:0.6rem; align-items:center; margin-top:0.5rem;">
           <button type="button" class="btn btn--primary" id="mp-global-save">保存</button>
           <span class="small muted" id="mp-global-count">0 / 1,000文字</span><span class="small muted" id="mp-global-status" aria-live="polite"></span>
@@ -218,7 +218,7 @@ const statusMap = Object.fromEntries(
         ].filter(Boolean).join('');
         return `
         <div class="card ${due ? 'row-highlight' : ''}" style="margin-bottom:0.5rem;">
-          <div>${caseLinkHtml(info, n.case_id)} ${due ? '<span class="badge badge--heat-4"><span class="badge__mark">!</span>期日到来</span>' : ''}</div>
+          <div>${caseLinkHtml(info, n.case_id)} ${due ? '<span class="badge badge--heat-4"><span class="badge__mark">!</span>チェック日を迎えました</span>' : ''}</div>
           <div class="small" style="margin:0.4rem 0 0;">${previewRows}</div>
         </div>`;
       })
@@ -256,7 +256,7 @@ const statusMap = Object.fromEntries(
 
   $('mp-login')?.addEventListener('click', async () => {
     if (!supabase) return;
-    authStatus.textContent = 'Googleへリダイレクトします…';
+    authStatus.textContent = 'Googleのログイン画面へ移動します…';
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${location.origin}/mypage/` },

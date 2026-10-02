@@ -121,7 +121,7 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
               <div class="event-card__head">
                 <EventTypeBadge type={row.event.eventType} />
                 <span class="event-card__date">{row.event.dateLabel}</span>
-                {row.event.date.precision==='issue' && <span class="small muted">号数のみ・公表日未確認{row.event.date.referenceMonth && `（${row.event.date.referenceMonth}を参考配置）`}</span>}
+                {row.event.date.precision==='issue' && <span class="small muted">号数のみ確認・公表日は未確認{row.event.date.referenceMonth && `（参考年月：${row.event.date.referenceMonth}）`}</span>}
                 {row.event.corrected && (
                   <span class="badge badge--stop"><span class="badge__mark" aria-hidden="true">!</span>訂正あり</span>
                 )}
@@ -151,12 +151,12 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
   </section>
 
   <section class="section" id="evidence" aria-label="媒体と確認した根拠">
-    <details class="card evidence-details"><summary>媒体・追跡理由・確認した根拠を読む</summary>
+    <details class="card evidence-details"><summary>追跡理由と、媒体ごとに確認した根拠を読む</summary>
       <p>{c.trackingReason || '追跡理由はまだ整理されていません。'}</p>
       {c.tracking?.report_note && <p>{c.tracking.report_note}</p>}
-      {c.tracking?.report_state==='none' && <p class="small muted">「報道なし」は当サイトで報道を確認できていないことを示します。報道が存在しないとの断定ではありません。</p>}
+      {c.tracking?.report_state==='none' && <p class="small muted">「報道なし」は、当サイトで報道を確認できていない状態です。報道が存在しないと断定するものではありません。</p>}
       <ul class="evidence-list">{c.tracking?.reports.map(r=><li><strong>{c.media.find(m=>m.id===r.outlet_id)?.name}</strong> <span class="small">{REPORT_METHOD[r.method]}・{REPORT_ACCESS[r.access]}</span><p>{r.scope_note}</p><a href={r.source_url} target="_blank" rel="noopener noreferrer nofollow">{r.source_name} ↗</a><span class="small muted"> 確認: {formatDate(r.checked_on)}{r.reported_on && ` ／ 報道日: ${formatDate(r.reported_on)}`}</span>{r.event_id && <p class="small"><a href={`#event-${r.event_id}`}>関連する出来事</a></p>}</li>)}</ul>
-      {c.tracking?.statements.length ? <><h3>記録した会社説明</h3><ul class="evidence-list">{c.tracking.statements.map(statement=><li><strong>{statement.subject}</strong><p>{statement.text}</p><a href={`#event-${statement.event_id}`}>{c.events.find(e=>e.id===statement.event_id)?.dateLabel} の説明</a></li>)}</ul><p class="small muted">各日付時点の説明です。過去の「検討」「否定」が現在も続くことを意味しません。</p></> : null}
+      {c.tracking?.statements.length ? <><h3>記録した会社説明</h3><ul class="evidence-list">{c.tracking.statements.map(statement=><li><strong>{statement.subject}</strong><p>{statement.text}</p><a href={`#event-${statement.event_id}`}>{c.events.find(e=>e.id===statement.event_id)?.dateLabel} の説明</a></li>)}</ul><p class="small muted">会社説明は、それぞれの日付時点の内容です。過去の検討や否定が、現在も続いているとは限りません。</p></> : null}
       <dl class="tracking-meta"><div><dt>追跡開始</dt><dd>{formatDate(c.trackingStartedOn)}</dd></div><div><dt>最終確認</dt><dd>{formatDate(c.lastCheckedOn)}</dd></div><div><dt>日付を確認できた最初の報道</dt><dd>{formatDate(c.firstReportedAt)}</dd></div><div><dt>最終更新</dt><dd>{formatDate(c.lastUpdatedAt)}</dd></div><div><dt>サイト掲載</dt><dd>{formatDate(c.sitePublishedAt)}</dd></div></dl>
       {c.verificationNote && <p>{c.verificationNote}</p>}
     </details>
@@ -175,7 +175,7 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
         <label>目標価格<input type="text" id="note-target-price" /></label>
         <label>撤退条件<input type="text" id="note-exit-condition" /></label>
         <label>次のチェック日<input type="date" id="note-next-check-date" /></label>
-        <label style="grid-column:1/-1">自由メモ<textarea id="note-body" maxlength="1000" placeholder="この案件についての自分用メモ(本人のみ閲覧可)"></textarea></label>
+        <label style="grid-column:1/-1">自由メモ<textarea id="note-body" maxlength="1000" placeholder="この銘柄についての自分専用メモ"></textarea></label>
       </div>
       <div style="display:flex; gap:0.6rem; align-items:center; margin-top:0.5rem;">
         <button type="button" class="btn btn--primary" id="note-save">メモを保存</button>
@@ -188,8 +188,8 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
   {formUrl && (
     <section class="section">
       <p class="small">
-        この案件の続報・会社コメント・訂正のご連絡は
-        <a href={formUrl} target="_blank" rel="noopener noreferrer">追加掲載・訂正申請フォーム(Googleフォーム)</a>
+        この銘柄の続報・会社説明・訂正は
+        <a href={formUrl} target="_blank" rel="noopener noreferrer">追加掲載・訂正申請フォーム（Googleフォーム）</a>
         からお願いします。
       </p>
     </section>
