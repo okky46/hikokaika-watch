@@ -7,7 +7,7 @@ export const GET: APIRoute = async ({ site }) => {
   const base = (site ?? new URL('https://hikokaika.com')).href.replace(/\/$/, '');
   const data = await loadPublicData();
 
-  const staticPaths = ['/', '/articles/', '/guidelines/', '/disclaimer/', '/privacy/'];
+  const staticPaths = ['/', '/articles/', '/guidelines/', '/disclaimer/', '/privacy/', '/requests/'];
   const casePaths = data.details.map((d) => ({
     path: `/cases/${d.slug}/`,
     lastmod: d.lastUpdatedAt,

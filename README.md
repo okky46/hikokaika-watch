@@ -24,7 +24,7 @@
 | 一般ユーザー認証 | Supabase Auth(Google OAuth) |
 | ユーザーデータ保護 | Supabase RLS |
 | 管理画面防御 | Cloudflare Access(MFA必須・管理者1名限定)+ Supabase `admin_users` RLS |
-| 追加掲載・訂正申請 | Googleフォーム(外部リンク) |
+| 追加掲載・訂正依頼 | 専用ページから管理者のXプロフィールへ案内し、DMで受付 |
 
 **設計の柱**: 公開ページの閲覧では Supabase に一切アクセスしない。公開データはビルド時に静的化され、Cloudflare から配信される。Supabase へ接続するのはログインユーザーの操作(認証・お気に入り・メモ)と管理画面のみ。
 
@@ -40,7 +40,7 @@ npm run preview  # ビルド結果の確認
 ```
 
 Cloudflare Pages 以外のローカル環境では、`DEPLOY_ENV` と `DATA_SOURCE` が両方未設定の場合のみ、安全な既定値として `DEPLOY_ENV=development` / `DATA_SOURCE=sample` が使われるため、リポジトリ取得直後でもサンプルデータ(`data/sample/`)で動作する。どちらか一方だけを設定した場合や未知の値はエラーになる。
-Supabase / Google フォーム連携は `.env.example` を `.env` にコピーして設定する。
+Supabaseなどの環境変数は `.env.example` を参照して設定する。追加掲載・訂正は現在XのDMで受け付ける。
 
 ## デプロイ・初期セットアップ
 

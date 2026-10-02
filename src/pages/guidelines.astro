@@ -1,6 +1,5 @@
 ---
 import Base from '../layouts/Base.astro';
-import { ADMIN_CONTACT_URL, ADMIN_CONTACT_HANDLE } from '../lib/contact';
 ---
 
 <Base
@@ -59,8 +58,7 @@ import { ADMIN_CONTACT_URL, ADMIN_CONTACT_HANDLE } from '../lib/contact';
     <details>
       <summary>報道された銘柄が見つかりません。追加を依頼できますか？</summary>
       <p>
-        追加掲載のご依頼は、XのDMで教えてください。
-        <a href={ADMIN_CONTACT_URL} target="_blank" rel="noopener noreferrer">管理者のX（{ADMIN_CONTACT_HANDLE}）</a>へ、一般公開された情報源のURLを添えてお知らせください。管理者が確認したうえで掲載します。
+        <a href="/requests/">追加掲載・訂正依頼</a>のページから、一般公開された情報源のURLを添えてお知らせください。管理者が確認したうえで掲載します。
       </p>
     </details>
     <details>
@@ -78,8 +76,7 @@ import { ADMIN_CONTACT_URL, ADMIN_CONTACT_HANDLE } from '../lib/contact';
     <details>
       <summary>掲載内容に誤りを見つけました。どう連絡すればよいですか？</summary>
       <p>
-        掲載内容の誤りは、XのDMで教えてください。
-        <a href={ADMIN_CONTACT_URL} target="_blank" rel="noopener noreferrer">管理者のX（{ADMIN_CONTACT_HANDLE}）</a>へ、該当ページと訂正内容をお知らせください。内容を確認して訂正し、該当する出来事に訂正済みと表示します。
+        掲載内容の誤りは、<a href="/requests/">追加掲載・訂正依頼</a>のページから、該当ページと訂正内容をお知らせください。内容を確認して訂正し、該当する出来事に訂正済みと表示します。
       </p>
     </details>
   </section>
