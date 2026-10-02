@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import { ADMIN_CONTACT_URL, ADMIN_CONTACT_HANDLE } from '../../lib/contact';
 import TrackingStatus from '../../components/TrackingStatus.astro';
 import { REPORT_METHOD, REPORT_ACCESS } from '../../lib/trackingProfile';
 import StockLinks from '../../components/StockLinks.astro';
@@ -26,7 +27,6 @@ interface Props {
 }
 
 const { detail: c, isSampleData } = Astro.props;
-const formUrl = import.meta.env.PUBLIC_REQUEST_FORM_URL ?? '';
 
 const title = `${c.companyName}(${c.securityCode})${c.title.includes(c.companyName) ? '' : ` ${c.title}`}の経過`;
 const description = `${c.companyName}(証券コード${c.securityCode})の非公開化・MBO・TOBに関する追跡開始から現在までの経過を時系列で整理。${c.summary}`.slice(0, 155);
@@ -185,15 +185,12 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
   </section>
 
 
-  {formUrl && (
-    <section class="section">
-      <p class="small">
-        この銘柄の続報・会社説明・訂正は
-        <a href={formUrl} target="_blank" rel="noopener noreferrer">追加掲載・訂正申請フォーム（Googleフォーム）</a>
-        からお願いします。
-      </p>
-    </section>
-  )}
+  <section class="section">
+    <p class="small">
+      この銘柄の続報・会社説明・訂正は、XのDMで教えてください。
+      <a href={ADMIN_CONTACT_URL} target="_blank" rel="noopener noreferrer">管理者のX（{ADMIN_CONTACT_HANDLE}）</a>へ、一般公開された情報源のURLを添えてお知らせください。
+    </p>
+  </section>
 </Base>
 
 <script>

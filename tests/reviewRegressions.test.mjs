@@ -417,12 +417,14 @@ describe('daily_close normalization behavior', () => {
 });
 
 describe('phase 3 analytics and advertising regressions', () => {
-  it('uses Cloudflare adaptive Time windows and real visit metrics', () => {
+  it('uses Cloudflare Web Analytics account/site scopes and Time windows', () => {
     const source = fs.readFileSync('functions/api/analytics.ts', 'utf8');
     assert.match(source, /\$since7: Time!/);
-    assert.match(source, /datetime_geq: \$since7, datetime_lt: \$until, requestSource: "eyeball"/);
-    assert.match(source, /datetime_geq: \$since30, datetime_lt: \$until, requestSource: "eyeball"/);
-    assert.match(source, /sum \{ pageViews visits \}/);
+    assert.match(source, /datetime_geq: \$since7, datetime_lt: \$until, siteTag: \$siteTag, requestHost: \$host/);
+    assert.match(source, /datetime_geq: \$since30, datetime_lt: \$until, siteTag: \$siteTag, requestHost: \$host/);
+    assert.match(source, /count sum \{ visits \}/);
+    assert.match(source, /rumPageloadEventsAdaptiveGroups/);
+    assert.doesNotMatch(source, /httpRequestsAdaptiveGroups/);
     assert.doesNotMatch(source, /date_geq|date_leq|sum\?\.requests/);
     assert.match(source, /hours \* 60 \* 60 \* 1000/);
     assert.match(source, /168/);
@@ -433,7 +435,7 @@ describe('phase 3 analytics and advertising regressions', () => {
     const source = fs.readFileSync('functions/api/analytics.ts', 'utf8');
     assert.match(source, /await response\.json\(\)/);
     assert.match(source, /Cloudflare Analytics returned non-JSON/);
-    assert.match(source, /Cloudflare Analytics returned no zone/);
+    assert.match(source, /Cloudflare Analytics returned no account/);
     assert.match(source, /PUBLIC_UPSTREAM_ERROR/);
     assert.doesNotMatch(source, /details: json/);
   });
@@ -447,15 +449,15 @@ describe('phase 3 analytics and advertising regressions', () => {
     fs.writeFileSync(file, outputText);
     const { queryCloudflare } = await import(pathToFileURL(file).href);
     const originalFetch = globalThis.fetch;
-    const env = { CF_ANALYTICS_API_TOKEN: 'secret-token', CF_ZONE_TAG: 'secret-zone' };
+    const env = { CF_ANALYTICS_API_TOKEN: 'secret-token', CF_ACCOUNT_ID: 'account', CF_ANALYTICS_SITE_TAG: 'site' };
     try {
       let submitted;
       globalThis.fetch = async (_url, init) => {
         submitted = JSON.parse(init.body);
-        return new Response(JSON.stringify({ data: { viewer: { zones: [{
-          last7: [{ sum: { pageViews: 7, visits: 3 } }],
-          last30: [{ sum: { pageViews: 30, visits: 11 } }],
-          topUrls: [{ dimensions: { clientRequestPath: '/cases/example/' }, sum: { pageViews: 5 } }],
+        return new Response(JSON.stringify({ data: { viewer: { accounts: [{
+          last7: [{ count: 7, sum: { visits: 3 } }],
+          last30: [{ count: 30, sum: { visits: 11 } }],
+          topUrls: [{ dimensions: { requestPath: '/cases/example/' }, count: 5 }],
         }] } } }));
       };
       const success = await queryCloudflare(env);
@@ -468,7 +470,7 @@ describe('phase 3 analytics and advertising regressions', () => {
         new Response('upstream failure', { status: 500 }),
         new Response('<html>failure</html>', { status: 502, headers: { 'content-type': 'text/html' } }),
         new Response(JSON.stringify({ errors: [{ message: 'private detail' }] })),
-        new Response(JSON.stringify({ data: { viewer: { zones: [] } } })),
+        new Response(JSON.stringify({ data: { viewer: { accounts: [] } } })),
       ]) {
         globalThis.fetch = async () => response;
         const result = await queryCloudflare(env);

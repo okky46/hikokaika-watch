@@ -56,7 +56,7 @@
    | `PUBLIC_SUPABASE_URL` | `https://<project-ref>.supabase.co` |
    | `PUBLIC_SUPABASE_ANON_KEY` | anon key |
    | `SITE_URL` | `https://<本番ドメイン>` |
-   | `PUBLIC_REQUEST_FORM_URL` | Google フォームの URL |
+   | 追加掲載・訂正の連絡先 | `src/lib/contact.ts` の管理者Xアカウント。環境変数の追加は不要 |
 4. 環境ごとの `DEPLOY_ENV` / `DATA_SOURCE` は以下を明示する。
    - 本番: `DEPLOY_ENV=production` / `DATA_SOURCE=supabase`。上記の本番環境変数表に必ず設定する。
    - ローカル開発: `DEPLOY_ENV=development` / `DATA_SOURCE=sample`。両方未設定の場合のみ、この安全な既定値へフォールバックする。
@@ -99,16 +99,11 @@ on conflict (key) do update set value = excluded.value;
 > 保護は多層: Access を突破されても、Supabase Auth の本人ログイン +
 > `admin_users` RLS がなければ一切の読み書きができない。
 
-## 7. Google フォーム(追加掲載・訂正申請)
+## 7. 追加掲載・訂正の連絡先
 
-1. Google フォームを作成し、以下を設定する。
-   - 申請種別(選択式): 新規案件の追加 / 続報・会社コメントの追加 / 既存情報の訂正 / その他
-   - 対象の会社名・証券コード(記述式)
-   - 情報源のURL(記述式)
-   - 補足(段落)
-2. フォームの説明文に以下の注意書きを入れる:
-   > 本フォームは、一般に公開されている報道、会社発表等の追加掲載または訂正を申請するためのものです。会社関係者として知り得た未公表情報、情報源を公開できない内部情報、第三者の個人情報は送信しないでください。
-3. フォーム URL を `PUBLIC_REQUEST_FORM_URL` に設定して再デプロイする。
+2026-10-03のユーザー指定により、管理者のXアカウント [@kabu_kaitaku](https://x.com/kabu_kaitaku) へのリンクを表示し、「XのDMで教えてください」と案内する。URLとアカウント名は `src/lib/contact.ts` に集約。Googleフォームと `PUBLIC_REQUEST_FORM_URL` は現在の公開画面で使用しない。
+
+一般公開された情報源のURLを添えて連絡してもらい、管理者が確認して掲載・訂正する。未公表情報・内部情報・第三者の個人情報を受け付けない掲載基準は維持する。リンクは指定プロフィールへ開き、XへのAPI連携や自動送信は追加しない。
 
 ## 8. 運用フロー(日常)
 
@@ -239,7 +234,11 @@ $$;
 
 ### 管理画面のアクセス統計タブ
 
-`/admin` の「アクセス統計」タブは `/api/analytics` の Cloudflare Pages Function 経由で Cloudflare GraphQL Analytics API を呼び出します。APIトークンは必ず Pages のサーバー側環境変数に設定し、`PUBLIC_` を付けないでください。
+`/admin` の「アクセス統計」タブは `/api/analytics` の Cloudflare Pages Function 経由で、Web Analyticsの `rumPageloadEventsAdaptiveGroups` を取得する。対象アカウント・サイト・ホストで絞り、直近7日・30日のPVと訪問数、直近30日の上位20パスを表示する。ゾーンのHTTPリクエスト数をページ閲覧数へ流用しない。APIトークンはPagesのサーバー側Secretに設定し、`PUBLIC_`を付けない。
+
+FunctionはSupabaseのログインJWTを既存の `is_admin` RPCで検証する。未ログインは401、管理者でなければ403とし、Cloudflareへ問い合わせない。レスポンスはprivate・no-store。認可にservice role keyは使わず、既存のGoogleログインと本人メモRLSも変更しない。
+
+Cloudflare側ではhikokaika.comの自動セットアップが有効で、2026-10-03の確認時に直近24時間78PV・34訪問が記録されていた。二重計測を避けるため、既存の自動挿入に加えて手動ビーコンを設定しない。ブラウザーの遮断や集計の更新により、計測値は全閲覧の厳密な件数とは限らない。
 
 | 変数 | 種別 | 用途 |
 |---|---|---|
@@ -248,9 +247,10 @@ $$;
 | `PUBLIC_ADSENSE_SLOT_CASE_TIMELINE_1` | 公開 | 案件詳細の3件目後用のAdSense広告ユニットID。 |
 | `PUBLIC_ADSENSE_SLOT_CASE_TIMELINE_2` | 公開 | 案件詳細の6件目後用のAdSense広告ユニットID。 |
 | `PUBLIC_CF_ANALYTICS_TOKEN` | 公開 | Cloudflare Web Analytics ビーコントークン。未設定ならビーコン非出力。 |
-| `CF_ANALYTICS_API_TOKEN` | サーバー側 | Pages Function が Cloudflare GraphQL Analytics API を呼ぶためのトークン。 |
-| `CF_ZONE_TAG` | サーバー側 | Analytics 対象のCloudflare zoneTag。 |
-| `CF_ACCOUNT_ID` | サーバー側 | 必要に応じて運用メモ・将来拡張で利用するアカウントID。 |
+| `CF_ANALYTICS_API_TOKEN` | サーバー側Secret | 対象アカウントのAccount Analytics Readだけを許可したトークン。 |
+| `CF_ACCOUNT_ID` | サーバー側 | 対象アカウントID。 |
+| `CF_ANALYTICS_SITE_TAG` | サーバー側 | Web Analyticsの対象siteTag。公開ビーコンのtokenと混同しない。 |
+| `CF_ANALYTICS_HOST` | サーバー側 | `hikokaika.com`。pages.devや別サイトを混ぜない。 |
 | `SUPABASE_URL` | GitHub Secrets | 日次終値取得ActionがPostgRESTへ接続するSupabase URL。 |
 | `SUPABASE_SERVICE_ROLE_KEY` | GitHub Secrets | 日次終値取得Actionの書き込み専用Service Role Key。ログに出力しない。 |
 | `CLOUDFLARE_DEPLOY_HOOK_URL` | GitHub Secrets | 日次終値のinsert/update時だけ呼ぶCloudflare Pages Deploy Hook URL。 |

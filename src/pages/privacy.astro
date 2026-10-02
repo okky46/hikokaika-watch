@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import { ADMIN_CONTACT_URL, ADMIN_CONTACT_HANDLE } from '../lib/contact';
 ---
 
 <Base
@@ -21,8 +22,8 @@ import Base from '../layouts/Base.astro';
         いずれも本人が情報を整理するためのもので、他の利用者や第三者には公開しません。
       </li>
       <li>
-        <strong>申請フォームの送信内容</strong>は、Googleのサービスを通じて管理者が確認します。
-        追加掲載・訂正の申請をGoogleフォームで受け付けています。
+        <strong>お問い合わせの内容</strong>は、XのDMを通じて管理者が確認します。
+        追加掲載・訂正のご連絡は、管理者のXアカウントで受け付けています。
       </li>
     </ul>
 
@@ -40,7 +41,8 @@ import Base from '../layouts/Base.astro';
     <ul>
       <li>Cloudflare(サイト配信・管理画面の保護)</li>
       <li>Supabase(データベース・認証)</li>
-      <li>Google(Googleログイン・Googleフォーム・Google AdSense)</li>
+      <li>Google(Googleログイン・Google AdSense)</li>
+      <li>X(管理者へのDMによるお問い合わせ)</li>
       <li>Cloudflare Web Analytics(Cookieを使用しないアクセス解析)</li>
     </ul>
 
@@ -53,7 +55,7 @@ import Base from '../layouts/Base.astro';
 
     <h2>アクセス解析</h2>
     <p>
-      本サイトではCloudflare Web Analyticsを利用する場合があります。Cloudflare Web AnalyticsはCookieを使用せず、
+      本サイトではCloudflare Web Analyticsを利用しています。Cloudflare Web AnalyticsはCookieを使用せず、
       個人を追跡するための識別子をブラウザに保存しません。取得した統計情報は、閲覧状況の把握とサイト改善のために利用します。
     </p>
 
@@ -65,7 +67,7 @@ import Base from '../layouts/Base.astro';
 
     <h2>データの削除</h2>
     <p>
-      アカウントと登録データの削除を希望する場合は、申請フォームの「その他」からご連絡ください。
+      アカウントと登録データの削除を希望する場合は、<a href={ADMIN_CONTACT_URL} target="_blank" rel="noopener noreferrer">管理者のX（{ADMIN_CONTACT_HANDLE}）</a>のDMでご連絡ください。
     </p>
 
     <h2>改定</h2>
