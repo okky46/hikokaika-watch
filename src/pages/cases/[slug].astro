@@ -1,6 +1,5 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { ADMIN_CONTACT_URL, ADMIN_CONTACT_HANDLE } from '../../lib/contact';
 import TrackingStatus from '../../components/TrackingStatus.astro';
 import { REPORT_METHOD, REPORT_ACCESS } from '../../lib/trackingProfile';
 import StockLinks from '../../components/StockLinks.astro';
@@ -187,8 +186,7 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
 
   <section class="section">
     <p class="small">
-      この銘柄の続報・会社説明・訂正は、XのDMで教えてください。
-      <a href={ADMIN_CONTACT_URL} target="_blank" rel="noopener noreferrer">管理者のX（{ADMIN_CONTACT_HANDLE}）</a>へ、一般公開された情報源のURLを添えてお知らせください。
+      この銘柄の続報・会社説明・訂正は、<a href="/requests/">追加掲載・訂正依頼</a>のページから、一般公開された情報源のURLを添えてお知らせください。
     </p>
   </section>
 </Base>

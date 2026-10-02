@@ -1,6 +1,5 @@
 ---
 import '../styles/global.css';
-import { ADMIN_CONTACT_URL } from '../lib/contact';
 
 interface Props {
   title: string;
@@ -25,8 +24,6 @@ const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
 const navigation = [
   { href: '/', label: '追跡銘柄', active: currentPath === '/' || /^\/(cases|companies)\//.test(currentPath) },
   { href: '/articles/', label: '調査記事', active: currentPath === '/articles' || currentPath.startsWith('/articles/') },
-  { href: '/guidelines/', label: '掲載基準・FAQ', active: currentPath === '/guidelines' },
-  { href: '/disclaimer/', label: '免責事項', active: currentPath === '/disclaimer' },
   { href: '/mypage/', label: 'マイページ', active: currentPath === '/mypage' },
 ];
 ---
@@ -60,7 +57,6 @@ const navigation = [
         <span class="site-header__tag">非公開化の噂とその後を追う</span>
         <nav class="site-nav" aria-label="サイト内メニュー">
           {navigation.map(item => <a href={item.href} aria-current={item.active ? (currentPath === (item.href.replace(/\/$/, '') || '/') ? 'page' : 'location') : undefined}>{item.label}</a>)}
-          <a class="is-cta" href={ADMIN_CONTACT_URL} target="_blank" rel="noopener noreferrer">追加・訂正（XのDM）</a>
         </nav>
       </div>
     </header>
@@ -76,7 +72,7 @@ const navigation = [
           <a href="/disclaimer/">免責事項</a>
           <a href="/privacy/">プライバシーポリシー</a>
           <a href="/mypage/">マイページ</a>
-          <a href={ADMIN_CONTACT_URL} target="_blank" rel="noopener noreferrer">追加掲載・訂正はXのDMへ</a>
+          <a href="/requests/">追加掲載・訂正依頼</a>
         </nav>
         <p class="site-footer__note">
           掲載情報は、非公開化の実現を保証しません。売買を推奨するものでもありません。
