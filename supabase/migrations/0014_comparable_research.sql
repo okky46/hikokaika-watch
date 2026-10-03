@@ -125,4 +125,3 @@ begin
 end $$;
 revoke all on function public.publish_valuation_batch(jsonb,boolean) from public,anon,authenticated;
 grant execute on function public.publish_valuation_batch(jsonb,boolean) to authenticated;
-
