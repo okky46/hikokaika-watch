@@ -1,0 +1,38 @@
+---
+import {FIELDS,METRICS} from '../lib/valuation';
+---
+<section class="section" data-panel="valuations" hidden id="va-editor">
+  <h2>財務数値・TOB比較事例</h2>
+  <p>EDINETから取得した数値は原資料で確認してください。下書き保存後に公開対象へ設定し、「公開処理」でサイトを再ビルドすると反映されます。</p>
+  <div class="stock-links"><button type="button" class="btn" id="va-reload">一覧を再読込</button><button type="button" class="btn" id="va-new-financials">財務数値を新規作成</button><button type="button" class="btn" id="va-new-comparable">TOB事例を新規作成</button></div>
+  <label>保存済みデータ<select id="va-list"><option value="">新規作成</option></select></label>
+  <p id="va-status" aria-live="polite"></p>
+  <details class="card"><summary>EDINET取得結果・編集済みJSONを取り込む</summary><p>APIキーを含まない財務データのJSONファイルを指定してください。読み込んだ内容はまだ保存されません。</p><input type="file" id="va-import" accept="application/json,.json" aria-label="財務データのJSONファイル"/></details>
+  <form id="va-form" class="card section">
+    <h3 id="va-kind-label">財務数値</h3>
+    <div class="va-grid">
+      <label>銘柄コード<input name="code" pattern="[0-9][0-9A-Z]{3}" maxlength="4" required/></label>
+      <label>会社名<input name="name" maxlength="200" required/></label>
+      <label>比較業種<input name="industry" maxlength="100" required/><span class="small">同じ表記の業種を比較候補に表示します。</span></label>
+      <label>確認日<input name="checkedOn" type="date" required/></label>
+    </div>
+    <label>全体の注記<textarea name="notes" maxlength="2000"></textarea></label>
+    <div data-va-financials>
+      <p>使う項目にチェックを入れてください。金額は円、株式数は株で登録します。空欄は未取得、0は確認済みのゼロです。EPS・BPS・株式数は同じ株式分割基準にそろえてください。</p>
+      {Object.entries(FIELDS).map(([key,label])=><fieldset data-fact={key}><legend><label><input type="checkbox" data-enabled/>{label}を登録</label></legend><div class="va-grid">
+        <label>数値<input data-v="value" type="number" step="any"/></label>
+        <label>対象期・基準日<input data-v="period" maxlength="100" placeholder="2026-03-31 または 2026年3月期"/></label>
+        <label>実績・会社予想<select data-v="basis"><option value="actual">実績</option><option value="company_forecast">会社予想</option></select></label>
+        <label>範囲<select data-v="scope"><option value="consolidated">連結</option><option value="standalone">単体</option></select></label>
+        <label>出典名<input data-v="sourceName" maxlength="200"/></label><label>出典URL<input data-v="sourceUrl" type="url"/></label>
+      </div><label>定義・算定根拠・株式分割等の注記<textarea data-v="note" maxlength="2000"></textarea></label></fieldset>)}
+    </div>
+    <div data-va-comparable hidden>
+      <div class="va-grid"><label>公表日<input name="announcedOn" type="date"/></label><label>価格の段階<input name="priceStage" placeholder="当初提案・最終TOB価格など" maxlength="100"/></label><label>公開買付価格（円）<input name="offerPrice" type="number" min="0.0001" step="any"/></label><label>公表資料URL<input name="sourceUrl" type="url"/></label><label>調査記事URL（任意）<input name="articleUrl"/></label></div>
+      {Object.entries(METRICS).map(([key,label])=><fieldset data-comparable={key}><legend><label><input type="checkbox" data-enabled/>{label}を登録</label></legend><div class="va-grid"><label>倍率<input data-v="value" type="number" min="0.0001" max="10000" step="any"/></label><label>対象期<input data-v="period" maxlength="100"/></label><label>実績・会社予想<select data-v="basis"><option value="actual">実績</option><option value="company_forecast">会社予想</option></select></label><label>算定方法<select data-v="method"><option value="calculated">当サイトで計算</option><option value="disclosed">資料に記載された倍率</option></select></label><label>出典URL<input data-v="sourceUrl" type="url"/></label></div><label>計算式・採用数値・算定主体<textarea data-v="calculation" maxlength="2000"></textarea></label></fieldset>)}
+      <h4>価格・算定の経緯</h4><div id="va-history"></div><button type="button" class="btn" id="va-add-history">履歴を追加</button>
+    </div>
+    <div class="stock-links section"><button type="submit" class="btn btn--primary">下書きを保存</button><button type="button" class="btn" id="va-publish" disabled>保存した内容を公開対象にする</button><button type="button" class="btn" id="va-unpublish" disabled>公開対象から外す</button></div>
+  </form>
+</section>
+<style>.va-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}label{display:block;margin:.5rem 0}input:not([type=checkbox]),select,textarea{display:block;width:100%}fieldset{margin:1rem 0;padding:1rem;border:1px solid var(--color-line);min-width:0}fieldset:has([data-enabled]:not(:checked)) :is([data-v]){opacity:.5}@media(max-width:640px){.va-grid{grid-template-columns:1fr}}</style>

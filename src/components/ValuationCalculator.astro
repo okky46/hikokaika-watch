@@ -1,0 +1,71 @@
+---
+import {METRICS,FIELDS,basisLabel,prerequisites} from '../lib/valuation';
+import type {Financials,Comparable,Metric,Field} from '../lib/valuation';
+interface Props {financials?:Financials;comparables:Comparable[];industry?:string|null;sample?:boolean}
+const {financials,comparables,industry,sample}=Astro.props;
+const peers=comparables.filter(c=>c.industry===(financials?.industry||industry)&&c.code!==financials?.code);
+const fmt=(n:number)=>n.toLocaleString('ja-JP',{maximumFractionDigits:4});
+const entries=(p:Comparable)=>Object.entries(p.multiples) as [Metric,NonNullable<Comparable['multiples'][Metric]>][];
+---
+<section class="section valuation" id="valuation" data-valuation data-facts={JSON.stringify(financials?.facts??{})}>
+  <h2 class="section-title">株価と倍率の試算</h2>
+  <p>株価から倍率を計算するか、倍率から1株当たりの価格を試算できます。入力値はこの画面内だけで使います。</p>
+  {sample&&<p class="notice">試算用の財務数値・TOB事例は架空のサンプルです。</p>}
+  {!financials?<p class="empty-state">この銘柄の財務数値はまだ登録されていません。出典を確認した数値の公開後に試算できます。</p>:<>
+    <p class="small muted">財務情報の確認日 {financials.checkedOn} ／ 比較業種 {financials.industry}</p>
+    <div class="valuation-grid">
+      <div class="card">
+        <h3>株価から倍率を計算</h3>
+        <label>比較したい株価（円）<input data-price type="number" min="0.0001" max="1000000000" step="any" inputmode="decimal" autocomplete="off" placeholder="株価を入力" /></label>
+        <dl aria-live="polite">{(Object.entries(METRICS) as [Metric,string][]).map(([key,label])=><div><dt>{label} <span class="small muted">{financials.facts[key==='per'?'eps':key==='pbr'?'bps':'ebitda']&&basisLabel(financials.facts[key==='per'?'eps':key==='pbr'?'bps':'ebitda']!.basis)}</span></dt><dd data-result={key}>株価を入力してください</dd></div>)}</dl>
+      </div>
+      <div class="card">
+        <h3>倍率から株価を試算</h3>
+        <label>計算方法<select data-metric>{Object.entries(METRICS).map(([key,label])=><option value={key}>{label}</option>)}</select></label>
+        <label>試算に使う倍率（倍）<input data-multiple type="number" min="0.0001" max="10000" step="any" inputmode="decimal" autocomplete="off" placeholder="倍率を入力" /></label>
+        <p data-scenario-basis class="small"></p>
+        <p aria-live="polite" data-scenario>倍率を入力してください</p>
+        <button class="btn" type="button" data-reset>入力をクリア</button>
+      </div>
+    </div>
+    <details class="card section"><summary>計算に使う財務数値・出典・算式</summary>
+      <dl class="valuation-facts">{(Object.entries(FIELDS) as [Field,string][]).map(([key,label])=>{const f=financials.facts[key];return <div><dt>{label}</dt><dd>{f?<><strong>{fmt(f.value)}</strong><p class="small">{f.period} ／ {basisLabel(f.basis)} ／ {f.scope==='consolidated'?'連結':'単体'}</p><a href={f.sourceUrl} target="_blank" rel="noopener noreferrer">{f.sourceName}</a>{f.note&&<p class="small">{f.note}</p>}</>:'未登録'}</dd></div>})}</dl>
+      <p>PER＝株価÷EPS。PBR＝株価÷BPS。</p>
+      <p>EV＝株価×自己株式控除後株式数＋有利子負債−現金・現金同等物＋その他調整額。EV/EBITDA＝EV÷EBITDA。</p>
+      <p>EV/EBITDAからの試算株価＝（倍率×EBITDA−有利子負債＋現金・現金同等物−その他調整額）÷自己株式控除後株式数。</p>
+      <p class="small">その他調整額はEVへ加算する額です。リース債務・非支配持分等の扱いは各出典の注記を確認してください。基準日が異なる利益と残高を組み合わせる場合があります。株式分割後はEPS・BPS・株式数の調整を確認してください。</p>
+      {financials.notes&&<p>{financials.notes}</p>}
+      {(Object.keys(METRICS) as Metric[]).map(k=>prerequisites(financials.facts,k)&&<p class="small">{METRICS[k]}：{prerequisites(financials.facts,k)}</p>)}
+    </details>
+  </>}
+  <h3>過去の同業TOB事例</h3>
+  <p class="small">過去の取引条件が、この銘柄にも当てはまるとは限りません。実績・会社予想と対象期を確認して選択してください。</p>
+  {peers.length?peers.map(p=><article class="card section"><h4>{p.name}（{p.code}）</h4><p class="small">{p.announcedOn}公表 ／ {p.priceStage} {fmt(p.offerPrice)}円</p>{entries(p).map(([key,m])=><div class="peer-multiple"><span>{METRICS[key]} {fmt(m.value)}倍（{basisLabel(m.basis)}・{m.period}）</span>{financials&&<button class="btn" type="button" data-peer-metric={key} data-peer-value={m.value} data-peer-name={p.name} data-peer-basis={m.basis}>この倍率で試算</button>}<p class="small">{m.method==='calculated'?'当サイトで計算':'資料に記載された倍率'}：{m.calculation}</p></div>)}<p>{p.notes}</p><a href="/tob-comparables/">出典・価格算定履歴を見る</a></article>):<p class="empty-state">比較業種が一致する公開済み事例はまだありません。</p>}
+  <a href="/tob-comparables/">過去のTOB事例をすべて見る</a>
+  <p class="small muted section">結果は入力条件に基づく計算値です。将来の市場価格やTOB価格の予測、売買の推奨ではありません。</p>
+  <noscript><p>試算にはJavaScriptを有効にしてください。財務数値と出典はそのまま閲覧できます。</p></noscript>
+</section>
+<script>
+import {METRICS,basisLabel,prerequisites,multipleFromPrice,priceFromMultiple} from '../lib/valuation';
+import type {Financials,Metric} from '../lib/valuation';
+document.querySelectorAll<HTMLElement>('[data-valuation]').forEach(root=>{
+ const f=JSON.parse(root.dataset.facts??'{}') as Financials['facts'];
+ const price=root.querySelector<HTMLInputElement>('[data-price]'),multiple=root.querySelector<HTMLInputElement>('[data-multiple]'),metric=root.querySelector<HTMLSelectElement>('[data-metric]');
+ if(!price||!multiple||!metric)return;
+ const result=root.querySelector<HTMLElement>('[data-scenario]')!,basis=root.querySelector<HTMLElement>('[data-scenario-basis]')!;let peer='';
+ const number=(v:number)=>v.toLocaleString('ja-JP',{maximumFractionDigits:2});
+ const update=()=>{
+  for(const key of Object.keys(METRICS) as Metric[]){const out=root.querySelector<HTMLElement>(`[data-result="${key}"]`)!;const value=multipleFromPrice(f,key,price.valueAsNumber);out.textContent=prerequisites(f,key)??(!price.value?'株価を入力してください':!price.validity.valid||value===null?'計算できる正の株価・EVを確認してください':`${number(value)}倍`);}
+  const key=metric.value as Metric,fact=f[key==='per'?'eps':key==='pbr'?'bps':'ebitda'];
+  basis.textContent=`${fact?`${basisLabel(fact.basis)}・${fact.period}の数値で計算。`:''}${peer}`;
+  const value=priceFromMultiple(f,key,multiple.valueAsNumber);
+  result.textContent=prerequisites(f,key)??(!multiple.value?'倍率を入力してください':!multiple.validity.valid||value===null?'正の試算株価を計算できません。倍率と財務数値を確認してください。':`入力した条件での試算株価：${number(value)}円`);
+ }
+ price.addEventListener('input',update);multiple.addEventListener('input',()=>{peer='';update();});metric.addEventListener('change',()=>{peer='';update();});
+ root.querySelector('[data-reset]')!.addEventListener('click',()=>{price.value='';multiple.value='';peer='';update();});
+ root.querySelectorAll<HTMLButtonElement>('[data-peer-metric]').forEach(b=>b.addEventListener('click',()=>{metric.value=b.dataset.peerMetric!;multiple.value=b.dataset.peerValue!;const target=f[metric.value==='per'?'eps':metric.value==='pbr'?'bps':'ebitda'];peer=`参照事例：${b.dataset.peerName}。${target&&target.basis!==b.dataset.peerBasis?'事例とこの銘柄で実績・会社予想の基準が異なります。':''}`;update();multiple.focus();}));update();
+});
+</script>
+<style>
+.valuation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.valuation label{display:block;margin:.7rem 0}.valuation input,.valuation select{display:block;width:100%;max-width:22rem;margin-top:.3rem}.valuation dl>div{padding:.7rem 0;border-bottom:1px solid var(--color-line)}.valuation dd{margin:.3rem 0;overflow-wrap:anywhere}.valuation .peer-multiple{margin:.7rem 0}.peer-multiple button{margin-left:.6rem}.valuation p{overflow-wrap:anywhere}@media(max-width:640px){.valuation-grid{grid-template-columns:1fr}.peer-multiple button{display:block;margin:.4rem 0}}
+</style>

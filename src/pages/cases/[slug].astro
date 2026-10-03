@@ -4,6 +4,8 @@ import TrackingStatus from '../../components/TrackingStatus.astro';
 import { REPORT_METHOD, REPORT_ACCESS } from '../../lib/trackingProfile';
 import StockLinks from '../../components/StockLinks.astro';
 import ArticleList from '../../components/ArticleList.astro';
+import ValuationCalculator from '../../components/ValuationCalculator.astro';
+import { loadValuations } from '../../lib/valuationData';
 import EventTypeBadge from '../../components/EventTypeBadge.astro';
 import AdSlot from '../../components/AdSlot.astro';
 import { timelineGroup } from '../../lib/trackingDates';
@@ -26,6 +28,7 @@ interface Props {
 }
 
 const { detail: c, isSampleData } = Astro.props;
+const valuations = await loadValuations();
 
 const title = `${c.companyName}（${c.securityCode}）の経過`;
 const description = `${c.companyName}(証券コード${c.securityCode})の非公開化・MBO・TOBに関する追跡開始から現在までの経過を時系列で整理。${c.summary}`.slice(0, 155);
@@ -100,6 +103,7 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
     <a href="#timeline" aria-current="location">経過<span class="case-section-nav__count">{c.events.length}</span></a>
     <a href="#evidence">根拠・媒体</a>
     <a href="#related-articles">関連記事<span class="case-section-nav__count">{Astro.props.articles.length}</span></a>
+    <a href="#valuation">株価・倍率の試算</a>
     <a href="/mypage/" id="personal-note-link" aria-label="ログインして自分のメモを利用">自分のメモ</a>
   </nav>
 
@@ -162,6 +166,8 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
   </section>
 
   <section class="section" id="related-articles"><h2 class="section-title">関連記事</h2><ArticleList articles={Astro.props.articles}/></section>
+
+  <ValuationCalculator financials={valuations.financials.find(f=>f.code===c.securityCode)} comparables={valuations.comparables} industry={c.industry} sample={isSampleData}/>
 
   <section class="section" aria-label="自分専用メモ" id="note-section" hidden>
     <h2 class="section-title">自分専用メモ</h2>

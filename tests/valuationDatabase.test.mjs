@@ -1,0 +1,37 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {PGlite} from '@electric-sql/pglite';
+const admin='10000000-0000-4000-8000-000000000001',other='10000000-0000-4000-8000-000000000002';
+test('財務DB：管理者限定・下書き隔離・競合拒否・公開撤回・非公開銘柄除外',async()=>{
+ const db=new PGlite();
+ try{
+ await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key);
+ create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
+ create function auth.jwt() returns jsonb language sql stable as $$select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb$$;
+ grant usage on schema public,auth to anon,authenticated,service_role;`);
+ for(const file of ['0001_init.sql','0002_comment_mfa_audit_notes.sql','0003_price_event_enums.sql','0004_inbox.sql','0007_tracking_articles.sql','0008_article_validation.sql'])await db.exec(fs.readFileSync(`supabase/migrations/${file}`,'utf8'));
+ await db.exec(`insert into auth.users values('${admin}'),('${other}');insert into admin_users(user_id) values('${admin}');insert into companies(security_code,name_ja) values('0001','架空会社');insert into cases(company_id,title,slug,is_visible) select id,'架空案件','valuation-test',true from companies where security_code='0001';`);
+ const policies=(await db.query("select * from pg_policies where tablename like 'user_%' order by tablename,policyname")).rows;
+ await db.exec(fs.readFileSync('supabase/migrations/0013_valuation_editions.sql','utf8'));
+ assert.deepEqual((await db.query("select * from pg_policies where tablename like 'user_%' order by tablename,policyname")).rows,policies);
+ const session=async(role,id='')=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec(`set role ${role}`);};
+ const save=async(p,revision=null,id='financials:0001')=>(await db.query('select to_jsonb(save_valuation_draft($1,$2,$3)) as r',[id,p,revision])).rows[0].r;
+ const publish=async(revision,visible=true,id='financials:0001')=>(await db.query('select to_jsonb(publish_valuation($1,$2,$3)) as r',[id,revision,visible])).rows[0].r;
+ const read=async()=>(await db.query('select read_published_valuations() as r')).rows[0].r;
+ const [data,peer]=JSON.parse(fs.readFileSync('data/sample/valuations.json','utf8'));
+ await session('anon');await assert.rejects(save(data));await assert.rejects(db.query('select * from valuation_editions'));await assert.rejects(read());
+ await session('authenticated',other);await assert.rejects(save(data),/管理者/);assert.equal((await db.query('select * from valuation_editions')).rows.length,0);
+ await session('authenticated',admin);let row=await save(data);await assert.rejects(db.query('update valuation_editions set published=draft'));
+ await session('service_role');assert.deepEqual(await read(),[]);
+ await session('authenticated',admin);row=await publish(row.revision);await assert.rejects(save(data,row.revision-1),/競合/);await assert.rejects(publish(null),/競合/);
+ const changed=structuredClone(data);changed.facts.eps.value=200;row=await save(changed,row.revision);
+ await session('service_role');assert.equal((await read())[0].content.facts.eps.value,100);
+ await session('authenticated',admin);row=await publish(row.revision);let peerRow=await save(peer,null,'tob:sample');await publish(peerRow.revision,true,'tob:sample');
+ await session('service_role');assert.equal((await read())[0].content.facts.eps.value,200);
+ await session('postgres');await db.exec('update cases set is_visible=false');await session('service_role');assert.equal((await read()).length,1);assert.equal((await read())[0].content.kind,'comparable');
+ await session('authenticated',admin);row=await publish(row.revision,false);await publish(peerRow.revision+1,false,'tob:sample');
+ for(const bad of [{...data,checkedOn:'2026-02-30'},{...data,facts:{}},{...data,facts:{eps:{...data.facts.eps,value:null}}},{...data,facts:{eps:{...data.facts.eps,sourceUrl:'javascript:alert(1)'}}}])await assert.rejects(save(bad,row.revision));
+ await session('service_role');assert.deepEqual(await read(),[]);
+ }finally{await db.close();}
+});
