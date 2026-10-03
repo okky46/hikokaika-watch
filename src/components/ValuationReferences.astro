@@ -24,6 +24,7 @@ const price=(n:number|null)=>n===null?'試算できません':`${n.toLocaleStrin
           const reason=prerequisites(facts,metric);
           return <div class="reference-group">
             <p class="small reference-context">{basisLabel(g.basis)}・{g.scope==='consolidated'?'連結':'単体'} ／ 対象{g.count}件<br/>TOB公表年月：{referencePeriod(g)}</p>
+            <p class="small muted">{g.definition}</p>
             <dl class="reference-multiples"><div><dt>平均</dt><dd>{multiple(g.mean)}倍</dd></div><div><dt>中央値</dt><dd>{multiple(g.median)}倍</dd></div></dl>
             <p class="small muted">{metric==='evEbitda'?'平均倍率での試算株価':'平均倍率を当てはめた参考株価'}</p>
             <p class="reference-price" data-reference-center>{price(scenarios[1].price)}</p>
@@ -34,7 +35,7 @@ const price=(n:number|null)=>n===null?'試算できません':`${n.toLocaleStrin
             </div>
             {reason&&<p class="small">{reason}</p>}
             {!reason&&scenarios.some(s=>s.price===null)&&<p class="small">正の株価にならない条件は試算できません。</p>}
-            <details class="reference-sources"><summary>集計した{g.count}案件と定義</summary><p class="small">{g.definition}</p><ul>{g.samples.map(c=><li><a href={`/tob-comparables/#deal-${c.research!.dealId}`}>{c.name}（{c.code}）</a> ／ {c.announcedOn} ／ {multiple(c.multiples[metric]!.value)}倍</li>)}</ul></details>
+            <details class="reference-sources"><summary>集計した{g.count}案件</summary><ul>{g.samples.map(c=><li><a href={`/tob-comparables/#deal-${c.research!.dealId}`}>{c.name}（{c.code}）</a> ／ {c.announcedOn} ／ {multiple(c.multiples[metric]!.value)}倍</li>)}</ul></details>
           </div>;
         }):<><p class="reference-price muted">参考値なし</p><p class="small">この銘柄と条件が揃う取引倍率はまだありません。</p></>}
       </article>;

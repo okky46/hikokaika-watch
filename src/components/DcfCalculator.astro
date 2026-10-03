@@ -1,0 +1,81 @@
+---
+---
+<details class="section card dcf-calculator" data-dcf>
+  <summary>DCFで株価を試算する</summary>
+  <p>将来5年のFCFFを割り引き、継続価値を加えて事業価値を求めます。前提はすべて自由入力です。EDINETの実績から将来予測を自動で作る機能はありません。</p>
+  <p class="small">基準日から1〜5年後の期末にFCFFが生じるモデルです。各期間は12ヶ月で、初年度が半年などの計画や期央割引には対応していません。金額は百万円、株式数は株、率は%で入力します。</p>
+  <div class="dcf-inputs">
+    <label>算定基準日<input type="date" data-dcf-date /></label>
+    <label>計算する範囲<select data-dcf-scope><option value="">選択してください</option><option value="consolidated">連結</option><option value="standalone">単体</option></select></label>
+    {Array.from({length:5},(_,i)=><label>{i+1}年後のFCFF（百万円）<input data-dcf-fcff type="number" step="any" inputmode="decimal" autocomplete="off" /></label>)}
+    <label>割引率・WACC（%）<input data-dcf-wacc type="number" min="0.0001" max="100" step="any" inputmode="decimal" autocomplete="off" /></label>
+    <label>株主価値への調整額（百万円）<input data-dcf-bridge type="number" step="any" inputmode="decimal" autocomplete="off" /><span class="small">現金・非事業用資産を加え、有利子負債・非支配持分等を引いた合計。同じ基準日・範囲で揃え、現金等をFCFFと重複させないでください。調整なしも0の入力が必要です。</span></label>
+    <label>自己株式控除後の株式数（株）<input data-dcf-shares type="number" min="1" step="1" inputmode="numeric" autocomplete="off" /><span class="small">基準日時点の株式数。信託保有株や希薄化の扱いも前提に記録してください。</span></label>
+    <label>継続価値の方式<select data-dcf-method><option value="growth">永久成長率</option><option value="multiple">終期EBITDA倍率</option></select></label>
+    <div data-dcf-growth-fields>
+      <label>正常化した5年後のFCFF（百万円）<input data-dcf-normalized type="number" min="0.0001" step="any" inputmode="decimal" autocomplete="off" /></label>
+      <label>永久成長率（%）<input data-dcf-growth type="number" min="-99.9999" step="any" inputmode="decimal" autocomplete="off" /><span class="small">翌期FCFF＝正常化FCFF×（1＋成長率）。WACCより低い率を入力してください。</span></label>
+    </div>
+    <div data-dcf-multiple-fields hidden>
+      <label>5年後のEBITDA（百万円）<input data-dcf-ebitda type="number" min="0.0001" step="any" inputmode="decimal" autocomplete="off" /></label>
+      <label>継続価値用EBITDA倍率（倍）<input data-dcf-exit type="number" min="0.0001" step="any" inputmode="decimal" autocomplete="off" /><span class="small">過去TOBの取引倍率とは用途が異なります。参照値を自動入力しません。</span></label>
+    </div>
+  </div>
+  <label>前提の出典・採用理由<textarea data-dcf-notes rows="3" placeholder="FCFFの計画、割引率、正常化、調整額、株式数の根拠を記録" /></label>
+  <p class="small">FCFFは債権者と株主に帰属する事業全体のキャッシュフローです。営業CFと投資CFの単純合計や、株主向けFCFをそのまま代用しないでください。途中の負のFCFFは入力できます。金額・基準日・連結範囲は同じ条件で揃えてください。</p>
+  <button type="button" class="btn" data-dcf-reset>DCFの入力をクリア</button>
+  <div aria-live="polite"><p class="dcf-price" data-dcf-price>前提を入力してください</p><p class="small" data-dcf-status></p></div>
+  <div data-dcf-results hidden>
+    <dl class="dcf-values">
+      <div><dt>計画期間FCFFの現在価値</dt><dd data-dcf-value="presentForecast"></dd></div>
+      <div><dt>継続価値の現在価値</dt><dd data-dcf-value="presentTerminal"></dd></div>
+      <div><dt>事業価値</dt><dd data-dcf-value="enterpriseValue"></dd></div>
+      <div><dt>株主価値</dt><dd data-dcf-value="equityValue"></dd></div>
+      <div><dt>事業価値に占める継続価値</dt><dd data-dcf-value="terminalShare"></dd></div>
+    </dl>
+    <h3>前提を変えたときの試算株価</h3>
+    <p class="small" data-dcf-sensitivity-note></p>
+    <table class="dcf-table"><caption>行はWACC、列は継続価値の条件。単位は円／株。</caption><thead><tr data-dcf-head></tr></thead><tbody data-dcf-body></tbody></table>
+    <p class="small">中央は入力した条件。空欄のセルは計算条件を満たしていません。この表は前提を変えた感応度で、予測区間ではありません。</p>
+  </div>
+  <p class="small muted">入力はこの画面内だけで使い、保存・送信しません。計算結果は入力した仮定に依存します。第三者機関の評価レンジを再現した値や、TOB価格の予測とは区別してください。</p>
+</details>
+<script>
+import {dcf,dcfSensitivity} from '../lib/dcf';
+import type {DcfInput} from '../lib/dcf';
+document.querySelectorAll<HTMLElement>('[data-dcf]').forEach(root=>{
+  const select=(key:string)=>root.querySelector<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>(`[data-dcf-${key}]`)!;
+  const fields=(selector:string)=>root.querySelector<HTMLElement>(selector)!;
+  const price=fields('[data-dcf-price]'),status=fields('[data-dcf-status]'),results=fields('[data-dcf-results]');
+  const fcff=[...root.querySelectorAll<HTMLInputElement>('[data-dcf-fcff]')];
+  const amount=(key:string)=>{const el=select(key) as HTMLInputElement;return el.value!==''&&el.validity.valid?el.valueAsNumber:NaN;};
+  const fmt=(n:number)=>n.toLocaleString('ja-JP',{maximumFractionDigits:0});
+  const rate=(n:number)=>n.toLocaleString('ja-JP',{maximumFractionDigits:4});
+  const update=()=>{
+    const growth=select('method').value==='growth';
+    fields('[data-dcf-growth-fields]').hidden=!growth;fields('[data-dcf-multiple-fields]').hidden=growth;
+    results.hidden=true;price.textContent='前提を入力してください';status.textContent='';
+    fields('[data-dcf-head]').replaceChildren();fields('[data-dcf-body]').replaceChildren();root.querySelectorAll('[data-dcf-value]').forEach(el=>el.textContent='');
+    if(!select('date').value||!select('scope').value||!select('notes').value.trim()){status.textContent='算定基準日・連結範囲・前提の根拠を入力してください。';return;}
+    const input:DcfInput={fcff:fcff.map(el=>el.value!==''&&el.validity.valid?el.valueAsNumber:NaN),wacc:amount('wacc'),equityBridge:amount('bridge'),shares:amount('shares'),terminal:growth?{method:'growth',growth:amount('growth'),normalizedFcff:amount('normalized')}:{method:'multiple',multiple:amount('exit'),ebitda:amount('ebitda')}};
+    const result=dcf(input);
+    if(!result){status.textContent='全項目の入力を確認してください。WACC・株式数・終期FCFFまたはEBITDA・倍率は正の値が必要です。永久成長率はWACC未満にしてください。入力条件で株主価値が0以下になる場合は株価を表示しません。';return;}
+    price.textContent=`入力した条件での試算株価：${fmt(result.price)}円`;
+    status.textContent=`${select('date').value}基準・${select('scope').value==='consolidated'?'連結':'単体'}・5年の期末割引。`;
+    for(const [key,value] of Object.entries(result)){const el=root.querySelector<HTMLElement>(`[data-dcf-value="${key}"]`);if(el)el.textContent=value===null?'算出できません':key==='terminalShare'?`${value.toLocaleString('ja-JP',{maximumFractionDigits:1})}%`:`${fmt(value)}百万円`;}
+    const sensitivity=dcfSensitivity(input),head=fields('[data-dcf-head]'),body=fields('[data-dcf-body]');
+    fields('[data-dcf-sensitivity-note]').textContent=growth?'WACCと永久成長率をそれぞれ±0.5ポイント変えています。':'WACCを±0.5ポイント、終期EBITDA倍率を±0.5倍変えています。';
+    head.replaceChildren();body.replaceChildren();
+    const corner=document.createElement('th');corner.textContent=growth?'WACC／成長率':'WACC／倍率';corner.scope='col';head.append(corner);
+    sensitivity.terminals.forEach(value=>{const th=document.createElement('th');th.scope='col';th.textContent=rate(value)+(growth?'%':'倍');head.append(th);});
+    sensitivity.rows.forEach((row,i)=>{const tr=document.createElement('tr'),th=document.createElement('th');th.scope='row';th.textContent=rate(sensitivity.waccs[i])+'%';tr.append(th);row.forEach((value,j)=>{const td=document.createElement('td');td.textContent=value===null?'—':fmt(value);if(i===1&&j===1)td.className='dcf-center';tr.append(td);});body.append(tr);});
+    results.hidden=false;
+  };
+  root.querySelectorAll('input,textarea').forEach(el=>el.addEventListener('input',update));root.querySelectorAll('select').forEach(el=>el.addEventListener('change',update));
+  fields('[data-dcf-reset]').addEventListener('click',()=>{root.querySelectorAll<HTMLInputElement|HTMLTextAreaElement>('input,textarea').forEach(el=>el.value='');select('scope').value='';select('method').value='growth';update();});
+  update();
+});
+</script>
+<style>
+.dcf-calculator summary{font-weight:600}.dcf-inputs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.3rem 1rem}.dcf-calculator label{display:block;margin:.7rem 0}.dcf-calculator input,.dcf-calculator select,.dcf-calculator textarea{display:block;width:100%;margin-top:.3rem}.dcf-calculator label .small{display:block;margin-top:.3rem}.dcf-price{font-size:1.4rem;font-weight:700}.dcf-values{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 1rem}.dcf-values>div{padding:.7rem 0;border-bottom:1px solid var(--color-line)}.dcf-values dd{margin:.3rem 0}.dcf-table{width:100%;table-layout:fixed;font-size:.85rem}.dcf-table caption{text-align:left}.dcf-table :global(th),.dcf-table :global(td){overflow-wrap:anywhere;padding:.6rem .2rem;text-align:center;border:1px solid var(--color-line)}.dcf-table :global(.dcf-center){font-weight:700;background:var(--color-bg)}@media(max-width:640px){.dcf-inputs,.dcf-values{grid-template-columns:1fr}}
+</style>
