@@ -100,6 +100,10 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
   </header>
 
   <nav class="case-section-nav" aria-label="この銘柄のページ内メニュー">
+    <div class="case-section-nav__identity">
+      <span class="case-section-nav__code">{c.securityCode}</span>
+      <span class="case-section-nav__name" title={c.companyName}>{c.companyName}</span>
+    </div>
     <a href="#timeline" aria-current="location">経過<span class="case-section-nav__count">{c.events.length}</span></a>
     <a href="#evidence">根拠・媒体</a>
     <a href="#related-articles">関連記事<span class="case-section-nav__count">{Astro.props.articles.length}</span></a>
