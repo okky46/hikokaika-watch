@@ -8,6 +8,8 @@ main `f88136d` を既存Deploy Hookから再ビルドし、Cloudflare Production
 
 コード・SQL・フォント・認証・本人メモに変更なし。ニュース収集とDiscord通知は停止を維持する。別worktree・ブランチ `codex-research-nikkon-vector` で公開記録を保存し、元作業コピーの未コミット変更を保持した。報道後の交渉・入札結果と正式TOBは未確認で、続報が出たら出典と時点を確認して更新する。以下の件数・公開状態は各作業時点の履歴。
 
+公開記録3本をコミット `43e6aca` でpushし、ドラフトPR [#38](https://github.com/okky46/hikokaika-watch/pull/38)を作成した。文書のmainへのマージは未実施で、掲載データと解説記事は本番反映済み。`git diff --check`と追加調査文書のyomiyasu検査は成功した。管理画面で両銘柄の公開反映済み表示も確認した。
+
 ## 2026-10-03: 未マージPRをレビューし、公開記録を統合
 
 ユーザーの「P1級の重大な欠陥がなければマージ」という指示に基づき、未マージPR [#34](https://github.com/okky46/hikokaika-watch/pull/34)・[#36](https://github.com/okky46/hikokaika-watch/pull/36)・[#37](https://github.com/okky46/hikokaika-watch/pull/37)の最新差分をレビューした。3件とも文書のみで、P1級の欠陥は見つからなかった。公開コミット・DB適用・保存確認の記録、未確認事項、秘密値の混入を確認し、競合では各作業の記録を保持した。
