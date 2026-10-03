@@ -10,7 +10,7 @@
 python scripts/edinet_prepare.py --output outputs/edinet-research/financials.json
 ```
 
-標準の対象は `scripts/edinet_targets.json` の14銘柄。2026年8月31日のJPX上場銘柄一覧で比較業種を確認した。上場廃止済みの豆蔵、養命酒、ホギメディカル、Fast Fitness Japanはこの設定に含めていない。対象の追加は、コードと業種のJSON配列を `--targets` へ渡す。
+標準の対象は `scripts/edinet_targets.json` の14銘柄。2026年8月31日のJPX上場銘柄一覧で比較業種を確認した。同一覧にない豆蔵、養命酒、ホギメディカル、Fast Fitness Japanは比較業種を未照合のため、この設定に含めていない。対象の追加は、コードと業種のJSON配列を `--targets` へ渡す。
 
 直近400日分の書類一覧から、銘柄ごとに最新の対象期の有価証券報告書を選ぶ。同じ年度の訂正は提出時刻と訂正元を照合する。古い年度の新しい訂正で最新年度を置き換えない。取下げ、不開示、訂正元不明、同時刻の競合書類を採用しない。日付一覧は最大4接続で取得し、24時間以内のキャッシュを再利用する。現在日の一覧は再取得する。
 
@@ -21,6 +21,8 @@ XBRLの標準要素、通期、連結範囲、円・円／株が一致したEPS�
 一括保存は下書きだけを更新する。財務を再取得しても既存の未取得項目を消さず、EVの残高基準日や連結範囲が合わないときは計算を止める。保存後に確認欄へチェックし、一括で公開対象へ設定する。既存の「公開処理」で再ビルドすると公開画面へ反映する。競合や不正なデータが1件でもあれば、まとめて保存・公開する処理全体を取り消す。
 
 [金融庁の利用規約](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/WZEK0030.html)に従い、出典と加工したことを表示する。[公式API仕様書](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140206.pdf)を参照。JPXの業種は[上場銘柄一覧](https://www.jpx.co.jp/markets/statistics-equities/misc/01.html)で照合する。取得を停止中のニュースAction・Discordには接続しない。
+
+実取得では2025-08-29〜2026-10-03の全401日分の一覧を確認し、14銘柄の財務下書きを作成した。EPS14件・BPS13件・現金同等物14件。シェアリングテクノロジーのBPSは採用できず空欄。結果とXBRL根拠はローカル成果物に保存し、サイト取込の検証と隔離DBでの一括下書き保存を確認した。本番へは登録していない。
 
 ## 過去案件を蓄積する
 

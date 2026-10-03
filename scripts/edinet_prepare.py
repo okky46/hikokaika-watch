@@ -167,8 +167,9 @@ def main():
                         print(f'書類一覧を確認中：{i+1}/{len(days)}日。', flush=True)
         chosen, errors = select_documents(documents, [t['code'] for t in targets], end.isoformat())
         records, reports = [], []
-        for t in targets:
+        for number, t in enumerate(targets, 1):
             code=t['code']
+            print(f'財務を確認中：{number}/{len(targets)}銘柄（{code}）。', flush=True)
             if code not in chosen: reports.append({'code':code, 'issues':[errors[code]]}); continue
             doc=chosen[code]
             try:
