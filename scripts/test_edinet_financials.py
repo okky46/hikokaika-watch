@@ -30,4 +30,12 @@ class EdinetFinancialsTest(unittest.TestCase):
         mapping['fields']['eps']['ids']=['1','1']
         with self.assertRaises(ValueError):compose(self.fixture(),mapping)
 
+    def test_duplicate_element_across_files_is_not_added_twice(self):
+        data=self.fixture('円')
+        duplicate={**data['candidates'][0], 'id':'3', 'file':'another.csv'}
+        data['candidates'].append(duplicate)
+        mapping={'industry':'機械','fields':{'ebitda':{'ids':['1','3'],'period':'2026年3月期','scope':'consolidated','note':'営業利益と減価償却費を確認'}}}
+        with self.assertRaisesRegex(ValueError,'同じ要素'):
+            compose(data,mapping)
+
 if __name__=='__main__':unittest.main()

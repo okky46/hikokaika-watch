@@ -86,6 +86,8 @@ def compose(candidates, mapping):
         selected = [by_id[str(key)] for key in selection['ids']]
         if not selected or len({c['id'] for c in selected}) != len(selected):
             raise ValueError('項目が未選択、または重複しています。')
+        if len({(c['element'], c['context']) for c in selected}) != len(selected):
+            raise ValueError('同じ要素・コンテキストが重複しています。別CSVの同一数値を合計できません。')
         if field in {'eps','bps','shares','cash'} and len(selected) != 1:
             raise ValueError('この項目は単一の値を選択してください。')
         expected = {'円／株','円/株','JPY/shares'} if field in {'eps','bps'} else {'株','shares'} if field=='shares' else {'円','JPY'}

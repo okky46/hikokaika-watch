@@ -1,5 +1,5 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
-import {parseValuation} from './valuation';
+import {parseValuation} from './valuation.ts';
 import type {ValuationRecord,Comparable} from './valuation';
 type Row={id:string;draft:ValuationRecord;published:ValuationRecord|null;revision:number};
 export function setupValuationAdmin(client:SupabaseClient){
