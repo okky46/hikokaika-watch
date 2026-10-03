@@ -23,6 +23,46 @@ TAGS = {
     'cash': {'CashAndCashEquivalentsSummaryOfBusinessResults', 'CashAndCashEquivalentsIFRSSummaryOfBusinessResults'},
 }
 
+
+def parse_xml_qnames(xml):
+    # QName text must use the namespace binding at the element, including local overrides.
+    pending, stack, qnames = {}, [], {}
+    parser = ET.iterparse(io.BytesIO(xml), events=('start-ns', 'start', 'end'))
+    def resolve(value, bindings):
+        value = (value or '').strip()
+        if not value or value.count(':') > 1: return None
+        prefix, separator, local = value.partition(':')
+        if not separator: prefix, local = '', prefix
+        namespace = bindings.get(prefix)
+        return (namespace, local) if namespace and local else None
+    for event, element in parser:
+        if event == 'start-ns':
+            prefix, namespace = element; pending[prefix] = namespace
+        elif event == 'start':
+            bindings = dict(stack[-1]) if stack else {}
+            bindings.update(pending); pending.clear(); stack.append(bindings)
+        else:
+            if element.tag == '{'+NS['x']+'}measure':
+                qnames[element] = resolve(element.text, stack[-1])
+            stack.pop()
+    return parser.root, qnames
+
+
+def unit_kind(unit, qnames):
+    yen = ('http://www.xbrl.org/2003/iso4217', 'JPY')
+    shares = (NS['x'], 'shares')
+    children = list(unit)
+    if len(children) != 1: return None
+    child = children[0]
+    if child.tag == '{'+NS['x']+'}measure':
+        return 'JPY' if qnames.get(child) == yen else None
+    if child.tag != '{'+NS['x']+'}divide': return None
+    parts = list(child)
+    if len(parts) != 2 or [p.tag for p in parts] != ['{'+NS['x']+'}unitNumerator', '{'+NS['x']+'}unitDenominator']: return None
+    numerator, denominator = list(parts[0]), list(parts[1])
+    if len(numerator) != 1 or len(denominator) != 1: return None
+    return 'JPY/shares' if qnames.get(numerator[0]) == yen and qnames.get(denominator[0]) == shares else None
+
 def active(doc):
     return doc.get('withdrawalStatus') == '0' and doc.get('disclosureStatus') == '0' and doc.get('legalStatus') in {'1', '2'}
 
@@ -62,7 +102,7 @@ def parse_xbrl(blob, doc, industry):
         xml = z.read(files[0])
     if b'<!DOCTYPE' in xml.upper() or b'<!ENTITY' in xml.upper():
         raise ValueError('外部実体を含むXMLは処理しません。')
-    root = ET.fromstring(xml)
+    root, qnames = parse_xml_qnames(xml)
     contexts, units = {}, {}
     for c in root.findall('x:context', NS):
         members = c.findall('.//d:explicitMember', NS)
@@ -75,12 +115,8 @@ def parse_xbrl(blob, doc, industry):
                                 'instant': c.findtext('x:period/x:instant', namespaces=NS),
                                 'scope': 'standalone' if dims else 'consolidated'}
     for u in root.findall('x:unit', NS):
-        single = u.findtext('x:measure', namespaces=NS)
-        numerator = u.findtext('x:divide/x:unitNumerator/x:measure', namespaces=NS)
-        denominator = u.findtext('x:divide/x:unitDenominator/x:measure', namespaces=NS)
-        # The QName prefixes are the standard EDINET unit namespaces, not display labels.
-        if single == 'iso4217:JPY': units[u.get('id')] = 'JPY'
-        elif numerator == 'iso4217:JPY' and denominator == 'xbrli:shares': units[u.get('id')] = 'JPY/shares'
+        kind = unit_kind(u, qnames)
+        if kind: units[u.get('id')] = kind
     candidates = {k: [] for k in TAGS}
     end, start = doc.get('periodEnd'), doc.get('periodStart')
     if not end or not start or not 330 <= (dt.date.fromisoformat(end)-dt.date.fromisoformat(start)).days <= 380:
