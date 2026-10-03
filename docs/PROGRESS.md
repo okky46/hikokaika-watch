@@ -777,3 +777,9 @@ EDINET collection uses the official EDINET API v2 endpoint `https://api.edinet-f
 Manual Supabase tasks: apply `supabase/migrations/0004_inbox.sql` and verify the `inbox_items` table and RLS policies in the dashboard. Codex must not apply this to production.
 
 GitHub Repository Secrets to register manually: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `EDINET_API_KEY` (if EDINET enabled), `DISCORD_WEBHOOK_URL` (optional notification). GitHub Repository Variables to register manually: `TDNET_API_BASE_URL`, `TDNET_API_FORMAT`, `TDNET_API_LIMIT`, `EDINET_API_BASE_URL`, `EDINET_VIEWER_URL`, `ADMIN_URL`. Do not put secret values in Variables or logs.
+## 2026-10-04: 銘柄詳細の固定タブにコードと銘柄名を追加
+
+銘柄詳細のページ内メニューに、銘柄コードと銘柄名の小さな1行を追加した。スクロール後も既存タブと一緒に上部へ固定される。長い銘柄名は省略表示し、全文をtitle属性と読み上げ用のテキストに保持する。固定メニューの高さに合わせ、タブや出来事のリンク先が隠れないようスクロール余白を広げた。
+
+型検査は0エラー・0警告・既存3ヒント、166テスト成功、サンプル33ページのビルド成功。ブラウザーで幅1280・390・320pxの固定表示、試算タブへの移動と見出しの表示、横方向にはみ出さないことを確認した。既存のフォント指定・認証・メモ・お気に入り・DB・情報収集の設定は変更していない。マージと本番反映はこの時点では未実施。
+

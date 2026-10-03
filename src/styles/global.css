@@ -813,12 +813,15 @@ select {
 .case-overview__status .status-note { margin: .65rem 0 0; }
 .case-overview .stock-links { margin: 1.2rem 0 0; padding-top: 1rem; border-top: 1px solid var(--color-line); gap: .6rem; }
 .case-section-nav { position: sticky; top: .5rem; z-index: 5; display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: .3rem; padding: .35rem; margin: 1.2rem 0; border: 1px solid var(--color-line); border-radius: .75rem; background: #e9eef4; box-shadow: var(--shadow-card); }
+.case-section-nav__identity { grid-column: 1 / -1; display: flex; align-items: center; gap: .5rem; min-width: 0; padding: .15rem .5rem; color: var(--color-ink); font-size: .78rem; line-height: 1.5; font-weight: 700; }
+.case-section-nav__code { flex-shrink: 0; color: var(--color-ink-soft); }
+.case-section-nav__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .case-section-nav a { display: flex; align-items: center; justify-content: center; gap: .45rem; min-height: 44px; padding: .5rem .4rem; color: var(--color-ink-soft); text-decoration: none; font-size: .88rem; font-weight: 700; border-radius: .5rem; }
 .case-section-nav a:hover { background: #fff; color: var(--color-primary); }
 .case-section-nav a[aria-current="location"] { background: var(--color-primary); color: #fff; box-shadow: 0 2px 5px #1f3a5f26; }
 .case-section-nav__count { font-size: .7rem; padding: 0 .4rem; border-radius: 1rem; background: #ffffffb3; color: var(--color-primary); }
 .case-section-nav a[aria-current] .case-section-nav__count { background: #ffffff26; color: #fff; }
-body:has(.case-section-nav) :is(#timeline,#evidence,#related-articles,#valuation,#note-section,[id^="event-"]) { scroll-margin-top: 5.5rem; }
+body:has(.case-section-nav) :is(#timeline,#evidence,#related-articles,#valuation,#note-section,[id^="event-"]) { scroll-margin-top: 7rem; }
 @media (max-width: 640px) {
   .case-overview { padding: 1rem; }
   .case-overview__summary { grid-template-columns: minmax(0,1fr); gap: .8rem; }
@@ -830,7 +833,7 @@ body:has(.case-section-nav) :is(#timeline,#evidence,#related-articles,#valuation
 }
 @media (max-width: 350px) {
   .case-section-nav { grid-template-columns: repeat(2,minmax(0,1fr)); }
-  body:has(.case-section-nav) :is(#timeline,#evidence,#related-articles,#valuation,#note-section,[id^="event-"]) { scroll-margin-top: 12rem; }
+  body:has(.case-section-nav) :is(#timeline,#evidence,#related-articles,#valuation,#note-section,[id^="event-"]) { scroll-margin-top: 13.5rem; }
 }
 .tracking-table { table-layout: fixed; width: 100%; }
 .tracking-table .clickable-rows tr { cursor: pointer; }
