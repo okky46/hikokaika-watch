@@ -1,0 +1,82 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {transform} from '@astrojs/compiler';
+import {experimental_AstroContainer as AstroContainer} from 'astro/container';
+import {build,transform as stripTypes} from 'esbuild';
+import {JSDOM} from 'jsdom';
+import {comparableStats} from '../src/lib/comparableStats.ts';
+import {matchingReferences,referenceScenarios,referencePeriod} from '../src/lib/valuationReference.ts';
+import {priceFromMultiple,parseValuation} from '../src/lib/valuation.ts';
+const records=JSON.parse(fs.readFileSync('data/sample/valuations.json','utf8')).map(parseValuation);
+const financials=records[0],comparables=records.slice(1);
+
+test('平均倍率の±10%を各指標の株価へ換算し、EVの負債等を控除する',()=>{
+ assert.deepEqual(referenceScenarios(financials.facts,'per',20),[{multiple:18,price:1800},{multiple:20,price:2000},{multiple:22,price:2200}]);
+ assert.deepEqual(referenceScenarios(financials.facts,'pbr',2).map(s=>s.price),[1800,2000,2200]);
+ assert.deepEqual(referenceScenarios(financials.facts,'evEbitda',10).map(s=>s.price),[1250,1400,1550]);
+ const missing=structuredClone(financials.facts);delete missing.cash;
+ assert.ok(referenceScenarios(missing,'evEbitda',10).every(s=>s.price===null));
+ assert.equal(referenceScenarios(financials.facts,'evEbitda',0.01)[1].price,null);
+});
+test('参考株価は対象銘柄と実績予想・連結範囲が一致する集計から求める',()=>{
+ const [group]=comparableStats(comparables,financials.industry);
+ const wrongScope={...group,scope:'standalone'},wrongBasis={...group,basis:'company_forecast'};
+ assert.deepEqual(matchingReferences([group,wrongScope,wrongBasis],group.metric,financials.facts),[group]);
+ assert.deepEqual(matchingReferences([group],'pbr',financials.facts),[]);
+});
+test('対象年月は集計に採用したTOB公表月の範囲を示す',()=>{
+ const group={samples:[{announcedOn:'2024-04-05'},{announcedOn:'2023-11-08'}]};
+ assert.equal(referencePeriod(group),'2023年11月〜2024年4月');
+ assert.equal(referencePeriod({samples:[{announcedOn:'2023-11-08'}]}),'2023年11月');
+});
+
+const compiled=new Map();
+async function component(name){
+ if(compiled.has(name))return compiled.get(name);
+ const file=path.resolve('src/components',name+'.astro');
+ let code=(await transform(fs.readFileSync(file,'utf8'),{filename:pathToFileURL(file).href,internalURL:'astro/compiler-runtime',resultScopedSlot:true,renderScript:true,resolvePath:async s=>s})).code;
+ code=code.replaceAll('astro/compiler-runtime',import.meta.resolve('astro/compiler-runtime')).replace(/^import ".*\?astro&type=style.*";$/gm,'');
+ for(const match of [...code.matchAll(/from ['"]([^'"]+)['"]/g)]){
+  const spec=match[1];if(!spec.startsWith('.'))continue;
+  const replace=(value)=>{code=code.replaceAll("'"+spec+"'","'"+value+"'").replaceAll('"'+spec+'"','"'+value+'"');};
+  if(spec.endsWith('.astro'))replace(await component(path.basename(spec,'.astro')));
+  else {let target=path.resolve(path.dirname(file),spec);if(!fs.existsSync(target))target+='.ts';replace(pathToFileURL(target).href);}
+ }
+ code=(await stripTypes(code,{loader:'ts',format:'esm'})).code;
+ const url=`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`;compiled.set(name,url);return url;
+}
+const Calculator=(await import(await component('ValuationCalculator'))).default;
+const script=fs.readFileSync('src/components/ValuationCalculator.astro','utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
+const client=(await build({stdin:{contents:script,loader:'ts',resolveDir:path.resolve('src/components')},bundle:true,write:false,format:'iife',platform:'browser'})).outputFiles[0].text;
+
+test('画面：参考3指標の平均・中央値・期間・レンジを表示し、自由入力は変更しない',async()=>{
+ const html=await (await AstroContainer.create()).renderToString(Calculator,{props:{financials,comparables}});
+ const dom=new JSDOM(html,{runScripts:'outside-only'});dom.window.eval(client);const document=dom.window.document;
+ assert.equal(document.querySelector('[data-multiple]').value,'');
+ assert.equal(document.querySelectorAll('[data-peer-metric]').length,0);
+ const references=document.querySelectorAll('[data-reference-metric]');assert.equal(references.length,3);
+ for(const card of references){
+  assert.match(card.textContent,/平均\s*\d+\.\d倍/);assert.match(card.textContent,/中央値\s*\d+\.\d倍/);
+  assert.match(card.textContent,/対象2件/);assert.match(card.textContent,/TOB公表年月：/);assert.match(card.textContent,/−10%/);assert.match(card.textContent,/＋10%/);
+  const [group]=comparableStats(comparables,financials.industry).filter(g=>g.metric===card.dataset.referenceMetric);
+  assert.equal(card.querySelector('[data-reference-center]').textContent,priceFromMultiple(financials.facts,group.metric,group.mean).toLocaleString('ja-JP',{maximumFractionDigits:0})+'円');
+ }
+ const input=document.querySelector('[data-multiple]');input.value='12.3';input.dispatchEvent(new dom.window.Event('input'));
+ assert.match(document.querySelector('[data-scenario]').textContent,/1,230円/);
+ document.querySelector('.reference-sources summary').click();assert.equal(input.value,'12.3');
+ document.querySelector('[data-metric]').value='pbr';document.querySelector('[data-metric]').dispatchEvent(new dom.window.Event('change'));
+ assert.equal(input.value,'12.3');assert.match(document.querySelector('[data-scenario]').textContent,/12,300円/);
+ document.querySelector('[data-reset]').click();assert.equal(input.value,'');dom.window.close();
+});
+test('画面：不足するBPS・EVの株価は捏造せず、参考倍率と欠損理由を表示する',async()=>{
+ const f=structuredClone(financials);delete f.facts.bps;delete f.facts.cash;
+ const html=await (await AstroContainer.create()).renderToString(Calculator,{props:{financials:f,comparables}});
+ const dom=new JSDOM(html);for(const metric of ['pbr','evEbitda']){
+  const card=dom.window.document.querySelector(`[data-reference-metric="${metric}"]`);
+  assert.equal(card.querySelector('[data-reference-center]').textContent,'試算できません');assert.match(card.textContent,/未登録/);
+ }
+ dom.window.close();
+});
