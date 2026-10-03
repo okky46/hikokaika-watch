@@ -1,0 +1,46 @@
+---
+import {METRICS,basisLabel,prerequisites} from '../lib/valuation';
+import type {Financials,Comparable,Metric} from '../lib/valuation';
+import {comparableStats} from '../lib/comparableStats';
+import {matchingReferences,referencePeriod,referenceScenarios} from '../lib/valuationReference';
+interface Props {financials?:Financials;comparables:Comparable[];industry:string}
+const {financials,comparables,industry}=Astro.props;
+const facts=financials?.facts??{};
+const groups=comparableStats(comparables,industry,{excludeCode:financials?.code});
+const multiple=(n:number)=>n.toLocaleString('ja-JP',{minimumFractionDigits:1,maximumFractionDigits:1});
+const price=(n:number|null)=>n===null?'試算できません':`${n.toLocaleString('ja-JP',{maximumFractionDigits:0})}円`;
+---
+<section class="reference-section" aria-label="同業事例の参考倍率と試算株価">
+  <h3>同業事例の参考倍率と試算株価</h3>
+  <p class="small">{industry}の成立・完了したTOBの最終価格から集計しています。参考倍率は自由入力欄に反映しません。</p>
+  <div class="reference-grid">
+    {(Object.keys(METRICS) as Metric[]).map(metric=>{
+      const matches=matchingReferences(groups,metric,facts);
+      return <article class="card reference-card" data-reference-metric={metric}>
+        <h4>{METRICS[metric]}</h4>
+        {matches.length?matches.map(g=>{
+          const scenarios=referenceScenarios(facts,metric,g.mean);
+          const reason=prerequisites(facts,metric);
+          return <div class="reference-group">
+            <p class="small reference-context">{basisLabel(g.basis)}・{g.scope==='consolidated'?'連結':'単体'} ／ 対象{g.count}件<br/>TOB公表年月：{referencePeriod(g)}</p>
+            <dl class="reference-multiples"><div><dt>平均</dt><dd>{multiple(g.mean)}倍</dd></div><div><dt>中央値</dt><dd>{multiple(g.median)}倍</dd></div></dl>
+            <p class="small muted">平均倍率での試算株価</p>
+            <p class="reference-price" data-reference-center>{price(scenarios[1].price)}</p>
+            <div class="reference-range" aria-label="平均倍率の前後10パーセントによる試算">
+              <div><span>−10%</span><strong>{multiple(scenarios[0].multiple)}倍</strong><span>{price(scenarios[0].price)}</span></div>
+              <div class="reference-range-center"><span>中心</span><strong>{multiple(scenarios[1].multiple)}倍</strong><span>{price(scenarios[1].price)}</span></div>
+              <div><span>＋10%</span><strong>{multiple(scenarios[2].multiple)}倍</strong><span>{price(scenarios[2].price)}</span></div>
+            </div>
+            {reason&&<p class="small">{reason}</p>}
+            {!reason&&scenarios.some(s=>s.price===null)&&<p class="small">正の株価にならない条件は試算できません。</p>}
+            <details class="reference-sources"><summary>集計した{g.count}案件と定義</summary><p class="small">{g.definition}</p><ul>{g.samples.map(c=><li><a href={`/tob-comparables/#deal-${c.research!.dealId}`}>{c.name}（{c.code}）</a> ／ {c.announcedOn} ／ {multiple(c.multiples[metric]!.value)}倍</li>)}</ul></details>
+          </div>;
+        }):<><p class="reference-price muted">参考値なし</p><p class="small">この銘柄と条件が揃う取引倍率はまだありません。</p></>}
+      </article>;
+    })}
+  </div>
+  <p class="small muted">中心は平均倍率、レンジは平均倍率を±10%変えた試算です。過去事例の分布や予測区間ではありません。倍率は小数1桁で表示し、株価は丸める前の倍率で計算しています。対象年月は各TOBの公表月です。</p>
+</section>
+<style>
+.reference-section{margin:1.5rem 0}.reference-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}.reference-card{min-width:0;padding:1.1rem}.reference-card h4{font-size:1.15rem;margin:0 0 .8rem}.reference-group+.reference-group{border-top:1px solid var(--color-line);margin-top:1rem;padding-top:1rem}.reference-context{min-height:3em}.reference-multiples{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}.reference-multiples>div{padding:.5rem 0}.reference-multiples dt{font-size:.8rem;color:var(--color-ink-soft)}.reference-multiples dd{margin:.2rem 0;font-weight:600;font-size:1.1rem}.reference-price{font-size:1.7rem;font-weight:700;line-height:1.3;margin:.4rem 0 1rem}.reference-range{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--color-line);border-radius:.5rem;overflow:hidden}.reference-range>div{display:flex;flex-direction:column;gap:.25rem;align-items:center;text-align:center;padding:.7rem .25rem;font-size:.8rem}.reference-range>div+div{border-left:1px solid var(--color-line)}.reference-range-center{background:var(--color-bg)}.reference-range strong{font-size:.95rem}.reference-sources{margin-top:1rem}.reference-sources ul{padding-left:1.1rem}.reference-card p,.reference-card li{overflow-wrap:anywhere}@media(max-width:900px){.reference-grid{grid-template-columns:1fr}.reference-context{min-height:0}.reference-price{font-size:1.6rem}}
+</style>
