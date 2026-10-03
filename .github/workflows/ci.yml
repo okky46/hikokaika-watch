@@ -22,5 +22,6 @@ jobs:
           python-version: '3.12'
       - run: pip install -r scripts/collect/requirements.txt
       - run: python -m unittest discover -s scripts/collect -p 'test_*.py'
+      - run: python -m unittest discover -s scripts -p 'test_edinet_financials.py'
       - run: DEPLOY_ENV=test DATA_SOURCE=sample npm run build:cloudflare
       - run: node scripts/verify_build.mjs
