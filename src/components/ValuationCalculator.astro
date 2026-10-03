@@ -1,6 +1,7 @@
 ---
 import {METRICS,FIELDS,basisLabel,prerequisites} from '../lib/valuation';
 import type {Financials,Comparable,Metric,Field} from '../lib/valuation';
+import ComparableStatistics from './ComparableStatistics.astro';
 interface Props {financials?:Financials;comparables:Comparable[];industry?:string|null;sample?:boolean}
 const {financials,comparables,industry,sample}=Astro.props;
 const peers=comparables.filter(c=>c.industry===(financials?.industry||industry)&&c.code!==financials?.code);
@@ -39,8 +40,9 @@ const entries=(p:Comparable)=>Object.entries(p.multiples) as [Metric,NonNullable
     </details>
   </>}
   <h3>過去の同業TOB事例</h3>
+  {(financials?.industry||industry)&&<ComparableStatistics records={comparables} industry={financials?.industry||industry!} excludeCode={financials?.code} calculator={!!financials}/>}
   <p class="small">過去の取引条件が、この銘柄にも当てはまるとは限りません。実績・会社予想と対象期を確認して選択してください。</p>
-  {peers.length?peers.map(p=><article class="card section"><h4>{p.name}（{p.code}）</h4><p class="small">{p.announcedOn}公表 ／ {p.priceStage} {fmt(p.offerPrice)}円</p>{entries(p).map(([key,m])=><div class="peer-multiple"><span>{METRICS[key]} {fmt(m.value)}倍（{basisLabel(m.basis)}・{m.period}）</span>{financials&&<button class="btn" type="button" data-peer-metric={key} data-peer-value={m.value} data-peer-name={p.name} data-peer-basis={m.basis}>この倍率で試算</button>}<p class="small">{m.method==='calculated'?'当サイトで計算':'資料に記載された倍率'}：{m.calculation}</p></div>)}<p>{p.notes}</p><a href="/tob-comparables/">出典・価格算定履歴を見る</a></article>):<p class="empty-state">比較業種が一致する公開済み事例はまだありません。</p>}
+  {peers.length?peers.map(p=><article class="card section"><h4>{p.name}（{p.code}）</h4><p class="small">{p.announcedOn}公表 ／ {p.priceStage} {fmt(p.offerPrice)}円</p>{entries(p).map(([key,m])=><div class="peer-multiple"><span>{METRICS[key]} {fmt(m.value)}倍（{basisLabel(m.basis)}・{m.period}）</span>{financials&&<button class="btn" type="button" data-peer-metric={key} data-peer-value={m.value} data-peer-name={p.name} data-peer-basis={m.basis} data-peer-scope={p.research?.scope}>この倍率で試算</button>}<p class="small">{m.method==='calculated'?'当サイトで計算':'資料に記載された倍率'}：{m.calculation}</p></div>)}<p>{p.notes}</p><a href={p.research?`/tob-comparables/#deal-${p.research.dealId}`:'/tob-comparables/'}>出典・第三者機関の算定・価格履歴を見る</a></article>):<p class="empty-state">比較業種が一致する公開済み事例はまだありません。</p>}
   <a href="/tob-comparables/">過去のTOB事例をすべて見る</a>
   <p class="small muted section">結果は入力条件に基づく計算値です。将来の市場価格やTOB価格の予測、売買の推奨ではありません。</p>
   <noscript><p>試算にはJavaScriptを有効にしてください。財務数値と出典はそのまま閲覧できます。</p></noscript>
@@ -63,7 +65,7 @@ document.querySelectorAll<HTMLElement>('[data-valuation]').forEach(root=>{
  }
  price.addEventListener('input',update);multiple.addEventListener('input',()=>{peer='';update();});metric.addEventListener('change',()=>{peer='';update();});
  root.querySelector('[data-reset]')!.addEventListener('click',()=>{price.value='';multiple.value='';peer='';update();});
- root.querySelectorAll<HTMLButtonElement>('[data-peer-metric]').forEach(b=>b.addEventListener('click',()=>{metric.value=b.dataset.peerMetric!;multiple.value=b.dataset.peerValue!;const target=f[metric.value==='per'?'eps':metric.value==='pbr'?'bps':'ebitda'];peer=`参照事例：${b.dataset.peerName}。${target&&target.basis!==b.dataset.peerBasis?'事例とこの銘柄で実績・会社予想の基準が異なります。':''}`;update();multiple.focus();}));update();
+ root.querySelectorAll<HTMLButtonElement>('[data-peer-metric]').forEach(b=>b.addEventListener('click',()=>{metric.value=b.dataset.peerMetric!;multiple.value=b.dataset.peerValue!;const target=f[metric.value==='per'?'eps':metric.value==='pbr'?'bps':'ebitda'];peer=`参照事例：${b.dataset.peerName}。${target&&target.basis!==b.dataset.peerBasis?'事例とこの銘柄で実績・会社予想の基準が異なります。':''}${target&&b.dataset.peerScope&&target.scope!==b.dataset.peerScope?'事例とこの銘柄で連結・単体の範囲が異なります。':''}`;update();multiple.focus();}));update();
 });
 </script>
 <style>

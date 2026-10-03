@@ -4,24 +4,37 @@ import {loadValuations} from '../lib/valuationData';
 import {loadPublicData} from '../lib/publicData';
 import {METRICS,basisLabel} from '../lib/valuation';
 import type {Metric} from '../lib/valuation';
+import ComparableEvidence from '../components/ComparableEvidence.astro';
+import ComparableStatistics from '../components/ComparableStatistics.astro';
 const {comparables}=await loadValuations();
 const {isSampleData}=await loadPublicData();
 const fmt=(n:number)=>n.toLocaleString('ja-JP',{maximumFractionDigits:2});
+const industries=[...new Set(comparables.map(c=>c.industry))].sort();
 ---
 <Base title="過去のTOB事例と倍率" description="公表資料に基づく過去のTOBの倍率と価格の経緯。対象期・算定根拠・出典を確認できます。" path="/tob-comparables/">
   <h1>過去のTOB事例と倍率</h1>
   <p>過去の案件について、公表資料の倍率と当サイトで計算した倍率を区別して掲載します。業種が同じでも、成長率・財務構成・取引条件は異なります。</p>
   {isSampleData&&<p class="notice">ここに掲載する案件・数値は、動作確認用の架空のサンプルです。</p>}
   <p><a href="/">銘柄を選んで株価・倍率を試算する</a></p>
+  <label>比較業種<select id="tob-industry"><option value="">すべて</option>{industries.map(i=><option value={i}>{i}</option>)}</select></label>
+  <p id="tob-count" aria-live="polite">{comparables.length}案件</p>
+  <div class="tob-table"><table><caption>過去案件の価格と取引倍率</caption><thead><tr><th>銘柄・公表日</th><th>業種</th><th>価格段階・価格</th><th>PER</th><th>PBR</th><th>EV/EBITDA</th></tr></thead><tbody>{comparables.map((c,index)=><tr data-tob-industry={c.industry} data-tob-row><td><a href={`#${c.research?'deal-'+c.research.dealId:'legacy-'+index}`}>{c.name}（{c.code}）</a><br/>{c.announcedOn}</td><td>{c.industry}</td><td>{c.priceStage}<br/>{fmt(c.offerPrice)}円</td>{(['per','pbr','evEbitda'] as Metric[]).map(k=><td>{c.multiples[k]?<>{fmt(c.multiples[k]!.value)}倍<br/><span class="small">{basisLabel(c.multiples[k]!.basis)}</span></>:'未登録'}</td>)}</tr>)}</tbody></table></div>
+  {industries.map(i=><section data-tob-industry={i}><ComparableStatistics records={comparables} industry={i}/></section>)}
   {comparables.length===0&&<p class="empty-state">出典を確認した事例を順次掲載します。</p>}
-  {comparables.map(c=><article class="card section">
+  {comparables.map((c,index)=><article class="card section" data-tob-industry={c.industry} id={c.research?'deal-'+c.research.dealId:'legacy-'+index}>
     <h2>{c.name}（{c.code}）</h2>
     <p>{c.industry} ／ {c.announcedOn}公表 ／ 確認日 {c.checkedOn}</p>
     <p><strong>{c.priceStage}：{fmt(c.offerPrice)}円</strong> ／ <a href={c.sourceUrl} target="_blank" rel="noopener noreferrer">公表資料</a></p>
     <dl>{Object.entries(c.multiples).map(([key,m])=><div><dt><strong>{METRICS[key as Metric]} {fmt(m.value)}倍</strong></dt><dd><p>{basisLabel(m.basis)}・{m.period} ／ {m.method==='disclosed'?'資料記載の倍率':'当サイトで計算'}</p><p>{m.calculation}</p><a href={m.sourceUrl} target="_blank" rel="noopener noreferrer">倍率の出典</a></dd></div>)}</dl>
+    <ComparableEvidence record={c}/>
     <h3>価格・算定の経緯</h3>
     {c.history.length?<ol>{c.history.map(h=><li><strong>{h.date}：{fmt(h.price)}円</strong><p>{h.note}</p><a href={h.sourceUrl} target="_blank" rel="noopener noreferrer">出典</a></li>)}</ol>:<p>価格の変更・算定の経緯は未登録です。</p>}
     {c.notes&&<p>{c.notes}</p>}{c.articleUrl&&<p><a href={c.articleUrl}>詳しい調査記事</a></p>}
   </article>)}
 </Base>
-<style>dd{margin:.4rem 0 1rem}li{margin:1rem 0}p,dd{overflow-wrap:anywhere}</style>
+<script>
+const filter=document.querySelector<HTMLSelectElement>('#tob-industry')!;
+const apply=()=>{let n=0;document.querySelectorAll<HTMLElement>('[data-tob-industry]').forEach(e=>{e.hidden=!!filter.value&&e.dataset.tobIndustry!==filter.value;if(e.hasAttribute('data-tob-row')&&!e.hidden)n++;});document.querySelector('#tob-count')!.textContent=`${n}案件`;};
+filter.addEventListener('change',apply);
+</script>
+<style>dd{margin:.4rem 0 1rem}li{margin:1rem 0}p,dd{overflow-wrap:anywhere}.tob-table{overflow-x:auto}.tob-table table{min-width:42rem;width:100%;border-collapse:collapse}.tob-table td,.tob-table th{padding:.7rem;text-align:left;border-bottom:1px solid var(--color-line);vertical-align:top}select{margin:.5rem 0}</style>

@@ -34,6 +34,10 @@ function setup(t){
   rpc:async(name,args)=>{
    calls.push({name,args:structuredClone(args)});
    if(rejectNext){rejectNext=false;return {error:{message:'conflict'},data:null};}
+   if(name.endsWith('_batch')){
+    const data=args.items.map(item=>{const existing=rows.find(r=>r.id===item.id);assert.equal(item.revision,existing?.revision??null);return name==='save_valuation_batch'?{id:item.id,draft:structuredClone(item.payload),published:existing?.published??null,revision:(existing?.revision??0)+1}:{...existing,published:structuredClone(existing.draft),revision:existing.revision+1};});
+    rows=[...data,...rows.filter(r=>!data.some(d=>d.id===r.id))];return {data:structuredClone(data),error:null};
+   }
    let row=rows.find(r=>r.id===args.record_id);
    assert.equal(args.expected_revision,row?.revision??null);
    if(name==='save_valuation_draft')row={id:args.record_id,draft:structuredClone(args.payload),published:row?.published??null,revision:(row?.revision??0)+1};
@@ -48,7 +52,8 @@ function setup(t){
   const file=byId('va-import');Object.defineProperty(file,'files',{configurable:true,value:[{size:100,text:async()=>JSON.stringify(record)}]});
   await file.onchange({target:file});
  };
- return {editor,byId,input,importRecord,dom,calls,rows:()=>rows,reject:()=>{rejectNext=true;}};
+ const importBatch=async data=>{const file=byId('va-batch-import');Object.defineProperty(file,'files',{configurable:true,value:[{size:100,text:async()=>JSON.stringify(data)}]});await file.onchange({target:file});};
+ return {editor,byId,input,importRecord,importBatch,dom,calls,rows:()=>rows,reject:()=>{rejectNext=true;}};
 }
 
 test('管理フォーム：取込→保存→公開、編集後は公開版を維持、再取込は同じ版を更新',async t=>{
@@ -61,6 +66,18 @@ test('管理フォーム：取込→保存→公開、編集後は公開版を�
  h.byId('va-form').requestSubmit();await flush();assert.equal(h.rows()[0].draft.facts.eps.value,200);assert.equal(h.rows()[0].published.facts.eps.value,100);
  await h.importRecord({...financials,notes:'再取込'});h.byId('va-form').requestSubmit();await flush();assert.equal(h.rows().length,1);assert.equal(h.calls.at(-1).args.expected_revision,3);
  h.byId('va-unpublish').click();await flush();assert.equal(h.rows()[0].published,null);
+});
+
+test('一括取込：検証・下書き保存・確認後公開、欠けた財務項目は既存下書きから維持',async t=>{
+ const h=setup(t);await h.editor.reload();await h.importRecord(financials);h.byId('va-form').requestSubmit();await flush();
+ const updated={...financials,facts:{eps:{...financials.facts.eps,value:234}}};
+ await h.importBatch({records:[updated],reports:[{code:financials.code,issues:['未取得項目があります。']}]});
+ assert.match(h.byId('va-batch-preview').textContent,/未取得/);h.byId('va-batch-save').click();await flush();
+ assert.equal(h.rows()[0].draft.facts.eps.value,234);assert.equal(h.rows()[0].draft.facts.adjustments.value,0);assert.equal(h.rows()[0].published,null);
+ assert.equal(h.byId('va-batch-publish').disabled,true);
+ const box=h.byId('va-batch-reviewed');box.checked=true;box.dispatchEvent(new h.dom.window.Event('change'));h.byId('va-batch-publish').click();await flush();
+ assert.equal(h.rows()[0].published.facts.eps.value,234);assert.equal(h.calls.at(-1).name,'publish_valuation_batch');
+ await h.importBatch([updated,{...updated,facts:{}}]);assert.equal(h.byId('va-batch-save').disabled,true);
 });
 
 test('管理フォーム：空の数値・競合時に公開せず編集を保持、破棄の拒否を守る',async t=>{

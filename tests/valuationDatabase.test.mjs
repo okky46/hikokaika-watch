@@ -14,6 +14,7 @@ test('財務DB：管理者限定・下書き隔離・競合拒否・公開撤回
  await db.exec(`insert into auth.users values('${admin}'),('${other}');insert into admin_users(user_id) values('${admin}');insert into companies(security_code,name_ja) values('0001','架空会社');insert into cases(company_id,title,slug,is_visible) select id,'架空案件','valuation-test',true from companies where security_code='0001';`);
  const policies=(await db.query("select * from pg_policies where tablename like 'user_%' order by tablename,policyname")).rows;
  await db.exec(fs.readFileSync('supabase/migrations/0013_valuation_editions.sql','utf8'));
+ await db.exec(fs.readFileSync('supabase/migrations/0014_comparable_research.sql','utf8'));
  assert.deepEqual((await db.query("select * from pg_policies where tablename like 'user_%' order by tablename,policyname")).rows,policies);
  const session=async(role,id='')=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec(`set role ${role}`);};
  const save=async(p,revision=null,id='financials:0001')=>(await db.query('select to_jsonb(save_valuation_draft($1,$2,$3)) as r',[id,p,revision])).rows[0].r;
@@ -32,6 +33,23 @@ test('財務DB：管理者限定・下書き隔離・競合拒否・公開撤回
  await session('postgres');await db.exec('update cases set is_visible=false');await session('service_role');assert.equal((await read()).length,1);assert.equal((await read())[0].content.kind,'comparable');
  await session('authenticated',admin);row=await publish(row.revision,false);await publish(peerRow.revision+1,false,'tob:sample');
  for(const bad of [{...data,checkedOn:'2026-02-30'},{...data,facts:{}},{...data,facts:{eps:{...data.facts.eps,value:null}}},{...data,facts:{eps:{...data.facts.eps,sourceUrl:'javascript:alert(1)'}}}])await assert.rejects(save(bad,row.revision));
+ const batchSave=async items=>(await db.query('select save_valuation_batch($1) as r',[items])).rows[0].r;
+ const batchPublish=async items=>(await db.query('select publish_valuation_batch($1,true) as r',[items])).rows[0].r;
+ const researched={...peer,multiples:{},research:{dealId:peer.code+'-20230101',buyer:'架空買付者',transactionType:'mbo',status:'announced',priceBasis:'initial',scope:'consolidated',statisticsEligible:false,definitions:{},denominators:{},valuations:[{advisor:'架空証券',role:'対象会社',date:'2023-01-01',method:'dcf',low:1000,high:1500,page:'10頁',sourceUrl:'https://example.com/valuation.pdf',inputs:[{name:'割引率',unit:'%',period:'算定時点',basis:'valuation_assumption',low:5,high:6,definition:'テスト前提'}],peers:[],notes:'架空テスト'}]}};
+ const before=(await db.query('select count(*) as n from valuation_editions')).rows[0].n;
+ await assert.rejects(batchSave([{id:'tob:batch-good',payload:researched,revision:null},{id:'tob:batch-bad',payload:{...researched,checkedOn:'2026-02-30'},revision:null}]));
+ assert.equal((await db.query('select count(*) as n from valuation_editions')).rows[0].n,before);
+ const saved=await batchSave([{id:'tob:batch-a',payload:researched,revision:null},{id:'tob:batch-b',payload:researched,revision:null}]);assert.equal(saved.length,2);
+ await assert.rejects(batchPublish([{id:'tob:batch-a',revision:1},{id:'tob:batch-b',revision:99}]),/競合/);
+ assert.equal((await db.query("select count(*) as n from valuation_editions where id like 'tob:batch-%' and published is not null")).rows[0].n,0);
+ await batchPublish(saved.map(r=>({id:r.id,revision:r.revision})));
+ assert.equal((await db.query("select count(*) as n from valuation_editions where id like 'tob:batch-%' and published is not null")).rows[0].n,2);
+ const broken=structuredClone(researched);broken.research.valuations[0].inputs[0].high=4;await assert.rejects(save(broken,null,'tob:invalid-input'));
+ await session('authenticated',other);await assert.rejects(batchSave([{id:'tob:no-admin',payload:researched,revision:null}]),/管理者/);
+ await session('authenticated',admin);await publish(2,false,'tob:batch-a');await publish(2,false,'tob:batch-b');
+ await session('service_role');assert.deepEqual(await read(),[]);
+ await session('authenticated',admin);
+
  await session('service_role');assert.deepEqual(await read(),[]);
  }finally{await db.close();}
 });

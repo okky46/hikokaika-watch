@@ -8,6 +8,14 @@ import {FIELDS,METRICS} from '../lib/valuation';
   <label>保存済みデータ<select id="va-list"><option value="">新規作成</option></select></label>
   <p id="va-status" aria-live="polite"></p>
   <details class="card"><summary>EDINET取得結果・編集済みJSONを取り込む</summary><p>APIキーを含まない財務データのJSONファイルを指定してください。読み込んだ内容はまだ保存されません。</p><input type="file" id="va-import" accept="application/json,.json" aria-label="財務データのJSONファイル"/></details>
+  <details class="card section"><summary>EDINETの財務下書き・TOB調査をまとめて取り込む</summary>
+    <p>EDINET準備コマンドの出力、またはrecords配列を持つJSONを指定してください。公開対象への設定は下書き保存と分けて行います。</p>
+    <input type="file" id="va-batch-import" accept="application/json,.json" aria-label="一括取込のJSONファイル"/>
+    <div id="va-batch-preview"></div>
+    <button type="button" class="btn" id="va-batch-save" disabled>読み込んだ内容を一括で下書き保存</button>
+    <label><input type="checkbox" id="va-batch-reviewed"/>数値・出典・対象期・株式分割基準を確認しました</label>
+    <button type="button" class="btn" id="va-batch-publish" disabled>一括保存した内容を公開対象にする</button>
+  </details>
   <form id="va-form" class="card section">
     <h3 id="va-kind-label">財務数値</h3>
     <div class="va-grid">
@@ -31,6 +39,7 @@ import {FIELDS,METRICS} from '../lib/valuation';
       <div class="va-grid"><label>公表日<input name="announcedOn" type="date"/></label><label>価格の段階<input name="priceStage" placeholder="当初提案・最終TOB価格など" maxlength="100"/></label><label>公開買付価格（円）<input name="offerPrice" type="number" min="0.0001" step="any"/></label><label>公表資料URL<input name="sourceUrl" type="url"/></label><label>調査記事URL（任意）<input name="articleUrl"/></label></div>
       {Object.entries(METRICS).map(([key,label])=><fieldset data-comparable={key}><legend><label><input type="checkbox" data-enabled/>{label}を登録</label></legend><div class="va-grid"><label>倍率<input data-v="value" type="number" min="0.0001" max="10000" step="any"/></label><label>対象期<input data-v="period" maxlength="100"/></label><label>実績・会社予想<select data-v="basis"><option value="actual">実績</option><option value="company_forecast">会社予想</option></select></label><label>算定方法<select data-v="method"><option value="calculated">当サイトで計算</option><option value="disclosed">資料に記載された倍率</option></select></label><label>出典URL<input data-v="sourceUrl" type="url"/></label></div><label>計算式・採用数値・算定主体<textarea data-v="calculation" maxlength="2000"></textarea></label></fieldset>)}
       <h4>価格・算定の経緯</h4><div id="va-history"></div><button type="button" class="btn" id="va-add-history">履歴を追加</button>
+      <details><summary>第三者機関の算定・集計条件を編集</summary><p>調査JSONのresearch欄です。算定機関、評価レンジ、入力数値、出典ページ、集計対象を保持します。空欄は旧形式の事例として扱い、集計しません。</p><label>算定根拠JSON<textarea name="research" rows="16"></textarea></label></details>
     </div>
     <div class="stock-links section"><button type="submit" class="btn btn--primary">下書きを保存</button><button type="button" class="btn" id="va-publish" disabled>保存した内容を公開対象にする</button><button type="button" class="btn" id="va-unpublish" disabled>公開対象から外す</button></div>
   </form>

@@ -18,6 +18,8 @@ PERは株価÷EPS、PBRは株価÷BPS。EVは時価総額＋有利子負債−�
 
 ## EDINETから取り込む
 
+2026-10-03の追加実装で、APIキーと標準対象銘柄の設定から財務下書きを一括準備できるようにした。`python scripts/edinet_prepare.py --output outputs/edinet-research/financials.json` を実行し、管理画面の一括取込へ渡す。最新対象期と訂正元、通期・標準要素・単位を照合する。詳しい取得範囲、過去TOBの調査、同業集計は [EDINET取込とTOBデータベース](EDINET_TOB_DATABASE_2026_10_03.md) を参照。以下の個別取込は、追加項目の定義確認にも引き続き使う。
+
 公式API v2の仕様は [EDINET API仕様書](https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/download/ESE140206.pdf) を参照。取得は手動実行し、停止中のニュース収集Action・Discord通知には接続しない。Python標準ライブラリだけで実行できる。
 
 ```powershell
@@ -62,6 +64,6 @@ python scripts/edinet_financials.py compose --candidates outputs/edinet/candidat
 3. 保存内容を確認して公開対象にする。編集中のまま公開操作はできない。
 4. 既存の「公開処理」で再ビルドし、詳細ページ・事例一覧の数値と出典を確認する。
 
-DBは `0013_valuation_editions.sql` で追加する。適用済みSQLは変更しない。[自動更新手順](AUTO_DEPLOY.md)に従い本番公開前に適用する。管理者だけが下書きを読み書きでき、ビルド用RPCは公開版だけを返す。公開後に下書きを編集しても公開版は変わらない。更新が競合したときは内容を控えて再読込する。公開対象から外した後も、公開サイトへ反映するには再ビルドが必要。
+DBの保存・公開版は適用済みの `0013_valuation_editions.sql` を使う。算定根拠の検証と一括RPCは未適用の `0014_comparable_research.sql` で追加する。適用済みSQLは変更しない。[自動更新手順](AUTO_DEPLOY.md)に従い本番公開前に適用する。管理者だけが下書きを読み書きでき、ビルド用RPCは公開版だけを返す。公開後に下書きを編集しても公開版は変わらない。更新が競合したときは内容を控えて再読込する。公開対象から外した後も、公開サイトへ反映するには再ビルドが必要。
 
 既存メモ・お気に入り・認証・RLS・フォントは維持する。無料で公開利用できることを確認できない取得元、課金API、OpenAI API、株価スクレイピングは追加しない。
