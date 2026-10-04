@@ -1,6 +1,6 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
-import {parseValuation,FIELDS,METRICS,basisLabel,valuationMethodLabel} from './valuation.ts';
-import type {ValuationRecord,Comparable} from './valuation';
+import {parseValuation,FIELDS,METRICS,basisLabel,valuationMethodLabel,prerequisites,multipleFromPrice,priceFromMultiple} from './valuation.ts';
+import type {ValuationRecord,Comparable,Financials,Field,Fact} from './valuation';
 type Row={id:string;draft:ValuationRecord;published:ValuationRecord|null;revision:number};
 export function setupValuationAdmin(client:SupabaseClient){
   const root=document.getElementById('va-editor')!;
@@ -10,6 +10,28 @@ export function setupValuationAdmin(client:SupabaseClient){
   let rows:Row[]=[],current:Row|null=null,kind:ValuationRecord['kind']='financials',dirty=false,busy=false;
   let batch:ValuationRecord[]=[],savedBatch:Row[]=[];
   const today=()=>new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Tokyo'});
+  function updateEvPreview(){
+    const facts:Financials['facts']={};
+    let issue:string|null=null;
+    for(const key of ['ebitda','debt','cash','adjustments','shares'] as Field[]){
+      const fieldset=root.querySelector<HTMLElement>(`[data-fact="${key}"]`)!;
+      if(!fieldset.querySelector<HTMLInputElement>('[data-enabled]')!.checked)continue;
+      const get=(name:string)=>fieldset.querySelector<HTMLInputElement>(`[data-v="${name}"]`)!.value;
+      const value=fieldset.querySelector<HTMLInputElement>('[data-v="value"]')!;
+      if(!value.value.trim()||!Number.isFinite(value.valueAsNumber)||!value.validity.valid){issue='有効な財務数値を入力してください。';continue;}
+      if(!get('period').trim()){issue='各財務項目の対象期・基準日を入力してください。';continue;}
+      facts[key]={value:value.valueAsNumber,period:get('period').trim(),scope:get('scope') as Fact['scope'],basis:get('basis') as Fact['basis'],sourceName:get('sourceName'),sourceUrl:get('sourceUrl'),note:get('note')};
+    }
+    issue??=prerequisites(facts,'evEbitda');
+    const price=root.querySelector<HTMLInputElement>('[data-va-ev-price]')!;
+    const multiple=root.querySelector<HTMLInputElement>('[data-va-ev-multiple]')!;
+    const ratio=multipleFromPrice(facts,'evEbitda',price.valueAsNumber);
+    const sharePrice=priceFromMultiple(facts,'evEbitda',multiple.valueAsNumber);
+    const number=(value:number)=>value.toLocaleString('ja-JP',{maximumFractionDigits:2});
+    root.querySelector<HTMLElement>('[data-va-ev-value]')!.textContent=issue??(!price.value?'株価を入力してください。':!price.validity.valid||ratio===null?'計算できる正の株価・EVを確認してください。':number(price.valueAsNumber*facts.shares!.value+facts.debt!.value-facts.cash!.value+facts.adjustments!.value));
+    root.querySelector<HTMLElement>('[data-va-ev-ratio]')!.textContent=issue??(!price.value?'株価を入力してください。':!price.validity.valid||ratio===null?'計算できる正の株価・EVを確認してください。':`${number(ratio)}倍`);
+    root.querySelector<HTMLElement>('[data-va-ev-share-price]')!.textContent=issue??(!multiple.value?'倍率を入力してください。':!multiple.validity.valid||sharePrice===null?'計算できる正の倍率・株主価値を確認してください。':number(sharePrice));
+  }
   function buttons(){el<HTMLButtonElement>('va-publish').disabled=busy||dirty||!current;el<HTMLButtonElement>('va-unpublish').disabled=busy||dirty||!current?.published;el<HTMLButtonElement>('va-batch-save').disabled=busy||dirty||!batch.length;el<HTMLButtonElement>('va-batch-publish').disabled=busy||dirty||!savedBatch.length||!el<HTMLInputElement>('va-batch-reviewed').checked;}
   const discard=()=>!dirty||window.confirm('未保存の編集を破棄しますか？');
   function historyRow(h?:Comparable['history'][number]){
@@ -19,6 +41,9 @@ export function setupValuationAdmin(client:SupabaseClient){
   }
   function render(record?:ValuationRecord){
     form.reset();kind=record?.kind??kind;
+    const preview=root.querySelector<HTMLElement>('[data-va-ev-preview]')!;
+    preview.hidden=kind!=='financials';
+    preview.querySelectorAll<HTMLInputElement>('input').forEach(input=>input.value='');
     for(const name of ['code','name','industry','checkedOn','notes','announcedOn','priceStage','offerPrice','sourceUrl','articleUrl'])control(name).value=String(record?.[name as keyof ValuationRecord]??(name==='checkedOn'?today():''));
     root.querySelector<HTMLElement>('[data-va-financials]')!.hidden=kind!=='financials';root.querySelector<HTMLElement>('[data-va-comparable]')!.hidden=kind!=='comparable';
     el<HTMLElement>('va-kind-label').textContent=kind==='financials'?'財務数値':'TOB比較事例';
@@ -32,7 +57,7 @@ export function setupValuationAdmin(client:SupabaseClient){
     }
     for(const group of root.querySelectorAll<HTMLElement>('[data-va-financials],[data-va-comparable]'))for(const input of group.querySelectorAll<HTMLInputElement>('[name]'))input.disabled=group.hidden;
     el<HTMLElement>('va-history').replaceChildren();if(record?.kind==='comparable')record.history.forEach(historyRow);
-    control('code').readOnly=!!current;dirty=false;buttons();
+    control('code').readOnly=!!current;dirty=false;buttons();updateEvPreview();
   }
   function read(){
     const p:Record<string,unknown>={kind};for(const name of ['code','name','industry','checkedOn','notes'])p[name]=control(name).value;
@@ -45,8 +70,9 @@ export function setupValuationAdmin(client:SupabaseClient){
   function options(){list.replaceChildren(new Option('新規作成',''));rows.forEach(r=>list.add(new Option(`${r.draft.name}（${r.draft.code}）・${r.draft.kind==='financials'?'財務':'TOB'}・${r.published?'公開対象あり':'下書き'}`,r.id)));list.value=current?.id??'';}
   async function run(fn:()=>Promise<void>){if(busy)return;busy=true;root.inert=true;buttons();try{await fn();}catch{status.textContent='保存・読込に失敗しました。入力内容、管理者ログイン、DB更新状況を確認してください。競合時は内容を控えて再読込してください。';}finally{root.inert=false;busy=false;buttons();}}
   async function reload(){if(!discard())return;await run(async()=>{const {data,error}=await client.from('valuation_editions').select('*').order('updated_at',{ascending:false});if(error)throw error;rows=data??[];current=current?rows.find(r=>r.id===current!.id)??null:null;options();render(current?.draft);status.textContent='一覧を読み込みました。';});}
-  form.addEventListener('input',()=>{dirty=true;buttons();});
-  form.addEventListener('change',e=>{const target=e.target as HTMLInputElement;if(target.matches('[data-enabled]'))target.closest('fieldset')!.querySelectorAll<HTMLInputElement>('[data-v]').forEach(i=>i.disabled=!target.checked);dirty=true;buttons();});
+  root.querySelector<HTMLElement>('[data-va-ev-preview]')!.addEventListener('input',updateEvPreview);
+  form.addEventListener('input',()=>{updateEvPreview();dirty=true;buttons();});
+  form.addEventListener('change',e=>{const target=e.target as HTMLInputElement;if(target.matches('[data-enabled]'))target.closest('fieldset')!.querySelectorAll<HTMLInputElement>('[data-v]').forEach(i=>i.disabled=!target.checked);updateEvPreview();dirty=true;buttons();});
   for(const type of ['financials','comparable'] as const)el<HTMLButtonElement>(`va-new-${type}`).onclick=()=>{if(busy||!discard())return;current=null;kind=type;render();list.value='';status.textContent='新規データを編集中です。';};
   list.onchange=()=>{if(busy||!discard()){list.value=current?.id??'';return;}current=rows.find(r=>r.id===list.value)??null;render(current?.draft);status.textContent=current?.published?'公開対象の保存版があります。編集は下書きに保存されます。':'下書きです。';};
   el<HTMLButtonElement>('va-reload').onclick=()=>{void reload();};

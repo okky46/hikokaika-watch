@@ -56,6 +56,8 @@ test('画面：参考3指標の平均・中央値・期間・レンジを表示�
  const html=await (await AstroContainer.create()).renderToString(Calculator,{props:{financials,comparables}});
  const dom=new JSDOM(html,{runScripts:'outside-only'});dom.window.eval(client);const document=dom.window.document;
  assert.equal(document.querySelector('[data-multiple]').value,'');
+ assert.equal(document.querySelector('[data-dcf]'),null);
+ assert.doesNotMatch(html,/DCFで株価を試算する/);
  assert.equal(document.querySelectorAll('[data-peer-metric]').length,0);
  const references=document.querySelectorAll('[data-reference-metric]');assert.equal(references.length,3);
  for(const card of references){

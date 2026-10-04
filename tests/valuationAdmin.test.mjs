@@ -56,6 +56,56 @@ function setup(t){
  return {editor,byId,input,importRecord,importBatch,dom,calls,rows:()=>rows,reject:()=>{rejectNext=true;}};
 }
 
+test('管理者EV試算：株価なしで倍率から試算でき、確認用入力は保存や公開版を変えない',async t=>{
+ const h=setup(t);await h.importRecord(financials);
+ h.input('[data-va-ev-multiple]','10');
+ assert.equal(h.dom.window.document.querySelector('[data-va-ev-share-price]').textContent,'1,400');
+ h.input('[data-va-ev-price]','1400');
+ assert.equal(h.dom.window.document.querySelector('[data-va-ev-value]').textContent,'15,000,000,000');
+ assert.equal(h.dom.window.document.querySelector('[data-va-ev-ratio]').textContent,'10倍');
+ assert.equal(h.calls.length,0);
+ h.byId('va-form').requestSubmit();await flush();h.byId('va-publish').click();await flush();
+ h.input('[data-va-ev-price]','2000');
+ assert.equal(h.byId('va-publish').disabled,false);
+ assert.deepEqual(h.rows()[0].draft.facts,financials.facts);
+ assert.equal('price' in h.rows()[0].draft,false);
+ h.input('[data-fact="cash"] [data-v="value"]','2000000000');
+ assert.equal(h.byId('va-publish').disabled,true);
+ assert.equal(h.rows()[0].published.facts.cash.value,1000000000);
+ assert.equal(h.dom.window.document.querySelector('[data-va-ev-share-price]').textContent,'1,500');
+});
+
+test('確認用の無効値は財務保存を妨げず、別のデータへの切替で消える',async t=>{
+ const h=setup(t);h.dom.window.confirm=()=>true;await h.importRecord(financials);
+ h.input('[data-va-ev-price]','-1');h.input('[data-va-ev-multiple]','10001');
+ assert.match(h.dom.window.document.querySelector('[data-va-ev-ratio]').textContent,/確認/);
+ assert.equal(h.dom.window.document.querySelector('[data-va-ev-price]').form,null);
+ assert.equal(h.byId('va-form').checkValidity(),true);
+ h.byId('va-form').requestSubmit();await flush();assert.equal(h.rows().length,1);
+ await h.importRecord(comparable);
+ assert.equal(h.dom.window.document.querySelector('[data-va-ev-preview]').hidden,true);
+ assert.equal(h.dom.window.document.querySelector('[data-va-ev-price]').value,'');
+ await h.importRecord(financials);
+ assert.equal(h.dom.window.document.querySelector('[data-va-ev-preview]').hidden,false);
+ assert.equal(h.dom.window.document.querySelector('[data-va-ev-multiple]').value,'');
+});
+
+test('管理者EV試算：未入力、負の残高、基準日と範囲の不一致では試算を止める',async t=>{
+ const h=setup(t);await h.importRecord(financials);h.input('[data-va-ev-multiple]','10');
+ const output=()=>h.dom.window.document.querySelector('[data-va-ev-share-price]').textContent;
+ for(const [value,expected] of [['',/有効な/],['-1',/有効な/]]){
+  h.input('[data-fact="cash"] [data-v="value"]',value);assert.match(output(),expected);
+ }
+ h.input('[data-fact="cash"] [data-v="value"]','0');assert.equal(output(),'1,300');
+ h.input('[data-fact="cash"] [data-v="period"]','2025-03-31');assert.match(output(),/基準日が一致/);
+ h.input('[data-fact="cash"] [data-v="period"]','2026-03-31');
+ h.input('[data-fact="cash"] [data-v="scope"]','standalone');assert.match(output(),/範囲が一致/);
+ h.input('[data-fact="cash"] [data-v="scope"]','consolidated');
+ const enabled=h.dom.window.document.querySelector('[data-fact="adjustments"] [data-enabled]');
+ enabled.checked=false;enabled.dispatchEvent(new h.dom.window.Event('change',{bubbles:true}));
+ assert.match(output(),/未登録/);assert.equal(h.calls.length,0);
+});
+
 test('管理フォーム：取込→保存→公開、編集後は公開版を維持、再取込は同じ版を更新',async t=>{
  const h=setup(t);await h.editor.reload();await h.importRecord(financials);
  assert.equal(h.byId('va-publish').disabled,true);

@@ -26,9 +26,10 @@ import {FIELDS,METRICS} from '../lib/valuation';
     </div>
     <label>全体の注記<textarea name="notes" maxlength="2000"></textarea></label>
     <div data-va-financials>
+      <p>EBITDA、有利子負債、現金・現金同等物、EVその他調整額、自己株式控除後株式数は、下の欄から手動でも登録できます。EBITDAの定義と残高の基準日を確認し、出典と一緒に保存してください。</p>
       <p>使う項目にチェックを入れてください。金額は円、株式数は株で登録します。空欄は未取得、0は確認済みのゼロです。EPS・BPS・株式数は同じ株式分割基準にそろえてください。</p>
       {Object.entries(FIELDS).map(([key,label])=><fieldset data-fact={key}><legend><label><input type="checkbox" data-enabled/>{label}を登録</label></legend><div class="va-grid">
-        <label>数値<input data-v="value" type="number" step="any"/></label>
+        <label>数値<input data-v="value" type="number" step="any" min={['debt','cash','shares'].includes(key)?'0':undefined}/></label>
         <label>対象期・基準日<input data-v="period" maxlength="100" placeholder="2026-03-31 または 2026年3月期"/></label>
         <label>実績・会社予想<select data-v="basis"><option value="actual">実績</option><option value="company_forecast">会社予想</option></select></label>
         <label>範囲<select data-v="scope"><option value="consolidated">連結</option><option value="standalone">単体</option></select></label>
@@ -43,5 +44,19 @@ import {FIELDS,METRICS} from '../lib/valuation';
     </div>
     <div class="stock-links section"><button type="submit" class="btn btn--primary">下書きを保存</button><button type="button" class="btn" id="va-publish" disabled>保存した内容を公開対象にする</button><button type="button" class="btn" id="va-unpublish" disabled>公開対象から外す</button></div>
   </form>
+  <section class="card section" data-va-ev-preview aria-label="保存前のEV試算">
+    <h3>入力した財務数値でEV/EBITDAを試す</h3>
+    <p class="small">金額は円、株式数は株です。上の5項目を有効にして入力してください。残高と株式数は同じ基準日、全項目は同じ連結・単体の範囲にそろえます。調整しない場合も、確認して調整額0を入力します。</p>
+    <div class="va-grid">
+      <label>確認用の株価（円）<input data-va-ev-price type="number" min="0.0001" step="any" inputmode="decimal"/></label>
+      <label>確認用のEV/EBITDA倍率（倍）<input data-va-ev-multiple type="number" min="0.0001" max="10000" step="any" inputmode="decimal"/></label>
+    </div>
+    <dl aria-live="polite">
+      <dt>EV（円）</dt><dd data-va-ev-value>株価と財務数値を入力してください。</dd>
+      <dt>EV/EBITDA</dt><dd data-va-ev-ratio>株価と財務数値を入力してください。</dd>
+      <dt>倍率からの試算株価（円）</dt><dd data-va-ev-share-price>倍率と財務数値を入力してください。</dd>
+    </dl>
+    <p class="small">EV＝株価×自己株式控除後株式数＋有利子負債−現金・現金同等物＋その他調整額。株価・倍率の確認用入力と試算結果は保存・公開しません。財務数値は下書き保存と公開対象の設定後にサイトへ反映します。</p>
+  </section>
 </section>
 <style>.va-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}label{display:block;margin:.5rem 0}input:not([type=checkbox]),select,textarea{display:block;width:100%}fieldset{margin:1rem 0;padding:1rem;border:1px solid var(--color-line);min-width:0}fieldset:has([data-enabled]:not(:checked)) :is([data-v]){opacity:.5}@media(max-width:640px){.va-grid{grid-template-columns:1fr}}</style>

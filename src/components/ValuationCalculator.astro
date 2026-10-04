@@ -3,7 +3,6 @@ import {METRICS,FIELDS,basisLabel,prerequisites} from '../lib/valuation';
 import type {Financials,Comparable,Metric,Field} from '../lib/valuation';
 import ComparableStatistics from './ComparableStatistics.astro';
 import ValuationReferences from './ValuationReferences.astro';
-import DcfCalculator from './DcfCalculator.astro';
 interface Props {financials?:Financials;comparables:Comparable[];industry?:string|null;sample?:boolean}
 const {financials,comparables,industry,sample}=Astro.props;
 const peers=comparables.filter(c=>c.industry===(financials?.industry||industry)&&c.code!==financials?.code);
@@ -42,7 +41,6 @@ const entries=(p:Comparable)=>Object.entries(p.multiples) as [Metric,NonNullable
     </details>
   </>}
   {(financials?.industry||industry)&&<ValuationReferences financials={financials} comparables={comparables} industry={financials?.industry||industry!}/>}
-  <DcfCalculator />
   <details class="section peer-details"><summary>他の集計条件・個別事例を見る</summary>
   {(financials?.industry||industry)&&<ComparableStatistics records={comparables} industry={financials?.industry||industry!} excludeCode={financials?.code}/> }
   <p class="small">過去の取引条件が、この銘柄にも当てはまるとは限りません。実績・会社予想と対象期を確認して選択してください。</p>
