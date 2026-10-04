@@ -26,3 +26,16 @@ test('取引倍率を算定レンジで代用せず、計算と根拠の不一�
  assert.equal(comparableStats([parseValuation(researchOnly)],'情報・通信業').length,0);
  researchOnly.research.valuations[0].sourceUrl='https://example.com/?api_key=secret';assert.throws(()=>parseValuation(researchOnly),/認証情報/);
 });
+
+
+test('20期DCFの年別前提を省略せず保持し、過大配列や末尾の不正値は拒否する',()=>{
+ const r=record('0008',20);r.multiples={};r.research.statisticsEligible=false;
+ const inputs=[];for(let y=2026;y<=2045;y++)for(const name of ['売上高','営業利益','EBITDA','FCF'])inputs.push({name,unit:'百万円',period:`${y}年3月期`,low:100,high:100,basis:'company_forecast',definition:'架空の20期計画'});
+ inputs.push({name:'WACC',unit:'%',period:'評価期間',low:11.3,high:12.3,basis:'valuation_assumption',definition:'テスト割引率'});
+ r.research.valuations=[{advisor:'架空証券',role:'対象会社',date:'2023-11-07',method:'dcf',low:1000,high:3000,sourceUrl:'https://example.com/report.pdf',page:'10頁',inputs,peers:[],notes:'テスト専用'}];
+ assert.deepEqual(parseValuation(r).research.valuations[0].inputs,inputs);
+ while(inputs.length<120)inputs.push(structuredClone(inputs[0]));assert.equal(parseValuation(r).research.valuations[0].inputs.length,120);
+ inputs[119].low=Infinity;assert.throws(()=>parseValuation(r),/有限/);inputs[119].low=100;
+ inputs.push(structuredClone(inputs[0]));assert.throws(()=>parseValuation(r),/120件/);inputs.pop();
+ r.research.valuations[0].peers=Array(61).fill('架空会社');assert.throws(()=>parseValuation(r),/比較会社.*60件/);
+});

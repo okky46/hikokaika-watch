@@ -69,7 +69,8 @@ function parseResearch(input:unknown,common:{code:string;name:string;industry:st
   const valuations=r.valuations.map((raw:unknown)=>{
     const v=object(raw);const advisor=text(v.advisor,200),role=text(v.role,100),day=text(v.date,10),low=num(v.low),high=num(v.high),page=text(v.page,100);
     if(!advisor||!role||!date(day)||!['market','trading_comparables','dcf','other'].includes(v.method)||low<0||high<low||!page)throw Error('算定主体・日付・手法・価格レンジ・掲載ページを確認してください。');
-    if(!Array.isArray(v.inputs)||v.inputs.length>60||!Array.isArray(v.peers)||v.peers.length>60)throw Error('算定の入力数値・比較会社は60件以内です。');
+    if(!Array.isArray(v.inputs)||v.inputs.length>120)throw Error('算定の入力数値は120件以内です。');
+    if(!Array.isArray(v.peers)||v.peers.length>60)throw Error('比較会社は60件以内です。');
     const inputs=v.inputs.map((raw:unknown)=>{const i=object(raw),name=text(i.name,200),unit=text(i.unit,50),period=text(i.period,100),definition=text(i.definition),low=num(i.low),high=num(i.high);if(!name||!unit||!period||!definition||high<low||!['actual','company_forecast','valuation_assumption','unknown'].includes(i.basis))throw Error('算定の入力値・単位・対象期・定義を確認してください。');return {name,unit,period,definition,low,high,basis:i.basis} as ValuationInput;});
     const peers=v.peers.map((p:unknown)=>text(p,200));
     return {advisor,role,date:day,method:v.method,low,high,page,inputs,peers,sourceUrl:source(v.sourceUrl),notes:text(v.notes)} as AdvisorValuation;
