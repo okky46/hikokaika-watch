@@ -37,6 +37,9 @@ export function setupTrackingList(personalMatch:(id:string)=>boolean, clearPerso
     const invalid=!!(filters.from && filters.to && filters.from>filters.to);
     input('to').setCustomValidity(invalid ? '終了日は開始日以降にしてください' : '');
     document.getElementById('date-error')!.hidden=!invalid;
+    if(invalid)form.querySelector<HTMLDetailsElement>('.search-more')!.open=true;
+    const advancedCount=filters.media.length+Number(!!filters.statement)+Number(!!(filters.from||filters.to))+Number(filters.includeIssues)+Number(!!(document.getElementById('f-intensity') as HTMLSelectElement).value);
+    document.getElementById('advanced-filter-count')!.textContent=advancedCount ? `（${advancedCount}条件を適用中）` : '';
     let visible=0;
     for(const row of rows.sort((a,b)=>compareCases(cases.get(a.dataset.caseId!)!,cases.get(b.dataset.caseId!)!,filters.sort))) {
       const c=cases.get(row.dataset.caseId!)!;

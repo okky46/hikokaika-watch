@@ -16,9 +16,13 @@ const industries=[...new Set(comparables.map(c=>c.industry))].sort();
   <p>過去の案件について、公表資料の倍率と当サイトで計算した倍率を区別して掲載します。業種が同じでも、成長率・財務構成・取引条件は異なります。</p>
   {isSampleData&&<p class="notice">ここに掲載する案件・数値は、動作確認用の架空のサンプルです。</p>}
   <p><a href="/">銘柄を選んで株価・倍率を試算する</a></p>
-  <label>比較業種<select id="tob-industry"><option value="">すべて</option>{industries.map(i=><option value={i}>{i}</option>)}</select></label>
+  <div class="card tob-controls" id="tob-list">
+    <label>比較業種<select id="tob-industry"><option value="">すべて</option>{industries.map(i=><option value={i}>{i}</option>)}</select></label>
+    <label id="tob-metric-control" hidden>比較する指標<select id="tob-metric" aria-controls="tob-comparison"><option value="all">すべての指標</option>{Object.entries(METRICS).map(([key,label])=><option value={key}>{label}</option>)}</select></label>
+  </div>
   <p id="tob-count" aria-live="polite">{comparables.length}案件</p>
-  <div class="tob-table"><table><caption>過去案件の価格と取引倍率</caption><thead><tr><th>銘柄・公表日</th><th>業種</th><th>価格段階・価格</th><th>PER</th><th>PBR</th><th>EV/EBITDA</th></tr></thead><tbody>{comparables.map((c,index)=><tr data-tob-industry={c.industry} data-tob-row><td><a href={`#${c.research?'deal-'+c.research.dealId:'legacy-'+index}`}>{c.name}（{c.code}）</a><br/>{c.announcedOn}</td><td>{c.industry}</td><td>{c.priceStage}<br/>{fmt(c.offerPrice)}{c.priceUnit??'円'}</td>{(['per','pbr','evEbitda'] as Metric[]).map(k=><td>{c.multiples[k]?<>{fmt(c.multiples[k]!.value)}倍<br/><span class="small">{basisLabel(c.multiples[k]!.basis)}</span></>:'未登録'}</td>)}</tr>)}</tbody></table></div>
+  <p class="small muted tob-scroll-hint" id="tob-scroll-hint">表は横にスクロールできます。銘柄名は左に固定されます。</p>
+  <div class="tob-table" id="tob-comparison" data-metric-mode="all" role="region" aria-label="過去案件の価格と取引倍率" aria-describedby="tob-scroll-hint" tabindex="0"><table><caption>過去案件の価格と取引倍率</caption><thead><tr><th scope="col">銘柄・公表日</th><th scope="col" class="tob-context">業種</th><th scope="col" class="tob-context">価格段階・価格</th>{Object.entries(METRICS).map(([key,label])=><th scope="col" data-metric-column={key}>{label}</th>)}</tr></thead><tbody>{comparables.map((c,index)=><tr data-tob-industry={c.industry} data-tob-row><th scope="row"><a href={`#${c.research?'deal-'+c.research.dealId:'legacy-'+index}`}>{c.name}（{c.code}）</a><span class="tob-date">{c.announcedOn}</span><span class="tob-mobile-context small">{c.industry}<br/>{c.priceStage} {fmt(c.offerPrice)}{c.priceUnit??'円'}</span></th><td class="tob-context">{c.industry}</td><td class="tob-context">{c.priceStage}<br/>{fmt(c.offerPrice)}{c.priceUnit??'円'}</td>{(['per','pbr','evEbitda'] as Metric[]).map(k=><td data-metric-column={k}>{c.multiples[k]?<><strong>{fmt(c.multiples[k]!.value)}倍</strong><br/><span class="small">{basisLabel(c.multiples[k]!.basis)}</span></>:'未登録'}</td>)}</tr>)}</tbody></table></div>
   {industries.map(i=><section data-tob-industry={i}><ComparableStatistics records={comparables} industry={i}/></section>)}
   {comparables.length===0&&<p class="empty-state">出典を確認した事例を順次掲載します。</p>}
   {comparables.map((c,index)=><article class="card section" data-tob-industry={c.industry} id={c.research?'deal-'+c.research.dealId:'legacy-'+index}>
@@ -30,11 +34,46 @@ const industries=[...new Set(comparables.map(c=>c.industry))].sort();
     <h3>価格・算定の経緯</h3>
     {c.history.length?<ol>{c.history.map(h=><li><strong>{h.date}：{fmt(h.price)}円</strong><p>{h.note}</p><a href={h.sourceUrl} target="_blank" rel="noopener noreferrer">出典</a></li>)}</ol>:<p>価格の変更・算定の経緯は未登録です。</p>}
     {c.notes&&<p>{c.notes}</p>}{c.articleUrl&&<p><a href={c.articleUrl}>詳しい調査記事</a></p>}
+    <a class="navigation-link small" href="#tob-list">比較一覧に戻る</a>
   </article>)}
 </Base>
 <script>
 const filter=document.querySelector<HTMLSelectElement>('#tob-industry')!;
+const metric=document.querySelector<HTMLSelectElement>('#tob-metric')!;
+const table=document.querySelector<HTMLElement>('#tob-comparison')!;
+const hint=document.querySelector<HTMLElement>('#tob-scroll-hint')!;
+document.querySelector<HTMLElement>('#tob-metric-control')!.hidden=false;
+const initialIndustry=new URLSearchParams(location.search).get('industry');
+if(initialIndustry && [...filter.options].some(option=>option.value===initialIndustry))filter.value=initialIndustry;
+metric.value=matchMedia('(max-width: 760px)').matches?'per':'all';
+const applyMetric=()=>{table.dataset.metricMode=metric.value;hint.hidden=metric.value!=='all';table.scrollLeft=0;};
 const apply=()=>{let n=0;document.querySelectorAll<HTMLElement>('[data-tob-industry]').forEach(e=>{e.hidden=!!filter.value&&e.dataset.tobIndustry!==filter.value;if(e.hasAttribute('data-tob-row')&&!e.hidden)n++;});document.querySelector('#tob-count')!.textContent=`${n}案件`;};
-filter.addEventListener('change',apply);
+filter.addEventListener('change',()=>{apply();const url=new URL(location.href);if(filter.value)url.searchParams.set('industry',filter.value);else url.searchParams.delete('industry');history.replaceState(null,'',url);});
+metric.addEventListener('change',applyMetric);
+apply();applyMetric();
 </script>
-<style>dd{margin:.4rem 0 1rem}li{margin:1rem 0}p,dd{overflow-wrap:anywhere}.tob-table{overflow-x:auto}.tob-table table{min-width:42rem;width:100%;border-collapse:collapse}.tob-table td,.tob-table th{padding:.7rem;text-align:left;border-bottom:1px solid var(--color-line);vertical-align:top}select{margin:.5rem 0}</style>
+<style>
+dd{margin:.4rem 0 1rem}li{margin:1rem 0}p,dd{overflow-wrap:anywhere}
+.tob-controls{display:flex;gap:.8rem 1.5rem;flex-wrap:wrap;margin:1rem 0}.tob-controls label{display:grid;gap:.35rem;flex:1;min-width:0}.tob-controls select{width:100%;margin:0}
+.tob-table{overflow-x:auto;border:1px solid var(--color-line);border-radius:var(--radius-lg);background:var(--color-surface)}
+.tob-table table{min-width:42rem;width:100%;border-collapse:separate;border-spacing:0}
+.tob-table caption{padding:.65rem;text-align:left;color:var(--color-ink-soft);font-size:.85rem}
+.tob-table td,.tob-table th{padding:.8rem;text-align:left;border-bottom:1px solid var(--color-line);vertical-align:top}
+.tob-table thead th{background:#edf2f7;font-size:.85rem}.tob-table tbody th{font-weight:normal}
+.tob-table th:first-child{position:sticky;left:0;z-index:1;background:var(--color-surface);box-shadow:1px 0 var(--color-line);min-width:11rem;max-width:18rem}
+.tob-table thead th:first-child{background:#edf2f7}.tob-table tbody th a{font-weight:700;text-underline-offset:.2em}
+.tob-date{display:block;font-size:.8rem;color:var(--color-ink-soft);margin-top:.3rem}.tob-mobile-context{display:none}
+.tob-table[data-metric-mode="per"] [data-metric-column]:not([data-metric-column="per"]),
+.tob-table[data-metric-mode="pbr"] [data-metric-column]:not([data-metric-column="pbr"]),
+.tob-table[data-metric-mode="evEbitda"] [data-metric-column]:not([data-metric-column="evEbitda"]){display:none}
+.tob-table:not([data-metric-mode="all"]) table{min-width:0}
+@media(max-width:760px){
+ .tob-controls{gap:.75rem}.tob-controls label{flex-basis:100%}
+ .tob-table th:first-child{width:11rem;max-width:11rem;overflow-wrap:anywhere}
+ .tob-table:not([data-metric-mode="all"]) table{table-layout:fixed}
+ .tob-table:not([data-metric-mode="all"]) .tob-context{display:none}
+ .tob-table:not([data-metric-mode="all"]) .tob-mobile-context{display:block;margin-top:.4rem}
+ .tob-table:not([data-metric-mode="all"]) th:first-child{width:62%;max-width:none;min-width:0}
+ .tob-table td,.tob-table th{padding:.7rem .6rem;overflow-wrap:anywhere}
+}
+</style>
