@@ -172,7 +172,7 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
 
   <section class="section" id="evidence" aria-label="媒体と確認した根拠">
     <details class="card evidence-details"><summary>追跡理由と、媒体ごとに確認した根拠を読む</summary>
-      <p>{c.trackingReason || '詳しい追跡理由は確認中です。'}</p>
+      <p>{c.trackingReason || '詳しい追跡理由はまだ掲載していません。'}</p>
       {c.tracking?.report_note && <p>{c.tracking.report_note}</p>}
       {c.tracking?.report_state==='none' && <p class="small muted">「報道なし」は、当サイトで報道を確認できていない状態を表します。</p>}
       <ul class="evidence-list">{c.tracking?.reports.map(r=><li><strong>{c.media.find(m=>m.id===r.outlet_id)?.name}</strong> <span class="small">{REPORT_METHOD[r.method]}・{REPORT_ACCESS[r.access]}</span><p>{r.scope_note}</p><a href={r.source_url} target="_blank" rel="noopener noreferrer nofollow">{r.source_name} ↗</a><span class="small muted"> 確認: {formatDate(r.checked_on)}{r.reported_on && ` ／ 報道日: ${formatDate(r.reported_on)}`}</span>{r.event_id && <p class="small"><a href={`#event-${r.event_id}`}>関連する出来事</a></p>}</li>)}</ul>
