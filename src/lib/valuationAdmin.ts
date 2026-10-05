@@ -47,6 +47,7 @@ export function setupValuationAdmin(client:SupabaseClient){
     for(const name of ['code','name','industry','checkedOn','notes','announcedOn','priceStage','offerPrice','sourceUrl','articleUrl'])control(name).value=String(record?.[name as keyof ValuationRecord]??(name==='checkedOn'?today():''));
     root.querySelector<HTMLElement>('[data-va-financials]')!.hidden=kind!=='financials';root.querySelector<HTMLElement>('[data-va-comparable]')!.hidden=kind!=='comparable';
     el<HTMLElement>('va-kind-label').textContent=kind==='financials'?'財務数値':'TOB比較事例';
+    control('priceUnit').value=record?.kind==='comparable'?(record.priceUnit??'円/株'):'円/株';
     control('research').value=record?.kind==='comparable'&&record.research?JSON.stringify(record.research,null,2):'';
     for(const fieldset of root.querySelectorAll<HTMLFieldSetElement>('[data-fact],[data-comparable]')){
       const key=fieldset.dataset.fact??fieldset.dataset.comparable!;
@@ -63,7 +64,7 @@ export function setupValuationAdmin(client:SupabaseClient){
     const p:Record<string,unknown>={kind};for(const name of ['code','name','industry','checkedOn','notes'])p[name]=control(name).value;
     const group:Record<string,unknown>={};for(const f of root.querySelectorAll<HTMLElement>(kind==='financials'?'[data-fact]':'[data-comparable]'))if(f.querySelector<HTMLInputElement>('[data-enabled]')!.checked){const data:Record<string,unknown>={};for(const i of f.querySelectorAll<HTMLInputElement>('[data-v]')){if(i.dataset.v==='value'&&!i.value.trim())throw Error('登録する項目の数値を入力してください。');data[i.dataset.v!]=i.dataset.v==='value'?Number(i.value):i.value;}group[f.dataset.fact??f.dataset.comparable!]=data;}
     p[kind==='financials'?'facts':'multiples']=group;
-    if(kind==='comparable'){for(const name of ['announcedOn','priceStage','sourceUrl','articleUrl'])p[name]=control(name).value;p.offerPrice=Number(control('offerPrice').value);p.history=Array.from(el<HTMLElement>('va-history').children).map(div=>Object.fromEntries(Array.from(div.querySelectorAll<HTMLInputElement>('[data-h]')).map(i=>[i.dataset.h!,i.dataset.h==='price'?Number(i.value):i.value])));}
+    if(kind==='comparable'){p.priceUnit=control('priceUnit').value;for(const name of ['announcedOn','priceStage','sourceUrl','articleUrl'])p[name]=control(name).value;p.offerPrice=Number(control('offerPrice').value);p.history=Array.from(el<HTMLElement>('va-history').children).map(div=>Object.fromEntries(Array.from(div.querySelectorAll<HTMLInputElement>('[data-h]')).map(i=>[i.dataset.h!,i.dataset.h==='price'?Number(i.value):i.value])));}
     if(kind==='comparable'&&control('research').value.trim())p.research=JSON.parse(control('research').value);
     return parseValuation(p);
   }
@@ -99,7 +100,7 @@ export function setupValuationAdmin(client:SupabaseClient){
         }else{
           line(`${p.announcedOn}公表 ／ ${p.priceStage}：${p.offerPrice.toLocaleString('ja-JP')}円`);source(p.sourceUrl,'価格の出典');
           for(const [key,m] of Object.entries(p.multiples)){line(`${METRICS[key as keyof typeof METRICS]}：${m.value}倍 ／ ${m.period} ／ ${basisLabel(m.basis)}。${m.calculation}`);source(m.sourceUrl,'倍率の出典');}
-          for(const v of p.research?.valuations??[]){line(`${v.advisor} ／ ${v.role} ／ ${v.date} ／ ${valuationMethodLabel[v.method]}：${v.low}〜${v.high}円。${v.page}。${v.notes}`);for(const i of v.inputs)line(`${i.name}：${i.low}〜${i.high}${i.unit} ／ ${i.period}。${i.definition}`);source(v.sourceUrl,'算定の出典');}
+          for(const v of p.research?.valuations??[]){line(`${v.advisor} ／ ${v.role} ／ ${v.date||'算定日未確認'} ／ ${v.methodName??valuationMethodLabel[v.method]}：${v.low}〜${v.high}${v.unit??'円/株'}。${v.page}。${v.notes}`);for(const i of v.inputs)line(`${i.name}：${i.low}〜${i.high}${i.unit} ／ ${i.period}。${i.definition}`);source(v.sourceUrl,'算定の出典');}
         }
         preview.append(details);
       }

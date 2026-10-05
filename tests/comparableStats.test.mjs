@@ -39,3 +39,11 @@ test('20期DCFの年別前提を省略せず保持し、過大配列や末尾の
  inputs.push(structuredClone(inputs[0]));assert.throws(()=>parseValuation(r),/120件/);inputs.pop();
  r.research.valuations[0].peers=Array(61).fill('架空会社');assert.throws(()=>parseValuation(r),/比較会社.*60件/);
 });
+
+ test('未確認日付・範囲・投資口単位と原調査の欠損を保持し、集計しない',()=>{
+ const r=record('0008',20);r.multiples={};r.research.statisticsEligible=false;r.research.scope='unknown';r.priceUnit='円/口';
+ r.research.valuations=[{advisor:'架空証券',role:'対象投資法人',date:'',method:'other',methodName:'DDM法',unit:'円/口',low:1000,high:3000,sourceUrl:'https://example.com/report.pdf',page:'10頁',inputs:[],peers:[],notes:'割引率は未確認'}];
+ r.research.sourceReview={packageId:'test-review-v1',sha256:'a'.repeat(64),caseData:{security_code:r.code,statisticsEligible:false,wacc:null,notes:'原典の矛盾を保持'}};
+ const parsed=parseValuation(r);assert.deepEqual(parsed,r);const ranges=structuredClone(r);ranges.research.valuations=Array.from({length:60},()=>structuredClone(r.research.valuations[0]));assert.equal(parseValuation(ranges).research.valuations.length,60);ranges.research.valuations.push(structuredClone(r.research.valuations[0]));assert.throws(()=>parseValuation(ranges),/60件/);assert.deepEqual(comparableStats([parsed],r.industry),[]);
+ for(const change of [r=>r.research.statisticsEligible=true,r=>r.research.sourceReview.caseData.security_code='9999',r=>r.research.sourceReview.caseData.statisticsEligible=true,r=>r.research.sourceReview.caseData.large='x'.repeat(200001),r=>r.research.valuations[0].date='2026-02-30',r=>r.priceUnit='USD']){const bad=structuredClone(r);change(bad);assert.throws(()=>parseValuation(bad));}
+ });

@@ -16,6 +16,7 @@ test('財務DB：管理者限定・下書き隔離・競合拒否・公開撤回
  await db.exec(fs.readFileSync('supabase/migrations/0013_valuation_editions.sql','utf8'));
  await db.exec(fs.readFileSync('supabase/migrations/0014_comparable_research.sql','utf8'));
  await db.exec(fs.readFileSync('supabase/migrations/0015_long_valuation_forecasts.sql','utf8'));
+ await db.exec(fs.readFileSync('supabase/migrations/0016_review_research_preservation.sql','utf8'));
  assert.deepEqual((await db.query("select * from pg_policies where tablename like 'user_%' order by tablename,policyname")).rows,policies);
  const session=async(role,id='')=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec(`set role ${role}`);};
  const save=async(p,revision=null,id='financials:0001')=>(await db.query('select to_jsonb(save_valuation_draft($1,$2,$3)) as r',[id,p,revision])).rows[0].r;
@@ -56,6 +57,12 @@ test('財務DB：管理者限定・下書き隔離・競合拒否・公開撤回
  await assert.rejects(batchSave([{id:'tob:long-invalid',payload:unsafeLong,revision:null}]));
  const tooManyPeers=structuredClone(long);tooManyPeers.research.valuations[0].peers=Array(61).fill('架空比較会社');
  await assert.rejects(save(tooManyPeers,null,'tob:peers-overflow'));
+ const review=structuredClone(researched);review.priceUnit='円/口';review.research.scope='unknown';review.research.valuations[0].date='';review.research.valuations[0].unit='円/口';review.research.valuations[0].methodName='DDM法';
+ review.research.sourceReview={packageId:'test-review-v1',sha256:'a'.repeat(64),caseData:{security_code:peer.code,statisticsEligible:false,missing:null,originalNotes:'原典の矛盾を保持',largeContext:'x'.repeat(110000)}};
+ const reviewSaved=await batchSave([{id:'tob:raw-review',payload:review,revision:null}]);assert.deepEqual(reviewSaved[0].draft,review);
+ await batchPublish(reviewSaved.map(r=>({id:r.id,revision:r.revision})));await session('service_role');assert.deepEqual((await read()).find(r=>r.id==='tob:raw-review').content,review);await session('authenticated',admin);await publish(2,false,'tob:raw-review');
+ const ranges=structuredClone(review);ranges.research.valuations=Array.from({length:60},()=>structuredClone(review.research.valuations[0]));assert.equal((await batchSave([{id:'tob:many-ranges',payload:ranges,revision:null}]))[0].draft.research.valuations.length,60);ranges.research.valuations.push(structuredClone(review.research.valuations[0]));await assert.rejects(batchSave([{id:'tob:range-overflow',payload:ranges,revision:null}]));
+ for(const change of [r=>r.research.sourceReview.packageId=123,r=>r.research.sourceReview.sha256=123,r=>r.research.statisticsEligible=true,r=>r.research.sourceReview.caseData.security_code='9999',r=>r.research.sourceReview.caseData.statisticsEligible=true,r=>r.research.sourceReview.caseData.largeContext='x'.repeat(200001),r=>r.research.valuations[0].date='2026-02-30',r=>r.priceUnit='USD']){const bad=structuredClone(review);change(bad);await assert.rejects(batchSave([{id:'tob:bad-review',payload:bad,revision:null}]));}
  const broken=structuredClone(researched);broken.research.valuations[0].inputs[0].high=4;await assert.rejects(save(broken,null,'tob:invalid-input'));
  await session('authenticated',other);await assert.rejects(batchSave([{id:'tob:no-admin',payload:researched,revision:null}]),/管理者/);
  await session('authenticated',admin);await publish(2,false,'tob:batch-a');await publish(2,false,'tob:batch-b');
