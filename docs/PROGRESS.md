@@ -1,6 +1,6 @@
 ## 2026-10-05: 調査10銘柄分をPR #69へ集約
 
-[PR #69](https://github.com/okky46/hikokaika-watch/pull/69)を作成し、このまとまりの10銘柄と、調査範囲を絞るユーザー指示を共有した。差分はAGENTS.md・RESEARCH_WORKFLOW.md・PROGRESS.md・UPDATE_PLAN_2026_09.mdの4文書のみ。原稿・PDF・認証情報・SQL・コードは含めず、並行した本番反映記録と過去PR #61の確定結果も保持した。P1級の欠陥なしとレビューし、git diff --checkは成功。文書更新のため[skip ci]を指定し、コードテスト・デプロイは行っていない。今回補完した数値は管理者専用の下書きに保存され、公開承認・再ビルドは別途行う。PRのマージ結果はGitHubとmainで照合する。
+[PR #69](https://github.com/okky46/hikokaika-watch/pull/69)を作成し、このまとまりの10銘柄と、調査範囲を絞るユーザー指示を共有した。差分はAGENTS.md・RESEARCH_WORKFLOW.md・PROGRESS.md・UPDATE_PLAN_2026_09.mdの4文書のみ。原稿・PDF・認証情報・SQL・コードは含めず、並行した本番反映記録と過去PR #61の確定結果も保持した。P1級の欠陥なしとレビューし、git diff --checkは成功。文書更新のため[skip ci]を指定し、コードテスト・デプロイは行っていない。今回補完した数値は管理者専用の下書きに保存され、公開承認・再ビルドは別途行う。PR #69をマージし、GitHubのMerged・closedとmain 9a7058dへの取り込みを確認した。マージコミットにも検証結果と下書き未公開を記録。今回の補完値の公開承認・再ビルドは未実施。
 
 ## 2026-10-05: 直近2案件の価格交渉履歴を補完し、10銘柄の調査を集約
 
