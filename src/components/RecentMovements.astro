@@ -5,11 +5,11 @@ import { eventTypeDef } from '../lib/status';
 interface Props { cases: CaseDetail[]; generatedAt: string }
 const { asOf, items } = recentMovements(Astro.props.cases, new Date(Astro.props.generatedAt));
 ---
-<section class="recent-movements" aria-labelledby="recent-movements-title">
-  <div class="recent-movements__head">
+<details class="recent-movements">
+  <summary class="recent-movements__head">
     <h2 id="recent-movements-title">最近動いた案件</h2>
     <span class="small muted"><time datetime={asOf}>{asOf.replaceAll('-', '/')}</time>時点 · 直近30日の公表</span>
-  </div>
+  </summary>
   {items.length ? <ul class="recent-movements__list">{items.map(({ slug, companyName, securityCode, event }) =>
     <li><a class="recent-movement" href={`/cases/${encodeURIComponent(slug)}/#event-${encodeURIComponent(event.id)}`}>
       <span class="recent-movement__meta"><time datetime={event.date.start!}>{event.date.start!.replaceAll('-', '/')}</time><span>{eventTypeDef(event.eventType).label}{event.corrected && '・訂正あり'}</span></span>
@@ -17,10 +17,12 @@ const { asOf, items } = recentMovements(Astro.props.cases, new Date(Astro.props.
       <span class="recent-movement__title">{event.title}</span>
     </a></li>
   )}</ul> : <p class="small muted recent-movements__empty">直近30日に公表された出来事は、まだ掲載されていません。</p>}
-</section>
+</details>
 <style>
-  .recent-movements { margin: 1rem 0 1.25rem; }
-  .recent-movements__head { display: flex; align-items: baseline; flex-wrap: wrap; gap: .25rem 1rem; margin-bottom: .5rem; }
+  .recent-movements { margin: .75rem 0; border: 1px solid var(--color-line); border-radius: var(--radius); background: var(--color-surface); padding: .6rem .8rem; }
+  .recent-movements__head { cursor: pointer; }
+  .recent-movements__head h2 { display: inline; margin-right: .6rem; }
+  .recent-movements[open] .recent-movements__head { margin-bottom: .65rem; }
   h2 { font-size: 1rem; margin: 0; }
   .recent-movements__list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); list-style: none; padding: 0; margin: 0; gap: .65rem; }
   .recent-movement { display: flex; flex-direction: column; height: 100%; padding: .7rem .8rem; border: 1px solid var(--color-line); border-radius: var(--radius); background: var(--color-surface); color: var(--color-ink); text-decoration: none; overflow-wrap: anywhere; }
@@ -32,5 +34,10 @@ const { asOf, items } = recentMovements(Astro.props.cases, new Date(Astro.props.
   .recent-movement__arrow { margin-left: auto; }
   .recent-movement__title { font-size: .85rem; }
   .recent-movements__empty { margin: 0; }
-  @media (max-width: 760px) { .recent-movements__list { grid-template-columns: 1fr; gap: .4rem; } .recent-movement { padding: .55rem .75rem; } }
+  @media (max-width: 760px) {
+    .recent-movements__head > span { display: block; margin-top: .2rem; }
+    .recent-movements__list { grid-template-columns: 1fr; gap: 0; }
+    .recent-movement { padding: .65rem 0; border: 0; border-radius: 0; border-top: 1px solid var(--color-line); }
+    .recent-movement__meta { font-size: .8rem; }
+  }
 </style>

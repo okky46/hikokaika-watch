@@ -5,12 +5,15 @@ import ComparableStatistics from './ComparableStatistics.astro';
 import ValuationReferences from './ValuationReferences.astro';
 interface Props {financials?:Financials;comparables:Comparable[];industry?:string|null;sample?:boolean}
 const {financials,comparables,industry,sample}=Astro.props;
+const comparisonIndustry=financials?.industry||industry;
+const hasIndustryComparables=comparables.some(c=>c.industry===comparisonIndustry);
 const peers=comparables.filter(c=>c.industry===(financials?.industry||industry)&&c.code!==financials?.code);
 const fmt=(n:number)=>n.toLocaleString('ja-JP',{maximumFractionDigits:4});
 const entries=(p:Comparable)=>Object.entries(p.multiples) as [Metric,NonNullable<Comparable['multiples'][Metric]>][];
 ---
 <section class="section valuation" id="valuation" data-valuation data-facts={JSON.stringify(financials?.facts??{})}>
   <h2 class="section-title">株価と倍率の試算</h2>
+  <p class="small"><a class="navigation-link" href={hasIndustryComparables ? `/tob-comparables/?industry=${encodeURIComponent(comparisonIndustry!)}` : '/tob-comparables/'}>{hasIndustryComparables ? `${comparisonIndustry}の過去TOB事例を比較する` : '過去のTOB事例を比較する'}</a></p>
   <p>株価から倍率を計算するか、倍率から1株当たりの価格を試算できます。入力値はこの画面内だけで使います。</p>
   {sample&&<p class="notice">試算用の財務数値・TOB事例は架空のサンプルです。</p>}
   {!financials?<p class="empty-state">この銘柄の財務数値はまだ登録されていません。出典を確認した数値の公開後に試算できます。</p>:<>
