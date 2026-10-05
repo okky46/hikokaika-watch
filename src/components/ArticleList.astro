@@ -1,10 +1,15 @@
 ---
 import type { PublicArticle } from '../lib/articles';
 import { formatDate } from '../lib/format';
+import { loadPublicData } from '../lib/publicData';
 interface Props { articles: PublicArticle[] }
+const { cases } = await loadPublicData();
 ---
 {Astro.props.articles.length ? <ul class="article-list">{Astro.props.articles.map(a => <li class="card research-card">
   <p class="small muted">公開: {formatDate(a.firstPublishedAt)} / 更新: {formatDate(a.publishedAt)}</p>
   <h3><a class="research-title" href={`/articles/${a.slug}/`}><span>{a.title}</span><span aria-hidden="true">→</span></a></h3><p>{a.summary}</p>
-  <div class="related-links small">{a.companies.map(c => <a class="entity-link" href={`/companies/${c.securityCode}/`}>{c.nameJa}（{c.securityCode}）<span aria-hidden="true">→</span></a>)}</div>
+  <div class="related-links small">{a.companies.map(company => {
+    const related=cases.filter(c=>c.companyId===company.id);
+    return related.length ? related.map(c=><a class="navigation-link" href={`/cases/${c.slug}/`}>{company.nameJa}の状況・経過{related.length>1 && `：${c.title}`}<span aria-hidden="true">→</span></a>) : <a class="entity-link" href={`/companies/${company.securityCode}/`}>{company.nameJa}の案件・記事<span aria-hidden="true">→</span></a>;
+  })}</div>
 </li>)}</ul> : <p class="empty-state">調査記事はまだありません。</p>}
