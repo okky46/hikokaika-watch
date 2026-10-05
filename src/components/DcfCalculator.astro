@@ -2,7 +2,7 @@
 ---
 <details class="section card dcf-calculator" data-dcf>
   <summary>DCFで株価を試算する</summary>
-  <p>将来5年のFCFFを割り引き、継続価値を加えて事業価値を求めます。前提はすべて自由入力です。EDINETの実績から将来予測を自動で作る機能はありません。</p>
+  <p>将来5年のFCFFを割り引き、継続価値を加えて事業価値を求めます。将来予測を含むすべての前提を手動で入力します。</p>
   <p class="small">基準日から1〜5年後の期末にFCFFが生じるモデルです。各期間は12ヶ月で、初年度が半年などの計画や期央割引には対応していません。金額は百万円、株式数は株、率は%で入力します。</p>
   <div class="dcf-inputs">
     <label>算定基準日<input type="date" data-dcf-date /></label>
@@ -36,7 +36,7 @@
     <h3>前提を変えたときの試算株価</h3>
     <p class="small" data-dcf-sensitivity-note></p>
     <table class="dcf-table"><caption>行はWACC、列は継続価値の条件。単位は円／株。</caption><thead><tr data-dcf-head></tr></thead><tbody data-dcf-body></tbody></table>
-    <p class="small">中央は入力した条件。空欄のセルは計算条件を満たしていません。この表は前提を変えた感応度で、予測区間ではありません。</p>
+    <p class="small">中央は入力した条件での試算値です。前提を変えると計算結果がどう動くかを比較でき、計算条件を満たさないセルは空欄になります。将来の予測幅を示す表とは異なります。</p>
   </div>
   <p class="small muted">入力はこの画面内だけで使い、保存・送信しません。計算結果は入力した仮定に依存します。第三者機関の評価レンジを再現した値や、TOB価格の予測とは区別してください。</p>
 </details>

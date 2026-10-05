@@ -134,7 +134,7 @@ test('管理フォーム：空の数値・競合時に公開せず編集を保�
  const h=setup(t);await h.editor.reload();await h.importRecord(financials);
  h.input('[data-fact="eps"] [data-v="value"]','');h.byId('va-form').requestSubmit();await flush();assert.equal(h.calls.length,0);
  h.input('[data-fact="eps"] [data-v="value"]','123');h.reject();h.byId('va-form').requestSubmit();await flush();
- assert.equal(h.byId('va-publish').disabled,true);assert.match(h.byId('va-status').textContent,/失敗/);
+ assert.equal(h.byId('va-publish').disabled,true);assert.match(h.byId('va-status').textContent,/保存または読み込みができませんでした/);
  h.dom.window.confirm=()=>false;await h.editor.reload();assert.equal(h.dom.window.document.querySelector('[data-fact="eps"] [data-v="value"]').value,'123');
  h.byId('va-new-comparable').click();assert.equal(h.byId('va-kind-label').textContent,'財務数値');
 });

@@ -46,11 +46,11 @@ const entries=(p:Comparable)=>Object.entries(p.multiples) as [Metric,NonNullable
   {(financials?.industry||industry)&&<ValuationReferences financials={financials} comparables={comparables} industry={financials?.industry||industry!}/>}
   <details class="section peer-details"><summary>他の集計条件・個別事例を見る</summary>
   {(financials?.industry||industry)&&<ComparableStatistics records={comparables} industry={financials?.industry||industry!} excludeCode={financials?.code}/> }
-  <p class="small">過去の取引条件が、この銘柄にも当てはまるとは限りません。実績・会社予想と対象期を確認して選択してください。</p>
-  {peers.length?peers.map(p=><article class="card section"><h4>{p.name}（{p.code}）</h4><p class="small">{p.announcedOn}公表 ／ {p.priceStage} {fmt(p.offerPrice)}円</p>{entries(p).map(([key,m])=><div class="peer-multiple"><span>{METRICS[key]} {fmt(m.value)}倍（{basisLabel(m.basis)}・{m.period}）</span><p class="small">{m.method==='calculated'?'当サイトで計算':'資料に記載された倍率'}：{m.calculation}</p></div>)}<p>{p.notes}</p><a href={p.research?`/tob-comparables/#deal-${p.research.dealId}`:'/tob-comparables/'}>出典・第三者機関の算定・価格履歴を見る</a></article>):<p class="empty-state">比較業種が一致する公開済み事例はまだありません。</p>}
+  <p class="small">倍率を選ぶ際は、過去事例との取引条件の違いに加え、実績・会社予想の区分と対象期を確認してください。</p>
+  {peers.length?peers.map(p=><article class="card section"><h4>{p.name}（{p.code}）</h4><p class="small">{p.announcedOn}公表 ／ {p.priceStage} {fmt(p.offerPrice)}円</p>{entries(p).map(([key,m])=><div class="peer-multiple"><span>{METRICS[key]} {fmt(m.value)}倍（{basisLabel(m.basis)}・{m.period}）</span><p class="small">{m.method==='calculated'?'当サイトで計算':'資料に記載された倍率'}：{m.calculation}</p></div>)}<p>{p.notes}</p><a href={p.research?`/tob-comparables/#deal-${p.research.dealId}`:'/tob-comparables/'}>出典・第三者機関の算定・価格履歴を見る</a></article>):<p class="empty-state">同じ業種の事例はまだ掲載していません。他の業種は「過去のTOB事例をすべて見る」から確認できます。</p>}
   <a href="/tob-comparables/">過去のTOB事例をすべて見る</a>
   </details>
-  <p class="small muted section">結果は入力条件に基づく計算値です。将来の市場価格やTOB価格の予測、売買の推奨ではありません。</p>
+  <p class="small muted section">試算株価は、入力した倍率と財務数値に基づく計算結果です。将来の市場価格・TOB価格の予測や、売買の推奨は行っていません。</p>
   <noscript><p>試算にはJavaScriptを有効にしてください。財務数値と出典はそのまま閲覧できます。</p></noscript>
 </section>
 <script>
@@ -63,11 +63,11 @@ document.querySelectorAll<HTMLElement>('[data-valuation]').forEach(root=>{
  const result=root.querySelector<HTMLElement>('[data-scenario]')!,basis=root.querySelector<HTMLElement>('[data-scenario-basis]')!;
  const number=(v:number)=>v.toLocaleString('ja-JP',{maximumFractionDigits:2});
  const update=()=>{
-  for(const key of Object.keys(METRICS) as Metric[]){const out=root.querySelector<HTMLElement>(`[data-result="${key}"]`)!;const value=multipleFromPrice(f,key,price.valueAsNumber);out.textContent=prerequisites(f,key)??(!price.value?'株価を入力してください':!price.validity.valid||value===null?'計算できる正の株価・EVを確認してください':`${number(value)}倍`);}
+  for(const key of Object.keys(METRICS) as Metric[]){const out=root.querySelector<HTMLElement>(`[data-result="${key}"]`)!;const value=multipleFromPrice(f,key,price.valueAsNumber);out.textContent=prerequisites(f,key)??(!price.value?'株価を入力してください':!price.validity.valid||value===null?'株価の入力範囲と財務数値を確認してください。計算には0より大きい株価・EVが必要です。':`${number(value)}倍`);}
   const key=metric.value as Metric,fact=f[key==='per'?'eps':key==='pbr'?'bps':'ebitda'];
   basis.textContent=fact?`${basisLabel(fact.basis)}・${fact.period}の数値で計算。`:'';
   const value=priceFromMultiple(f,key,multiple.valueAsNumber);
-  result.textContent=prerequisites(f,key)??(!multiple.value?'倍率を入力してください':!multiple.validity.valid||value===null?'正の試算株価を計算できません。倍率と財務数値を確認してください。':`入力した条件での試算株価：${number(value)}円`);
+  result.textContent=prerequisites(f,key)??(!multiple.value?'倍率を入力してください':!multiple.validity.valid||value===null?'試算できません。倍率の入力範囲と財務数値を確認してください。':`入力した条件での試算株価：${number(value)}円`);
  }
  price.addEventListener('input',update);multiple.addEventListener('input',update);metric.addEventListener('change',update);
  root.querySelector('[data-reset]')!.addEventListener('click',()=>{price.value='';multiple.value='';update();});

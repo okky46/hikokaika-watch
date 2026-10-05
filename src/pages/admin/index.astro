@@ -25,15 +25,15 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 >
   <h1>管理画面</h1>
   <p class="notice">
-    このページは Cloudflare Access で保護されている必要があります(docs/SETUP.md 参照)。
-    書き込みはすべて Supabase RLS(admin_users 登録済みUUID)で最終判定されます。
+    この管理画面を利用する前に、docs/SETUP.mdに沿ってCloudflare Accessの保護を設定してください。
+    保存時にはSupabaseのRLSが、admin_usersに登録された管理者の権限を確認します。
   </p>
 
-  <div id="ad-unconfigured" class="notice" hidden>Supabase が未設定のため管理画面は利用できません。</div>
+  <div id="ad-unconfigured" class="notice" hidden>Supabaseの接続設定が必要です。docs/SETUP.mdに沿って設定してください。</div>
 
   <section class="section card" id="ad-auth">
     <div id="ad-logged-out" hidden>
-      <p>管理者本人の Google アカウントでログインしてください。</p>
+      <p>管理者本人のGoogleアカウントでログインしてください。</p>
       <button type="button" class="btn btn--primary" id="ad-login">Googleでログイン</button>
     </div>
     <div id="ad-logged-in" hidden>
@@ -42,7 +42,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       <span id="ad-not-admin" class="badge badge--stop" hidden style="margin-left:0.6rem">管理者権限がありません</span>
       <button type="button" class="btn" id="ad-logout" style="margin-left:1rem">ログアウト</button>
     </div>
-    <div id="ad-mfa-challenge" hidden style="margin-top:0.7rem"><p class="small">登録済みTOTPコードを入力してください。</p><input type="text" id="ad-mfa-code" inputmode="numeric" placeholder="123456" style="max-width:8rem" /> <button type="button" class="btn btn--primary" id="ad-mfa-verify">MFA確認</button></div><p class="small muted" id="ad-auth-status" aria-live="polite"></p>
+    <div id="ad-mfa-challenge" hidden style="margin-top:0.7rem"><p class="small">登録した認証アプリに表示されるコードを入力してください。</p><input type="text" id="ad-mfa-code" aria-label="ログイン用の認証コード" inputmode="numeric" placeholder="123456" style="max-width:8rem" /> <button type="button" class="btn btn--primary" id="ad-mfa-verify">認証コードを確認</button></div><p class="small muted" id="ad-auth-status" aria-live="polite"></p>
   </section>
 
   <div id="ad-main" hidden>
@@ -65,25 +65,25 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     <!-- ============ 収集候補 ============ -->
     <section class="section" data-panel="inbox" hidden>
       <h2 class="section-title">収集候補</h2>
-      <p class="small muted">自動収集された pending の候補です。自動掲載は行わず、既存フォームへプリフィルして管理者が保存します。</p>
+      <p class="small muted">収集した未審査の候補を確認できます。候補を編集フォームに取り込み、内容を確認して保存してください。</p>
       <div class="card" style="margin-bottom:0.8rem">
         <div style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:end">
           <label class="small">キーワード検索<br /><input type="search" id="inbox-filter-keyword" placeholder="タイトル・コード・収集元など" /></label>
-          <label class="small">掲載日From<br /><input type="date" id="inbox-filter-from" /></label>
-          <label class="small">掲載日To<br /><input type="date" id="inbox-filter-to" /></label>
-          <button type="button" class="btn" id="inbox-filter-clear">条件クリア</button>
+          <label class="small">掲載日の開始日<br /><input type="date" id="inbox-filter-from" /></label>
+          <label class="small">掲載日の終了日<br /><input type="date" id="inbox-filter-to" /></label>
+          <button type="button" class="btn" id="inbox-filter-clear">条件をすべて解除</button>
         </div>
         <div style="display:flex; gap:0.4rem; flex-wrap:wrap; align-items:center; margin-top:0.7rem">
           <button type="button" class="btn" id="inbox-select-visible">表示中の候補をすべて選択</button>
-          <button type="button" class="btn" id="inbox-select-clear">選択解除</button>
+          <button type="button" class="btn" id="inbox-select-clear">選択を解除</button>
           <button type="button" class="btn" id="inbox-bulk-reject">選択した候補を一括破棄</button>
-          <span class="small muted" id="inbox-filter-count">表示中 0件 / pending全体 0件</span>
+          <span class="small muted" id="inbox-filter-count">表示中 0件 / 未審査の全体 0件</span>
           <span class="small muted" id="inbox-selected-count">選択 0件</span>
         </div>
         <p class="small" id="inbox-bulk-status" aria-live="polite"></p>
       </div>
       <div id="inbox-list"></div>
-      <p class="empty-state" id="inbox-empty" hidden>収集候補はありません。</p>
+      <p class="empty-state" id="inbox-empty" hidden>未審査の収集候補はありません。銘柄や記事は管理メニューから追加できます。</p>
     </section>
 
     <!-- ============ 会社 ============ -->
@@ -100,8 +100,8 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
           </div>
           <label class="filter-check"><input type="checkbox" id="co-active" checked /> 有効</label>
           <div style="display:flex; gap:0.6rem; margin-top:0.6rem;">
-            <button type="button" class="btn btn--primary" id="co-save">保存</button>
-            <button type="button" class="btn" id="co-clear">クリア(新規)</button>
+            <button type="button" class="btn btn--primary" id="co-save">会社を保存</button>
+            <button type="button" class="btn" id="co-clear">新規入力に切り替え</button>
             <span class="small muted" id="co-status" aria-live="polite"></span>
           </div>
         </form>
@@ -125,13 +125,13 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
             <div class="form-row"><label for="ca-slug">スラッグ *(URL: /cases/スラッグ/)</label><input type="text" id="ca-slug" required placeholder="1234-company-name" pattern="[a-z0-9\-]+" /></div>
           </div>
           <div class="form-row"><label for="ca-summary">概要</label><textarea id="ca-summary" style="min-height:4.5rem"></textarea></div>
-          <div class="form-row"><label for="ca-tracking-reason">追跡のきっかけ（公開用。噂を確認済み報道と断定しない）</label><textarea id="ca-tracking-reason"></textarea></div>
+          <div class="form-row"><label for="ca-tracking-reason">追跡のきっかけ（公開用。噂と確認済み報道を区別）</label><textarea id="ca-tracking-reason"></textarea></div>
           <div class="editor-grid"><div class="form-row"><label for="ca-tracking-start">追跡開始日（不明なら空欄）</label><input type="date" id="ca-tracking-start"/></div><div class="form-row"><label for="ca-last-checked">最終確認日</label><input type="date" id="ca-last-checked"/></div></div>
           <div class="form-row"><label for="ca-verification">確認状況・未確認事項（公開用）</label><textarea id="ca-verification"></textarea></div>
           <TrackingEditor/>
           <div style="display:flex; gap:0.6rem; margin-top:0.6rem; flex-wrap:wrap;">
             <button type="button" class="btn btn--primary" id="ca-save">下書きを保存</button>
-            <button type="button" class="btn" id="ca-clear">クリア(新規)</button>
+            <button type="button" class="btn" id="ca-clear">新規入力に切り替え</button>
             <button type="button" class="btn" id="ca-preview">入力内容をプレビュー</button>
             <span class="small muted" id="ca-status-msg" aria-live="polite"></span>
           </div>
@@ -186,8 +186,8 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
           </div>
           <label class="filter-check"><input type="checkbox" id="ev-visible" /> 公開する(チェックなし=非公開)</label>
           <div style="display:flex; gap:0.6rem; margin-top:0.6rem; align-items:center; flex-wrap:wrap;">
-            <button type="button" class="btn btn--primary" id="ev-save">保存</button>
-            <button type="button" class="btn" id="ev-clear">クリア(新規)</button>
+            <button type="button" class="btn btn--primary" id="ev-save">出来事を保存</button>
+            <button type="button" class="btn" id="ev-clear">新規入力に切り替え</button>
             <span class="small muted" id="ev-status" aria-live="polite"></span>
           </div>
           <p class="small" id="ev-status-suggestion" aria-live="polite"></p>
@@ -224,8 +224,8 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
             <div class="form-row"><label for="pr-source">出典</label><input type="text" id="pr-source" placeholder="取引所公表値(手動登録)" /></div>
           </div>
           <div style="display:flex; gap:0.6rem; margin-top:0.6rem;">
-            <button type="button" class="btn btn--primary" id="pr-save">保存</button>
-            <button type="button" class="btn" id="pr-clear">クリア(新規)</button>
+            <button type="button" class="btn btn--primary" id="pr-save">株価を保存</button>
+            <button type="button" class="btn" id="pr-clear">新規入力に切り替え</button>
             <span class="small muted" id="pr-status" aria-live="polite"></span>
           </div>
         </form>
@@ -241,7 +241,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       <h2 class="section-title">訂正履歴の確認</h2>
       <p class="small muted">「訂正」イベントおよび訂正済み表示の付いた出来事の一覧(最終修正の新しい順)。</p>
       <div id="correction-list"></div>
-      <p class="empty-state" id="correction-empty" hidden>訂正履歴はありません。</p>
+      <p class="empty-state" id="correction-empty" hidden>訂正履歴はまだありません。掲載済みの出来事を訂正すると、ここに記録されます。</p>
     </section>
 
     <!-- ============ 公開処理 ============ -->
@@ -249,14 +249,14 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       <h2 class="section-title">公開処理</h2>
       <div class="card">
         <p class="small">
-          「公開処理を実行」を押すと Cloudflare Pages の Deploy Hook が呼び出され、
-          現在 Supabase に登録されている公開データ(is_visible = true)で静的サイトが再ビルドされます。
+          「公開処理を実行」を押すと、Cloudflare Pagesに再ビルドを依頼し、
+          Supabaseに保存した公開対象のデータでサイトを再ビルドします。
           記事は承認済みの公開版だけが使われます。反映まで数分かかります。
         </p>
         <p class="small muted">
           Deploy Hook URL は Supabase の <code>admin_settings</code> テーブル(key: <code>deploy_hook_url</code>)に登録します(docs/SETUP.md 参照)。
         </p>
-        <button type="button" class="btn btn--primary" id="publish-run">公開処理を実行(サイト再ビルド)</button>
+        <button type="button" class="btn btn--primary" id="publish-run">公開処理を実行（サイトを再ビルド）</button>
         <p class="small" id="publish-status" aria-live="polite"></p>
       </div>
     </section>
@@ -279,20 +279,20 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
     <!-- ============ セキュリティ ============ -->
     <section class="section" data-panel="security" hidden>
-      <h2 class="section-title">セキュリティ(Supabase MFA)</h2>
+      <h2 class="section-title">セキュリティ（2段階認証）</h2>
       <div class="card">
         <p class="small">
           Supabase Auth の TOTP(認証アプリ)を登録すると、DB側で aal2 セッションを必須化できます
           (supabase/migrations/0001_init.sql のコメント参照)。
         </p>
         <div id="mfa-status" class="small muted"></div>
-        <button type="button" class="btn" id="mfa-enroll">TOTPを新規登録</button>
+        <button type="button" class="btn" id="mfa-enroll">認証アプリを登録</button>
         <div id="mfa-enroll-panel" hidden style="margin-top:0.8rem">
           <p class="small">認証アプリでQRコードを読み取り、6桁のコードを入力してください。</p>
           <div id="mfa-qr"></div>
           <p class="small mono" id="mfa-secret"></p>
-          <input type="text" id="mfa-code" inputmode="numeric" placeholder="123456" style="max-width:8rem" />
-          <button type="button" class="btn btn--primary" id="mfa-verify">確認</button>
+          <input type="text" id="mfa-code" aria-label="登録用の認証コード" inputmode="numeric" placeholder="123456" style="max-width:8rem" />
+          <button type="button" class="btn btn--primary" id="mfa-verify">認証コードを確認</button>
           <p class="small" id="mfa-msg" aria-live="polite"></p>
         </div>
       </div>
@@ -451,7 +451,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     $('ad-email').textContent = user.email ?? '';
 
     const { data: aal, error: aalErr } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (aalErr) { $('ad-auth-status').textContent = `MFA状態の確認に失敗: ${aalErr.message}`; return; }
+    if (aalErr) { $('ad-auth-status').textContent = '2段階認証の状態を確認できませんでした。通信状況を確認してから、ページを再読み込みしてください。'; return; }
     if (aal?.currentLevel === 'aal1' && aal?.nextLevel === 'aal2') {
       const { data: factors } = await supabase.auth.mfa.listFactors();
       pendingMfaFactorId = factors?.totp?.find((f) => f.status === 'verified')?.id ?? null;
@@ -484,9 +484,9 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     if (!supabase || !pendingMfaFactorId) return;
     const code = $<HTMLInputElement>('ad-mfa-code').value.trim();
     const { data: ch, error: chErr } = await supabase.auth.mfa.challenge({ factorId: pendingMfaFactorId });
-    if (chErr || !ch) { $('ad-auth-status').textContent = `MFAチャレンジ作成に失敗: ${chErr?.message ?? ''}`; return; }
+    if (chErr || !ch) { $('ad-auth-status').textContent = '認証を開始できませんでした。通信状況を確認し、もう一度認証コードを送信してください。'; return; }
     const { error } = await supabase.auth.mfa.verify({ factorId: pendingMfaFactorId, challengeId: ch.id, code });
-    if (error) { $('ad-auth-status').textContent = `MFA確認に失敗: ${error.message}`; return; }
+    if (error) { $('ad-auth-status').textContent = '認証できませんでした。認証アプリに表示されている最新のコードで、もう一度お試しください。'; return; }
     location.reload();
   });
 
@@ -580,8 +580,8 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     const emptyState = inboxEmptyState(inboxItems.length, filteredInboxItems.length);
     const emptyEl = $('inbox-empty');
     emptyEl.hidden = emptyState === 'none';
-    emptyEl.textContent = emptyState === 'no-filter-results' ? '条件に一致する収集候補はありません。' : '収集候補はありません。';
-    $('inbox-filter-count').textContent = `表示中 ${filteredInboxItems.length}件 / pending全体 ${inboxItems.length}件`;
+    emptyEl.textContent = emptyState === 'no-filter-results' ? '条件に一致する収集候補はありません。検索条件を変えるか、解除してください。' : '未審査の収集候補はありません。銘柄や記事は管理メニューから追加できます。';
+    $('inbox-filter-count').textContent = `表示中 ${filteredInboxItems.length}件 / 未審査の全体 ${inboxItems.length}件`;
     $('inbox-list').innerHTML = filteredInboxItems.map((item) => {
       const matched = cases.find((c) => c.id === item.matched_case_id);
       const raw = item.raw ?? {};
@@ -742,7 +742,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   // ---------------- 会社 ----------------
   async function loadCompanies() {
     const { data, error } = await supabase!.from('companies').select('*').order('security_code');
-    if (error) $('co-status').textContent = `読込エラー: ${error.message}`;
+    if (error) $('co-status').textContent = '読み込めませんでした。通信状況と管理者のログイン状態を確認してから、再読み込みしてください。';
     companies = data ?? [];
   }
 
@@ -798,7 +798,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       .from('cases')
       .select('*')
       .order('updated_at', { ascending: false });
-    if (error) $('ca-status-msg').textContent = `読込エラー: ${error.message}`;
+    if (error) $('ca-status-msg').textContent = '読み込めませんでした。通信状況と管理者のログイン状態を確認してから、再読み込みしてください。';
     cases = data ?? [];
     const editions = await supabase!.from('tracking_editions').select('*');
     if(editions.error)throw new Error(`分類の読込エラー: ${editions.error.message}`);
@@ -861,7 +861,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       .select('*')
       .eq('case_id', caseId)
       .order('occurred_at');
-    if (error) $('ev-status').textContent = `読込エラー: ${error.message}`;
+    if (error) $('ev-status').textContent = '読み込めませんでした。通信状況と管理者のログイン状態を確認してから、再読み込みしてください。';
     events = data ?? [];
     renderEventTable();
   }
@@ -961,7 +961,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       ? supabase!.from('case_events').update(row).eq('id', id).select('id').single()
       : supabase!.from('case_events').insert(row).select('id').single();
     const { data: savedEvent, error } = await q;
-    $('ev-status').textContent = error ? `保存エラー: ${error.message}` : '保存しました';
+    $('ev-status').textContent = error ? '保存できませんでした。入力内容を控え、通信状況と管理者のログイン状態を確認してから、もう一度保存してください。' : '保存しました';
     updateEventStatusSuggestion();
     if (!error) {
       if (savedEvent?.id) $<HTMLInputElement>('ev-id').value = savedEvent.id;
@@ -1021,7 +1021,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       .select('*')
       .eq('case_id', caseId)
       .order('price_date', { ascending: false });
-    if (error) $('pr-status').textContent = `読込エラー: ${error.message}`;
+    if (error) $('pr-status').textContent = '読み込めませんでした。通信状況と管理者のログイン状態を確認してから、再読み込みしてください。';
     prices = data ?? [];
     renderPriceTable();
   }
@@ -1074,7 +1074,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
         .eq('price_type', 'daily_close')
         .eq('price_date', row.price_date);
       if (duplicateError) {
-        $('pr-status').textContent = `重複確認エラー: ${duplicateError.message}`;
+        $('pr-status').textContent = '同じ基準日の株価が登録済みか確認できませんでした。通信状況を確認してから、もう一度保存してください。';
         return;
       }
       if (hasDailyCloseConflict(duplicateRows ?? [], id || null)) {
@@ -1086,7 +1086,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       ? supabase!.from('price_snapshots').update(row).eq('id', id)
       : supabase!.from('price_snapshots').insert(row);
     const { error } = await q;
-    $('pr-status').textContent = error ? `保存エラー: ${error.message}` : '保存しました';
+    $('pr-status').textContent = error ? '保存できませんでした。入力内容を控え、通信状況と管理者のログイン状態を確認してから、もう一度保存してください。' : '保存しました';
     if (!error) await loadPrices();
   });
 
@@ -1261,7 +1261,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       statusEl.textContent =
         '公開処理を要求しました。Cloudflare Pages のビルドが完了するまで数分お待ちください。';
     } catch (err) {
-      statusEl.textContent = `公開処理の要求に失敗しました: ${String(err)}`;
+      statusEl.textContent = '再ビルドの依頼結果を確認できませんでした。再実行する前にCloudflare Pagesでビルド状況を確認してください。';
     }
   });
 
@@ -1281,7 +1281,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     if (!supabase) return;
     const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
     if (error || !data) {
-      $('mfa-msg').textContent = `登録開始に失敗しました: ${error?.message ?? ''}`;
+      $('mfa-msg').textContent = '認証アプリの登録を開始できませんでした。ログイン状態を確認してから、もう一度お試しください。';
       $('mfa-enroll-panel').hidden = false;
       return;
     }
@@ -1298,7 +1298,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       factorId: enrollFactorId,
     });
     if (chErr || !challenge) {
-      $('mfa-msg').textContent = `チャレンジ作成に失敗: ${chErr?.message ?? ''}`;
+      $('mfa-msg').textContent = '認証を開始できませんでした。通信状況を確認し、もう一度認証コードを送信してください。';
       return;
     }
     const { error } = await supabase.auth.mfa.verify({
@@ -1307,7 +1307,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       code,
     });
     $('mfa-msg').textContent = error
-      ? `確認に失敗しました: ${error.message}`
+      ? '認証できませんでした。認証アプリに表示されている最新のコードで、もう一度お試しください。'
       : 'TOTPを登録しました。次回ログインからMFAが要求されます。';
     if (!error) refreshMfaStatus();
   });
