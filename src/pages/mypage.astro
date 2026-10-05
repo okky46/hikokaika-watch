@@ -15,7 +15,7 @@ const statusMap = Object.fromEntries(
 >
   <h1>マイページ</h1>
   <p class="small muted">
-    お気に入り・メモは公開されません。
+    お気に入りとメモを、ご本人だけが使える場所にまとめています。
   </p>
 
   <div id="mp-unavailable" class="notice" hidden>
@@ -60,15 +60,15 @@ const statusMap = Object.fromEntries(
       <h2 class="section-title">銘柄ごとのメモ</h2>
       <p class="small muted">メモは銘柄の詳細ページで編集できます。次のチェック日が早い順に並びます。</p>
       <div id="mp-notes"></div>
-      <p class="empty-state" id="mp-notes-empty" hidden>銘柄ごとのメモはまだありません。</p>
+      <p class="empty-state" id="mp-notes-empty" hidden>銘柄ごとのメモはまだありません。気になる銘柄の詳細ページで「自分のメモ」を保存すると、ここに表示されます。</p>
     </section>
 
     <section class="section" aria-label="全体メモ">
       <h2 class="section-title">全体メモ</h2>
       <div class="card">
-        <textarea id="mp-global-note" maxlength="1000" placeholder="自分専用の全体メモ"></textarea>
+        <textarea id="mp-global-note" maxlength="1000" aria-label="全体メモ" placeholder="自分専用の全体メモ"></textarea>
         <div style="display:flex; gap:0.6rem; align-items:center; margin-top:0.5rem;">
-          <button type="button" class="btn btn--primary" id="mp-global-save">保存</button>
+          <button type="button" class="btn btn--primary" id="mp-global-save">全体メモを保存</button>
           <span class="small muted" id="mp-global-count">0 / 1,000文字</span><span class="small muted" id="mp-global-status" aria-live="polite"></span>
         </div>
       </div>
@@ -261,7 +261,7 @@ const statusMap = Object.fromEntries(
       provider: 'google',
       options: { redirectTo: `${location.origin}/mypage/` },
     });
-    if (error) authStatus.textContent = `ログインに失敗しました: ${error.message}`;
+    if (error) authStatus.textContent = 'ログインできませんでした。通信状況を確認してから、もう一度「Googleでログイン」を選んでください。';
   });
 
   $('mp-logout')?.addEventListener('click', async () => {
@@ -306,14 +306,14 @@ const statusMap = Object.fromEntries(
 
   $('mp-global-save')?.addEventListener('click', async () => {
     if (!supabase || !userId) return;
-    if (globalNote.value.length > 1000) { globalStatus.textContent = '1,000文字を超えるメモは保存できません'; return; }
+    if (globalNote.value.length > 1000) { globalStatus.textContent = 'メモは1,000文字以内で入力してください。'; return; }
     const btn = $('mp-global-save') as HTMLButtonElement;
     btn.disabled = true;
     globalStatus.textContent = '保存中…';
     const { error } = await supabase
       .from('user_global_notes')
       .upsert({ user_id: userId, body: globalNote.value });
-    globalStatus.textContent = error ? `保存に失敗しました: ${error.message}` : '保存しました';
+    globalStatus.textContent = error ? '全体メモを保存できませんでした。入力内容を控え、通信状況とログイン状態を確認してから、もう一度保存してください。' : '保存しました';
     btn.disabled = false;
   });
 

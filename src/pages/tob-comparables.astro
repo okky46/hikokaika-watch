@@ -13,7 +13,7 @@ const industries=[...new Set(comparables.map(c=>c.industry))].sort();
 ---
 <Base title="過去のTOB事例と倍率" description="公表資料に基づく過去のTOBの倍率と価格の経緯。対象期・算定根拠・出典を確認できます。" path="/tob-comparables/">
   <h1>過去のTOB事例と倍率</h1>
-  <p>過去の案件について、公表資料の倍率と当サイトで計算した倍率を区別して掲載します。業種が同じでも、成長率・財務構成・取引条件は異なります。</p>
+  <p>過去の案件について、公表資料に記載された倍率と当サイトで計算した倍率を区別して掲載しています。比較する際は、業種に加えて成長率・財務構成・取引条件もご確認ください。</p>
   {isSampleData&&<p class="notice">ここに掲載する案件・数値は、動作確認用の架空のサンプルです。</p>}
   <p><a href="/">銘柄を選んで株価・倍率を試算する</a></p>
   <div class="card tob-controls" id="tob-list">
@@ -22,14 +22,14 @@ const industries=[...new Set(comparables.map(c=>c.industry))].sort();
   </div>
   <p id="tob-count" aria-live="polite">{comparables.length}案件</p>
   <p class="small muted tob-scroll-hint" id="tob-scroll-hint">表は横にスクロールできます。銘柄名は左に固定されます。</p>
-  <div class="tob-table" id="tob-comparison" data-metric-mode="all" role="region" aria-label="過去案件の価格と取引倍率" aria-describedby="tob-scroll-hint" tabindex="0"><table><caption>過去案件の価格と取引倍率</caption><thead><tr><th scope="col">銘柄・公表日</th><th scope="col" class="tob-context">業種</th><th scope="col" class="tob-context">価格段階・価格</th>{Object.entries(METRICS).map(([key,label])=><th scope="col" data-metric-column={key}>{label}</th>)}</tr></thead><tbody>{comparables.map((c,index)=><tr data-tob-industry={c.industry} data-tob-row><th scope="row"><a href={`#${c.research?'deal-'+c.research.dealId:'legacy-'+index}`}>{c.name}（{c.code}）</a><span class="tob-date">{c.announcedOn}</span><span class="tob-mobile-context small">{c.industry}<br/>{c.priceStage} {fmt(c.offerPrice)}{c.priceUnit??'円'}</span></th><td class="tob-context">{c.industry}</td><td class="tob-context">{c.priceStage}<br/>{fmt(c.offerPrice)}{c.priceUnit??'円'}</td>{(['per','pbr','evEbitda'] as Metric[]).map(k=><td data-metric-column={k}>{c.multiples[k]?<><strong>{fmt(c.multiples[k]!.value)}倍</strong><br/><span class="small">{basisLabel(c.multiples[k]!.basis)}</span></>:'未登録'}</td>)}</tr>)}</tbody></table></div>
+  <div class="tob-table" id="tob-comparison" data-metric-mode="all" role="region" aria-label="過去案件の価格と取引倍率" aria-describedby="tob-scroll-hint" tabindex="0"><table><caption>過去案件の価格と取引倍率</caption><thead><tr><th scope="col">銘柄・公表日</th><th scope="col" class="tob-context">業種</th><th scope="col" class="tob-context">価格の段階・金額</th>{Object.entries(METRICS).map(([key,label])=><th scope="col" data-metric-column={key}>{label}</th>)}</tr></thead><tbody>{comparables.map((c,index)=><tr data-tob-industry={c.industry} data-tob-row><th scope="row"><a href={`#${c.research?'deal-'+c.research.dealId:'legacy-'+index}`}>{c.name}（{c.code}）</a><span class="tob-date">{c.announcedOn}</span><span class="tob-mobile-context small">{c.industry}<br/>{c.priceStage} {fmt(c.offerPrice)}{c.priceUnit??'円'}</span></th><td class="tob-context">{c.industry}</td><td class="tob-context">{c.priceStage}<br/>{fmt(c.offerPrice)}{c.priceUnit??'円'}</td>{(['per','pbr','evEbitda'] as Metric[]).map(k=><td data-metric-column={k}>{c.multiples[k]?<><strong>{fmt(c.multiples[k]!.value)}倍</strong><br/><span class="small">{basisLabel(c.multiples[k]!.basis)}</span></>:'未登録'}</td>)}</tr>)}</tbody></table></div>
   {industries.map(i=><section data-tob-industry={i}><ComparableStatistics records={comparables} industry={i}/></section>)}
   {comparables.length===0&&<p class="empty-state">出典を確認した事例を順次掲載します。</p>}
   {comparables.map((c,index)=><article class="card section" data-tob-industry={c.industry} id={c.research?'deal-'+c.research.dealId:'legacy-'+index}>
     <h2>{c.name}（{c.code}）</h2>
     <p>{c.industry} ／ {c.announcedOn}公表 ／ 確認日 {c.checkedOn}</p>
     <p><strong>{c.priceStage}：{fmt(c.offerPrice)}{c.priceUnit??'円'}</strong> ／ <a href={c.sourceUrl} target="_blank" rel="noopener noreferrer">公表資料</a></p>
-    <dl>{Object.entries(c.multiples).map(([key,m])=><div><dt><strong>{METRICS[key as Metric]} {fmt(m.value)}倍</strong></dt><dd><p>{basisLabel(m.basis)}・{m.period} ／ {m.method==='disclosed'?'資料記載の倍率':'当サイトで計算'}</p><p>{m.calculation}</p><a href={m.sourceUrl} target="_blank" rel="noopener noreferrer">倍率の出典</a></dd></div>)}</dl>
+    <dl>{Object.entries(c.multiples).map(([key,m])=><div><dt><strong>{METRICS[key as Metric]} {fmt(m.value)}倍</strong></dt><dd><p>{basisLabel(m.basis)}・{m.period} ／ {m.method==='disclosed'?'資料に記載された倍率':'当サイトで計算'}</p><p>{m.calculation}</p><a href={m.sourceUrl} target="_blank" rel="noopener noreferrer">倍率の出典</a></dd></div>)}</dl>
     <ComparableEvidence record={c}/>
     <h3>価格・算定の経緯</h3>
     {c.history.length?<ol>{c.history.map(h=><li><strong>{h.date}：{fmt(h.price)}円</strong><p>{h.note}</p><a href={h.sourceUrl} target="_blank" rel="noopener noreferrer">出典</a></li>)}</ol>:<p>価格の変更・算定の経緯は未登録です。</p>}

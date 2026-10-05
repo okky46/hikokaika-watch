@@ -21,7 +21,7 @@ export const CASE_STATUS: Record<CaseStatus, StatusDef> = {
     mark: '◇',
     tone: 'watch',
     preAnnouncement: true,
-    description: '噂・市場観測などをきっかけに追跡中。報道の存在や非公開化の裏付けを示すものではありません',
+    description: '噂や市場観測をきっかけに追跡しています。報道の有無と確認できた根拠は、銘柄の詳細で確認できます',
   },
   commented: {
     label: '会社コメントあり',

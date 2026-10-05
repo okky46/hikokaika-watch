@@ -1,7 +1,7 @@
 <section class="section" data-panel="articles" hidden>
   <h2 class="section-title">調査記事</h2>
-  <p class="small muted">噂だけの銘柄は「追跡銘柄」から登録してください。記事は公表資料などで確認できた事実を整理します。下書きの保存だけでは公開版は変わりません。</p>
-  <div class="stock-links"><button type="button" class="btn" id="ar-new">新規記事</button><button type="button" class="btn" id="ar-reload">一覧を再読込</button><button type="button" class="btn" id="ar-check">このサイトへの公開反映を確認</button></div>
+  <p class="small muted">記事では、公表資料などで確認できた事実を整理します。噂段階の銘柄は、記事を作成せず「追跡銘柄」から登録できます。下書きは公開版と分けて保存します。</p>
+  <div class="stock-links"><button type="button" class="btn" id="ar-new">記事を作成</button><button type="button" class="btn" id="ar-reload">一覧を再読み込み</button><button type="button" class="btn" id="ar-check">このサイトへの公開反映を確認</button></div>
   <p class="small" id="ar-list-status" aria-live="polite"></p>
   <div id="ar-list" class="article-list"></div>
   <form class="card section" id="article-form" onsubmit="return false">
@@ -13,13 +13,13 @@
     </div>
     <div class="form-row"><label for="ar-summary">要約</label><textarea id="ar-summary" rows="2"></textarea></div>
     <div class="form-row"><label for="ar-confirmed_facts">確認できた事実（公開時必須）</label><textarea id="ar-confirmed_facts"></textarea></div>
-    <div class="form-row"><label for="ar-body">経緯・整理</label><textarea id="ar-body"></textarea></div>
+    <div class="form-row"><label for="ar-body">これまでの経緯</label><textarea id="ar-body"></textarea></div>
     <div class="editor-grid">
-      <div class="form-row"><label for="ar-interpretation">編集上の解釈</label><textarea id="ar-interpretation"></textarea></div>
+      <div class="form-row"><label for="ar-interpretation">当サイトの見方</label><textarea id="ar-interpretation"></textarea></div>
       <div class="form-row"><label for="ar-unknowns">未確認事項</label><textarea id="ar-unknowns"></textarea></div>
     </div>
-    <p class="small muted">本文はプレーンテキストとして表示します。HTMLは実行されません。未読の有料記事の内容や、非公開化の実現を断定しないでください。</p>
-    <fieldset><legend>出典</legend><p class="small muted">名前・URL・日付を個別に入力します。記号や改行のエスケープ操作は不要です。</p><div id="ar-sources"></div><button type="button" class="btn" id="ar-source-add">出典を追加</button></fieldset>
+    <p class="small muted">本文は入力した文字をそのまま表示します。HTMLによる装飾は使えません。確認できた事実と未確認事項を分け、有料記事は実際に閲覧した範囲を明記してください。</p>
+    <fieldset><legend>出典</legend><p class="small muted">出典名・URL・日付を、それぞれの欄に入力してください。記号や改行もそのまま使えます。</p><div id="ar-sources"></div><button type="button" class="btn" id="ar-source-add">出典を追加</button></fieldset>
     <p class="small muted">出典URLは通常の英数字ドメインまたはIPアドレスに対応しています。国際化ドメイン（日本語ドメイン等）は未対応です。</p>
     <fieldset><legend>関連銘柄（複数選択可）</legend><p class="small muted">会社単位の関連付けです。同じ会社の各追跡ページに関連記事として表示します。</p><div id="ar-companies" class="editor-grid"></div><button type="button" class="btn" data-create-company="articles">会社を追加してこの記事へ戻る</button></fieldset>
     <div class="form-row"><label for="ar-correction_note">訂正履歴（前の履歴を残して追記）</label><textarea id="ar-correction_note" rows="2"></textarea></div>
@@ -35,11 +35,11 @@
       <button type="button" class="btn" id="ar-confirm-cancel">キャンセル</button>
     </div>
     <p class="small" id="ar-status" aria-live="polite"></p>
-    <p class="small muted">承認後は「公開処理」タブから再ビルドしてください。非公開への変更も再ビルド完了まで既存ページに残ります。関連銘柄の追跡ページは残ります。</p>
+    <p class="small muted">承認後は「公開処理」でサイトを再ビルドすると反映されます。非公開に戻す場合も再ビルドが必要です。記事の公開設定を変えても、関連銘柄の追跡ページは残ります。</p>
     <div id="ar-preview-body" class="card article-body" hidden></div>
   </form>
   <details class="section card"><summary>ChatGPT／Codexで作成したドラフトを取り込む</summary>
-    <p class="small">docs/RESEARCH_WORKFLOW.md のJSON形式を貼り付けます。入力欄への取込だけでは保存・公開されません。未登録の会社は先に会社タブで登録してください。</p>
+    <p class="small">docs/RESEARCH_WORKFLOW.mdに記載した形式のJSONを貼り付け、取り込み後に内容を確認して下書きを保存してください。関連付ける会社が未登録の場合は、先に「会社」で登録します。</p>
     <label for="ar-import">ドラフトJSON</label><textarea id="ar-import"></textarea>
     <button type="button" class="btn" id="ar-import-run">新規記事の入力欄に取り込む</button>
   </details>

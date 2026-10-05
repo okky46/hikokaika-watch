@@ -16,7 +16,7 @@ assert.match(read('companies/0001/index.html'),/計算に使う財務数値/);
 assert.match(read('tob-comparables/index.html'),/価格・算定の経緯/);
 assert.match(read('sitemap.xml'),/tob-comparables/);
 assert.ok(!fs.existsSync('dist/articles/unpublished-secret'));
-assert.match(read('cases/999z-tracking/index.html'),/公開されている出来事はまだありません/);
+assert.match(read('cases/999z-tracking/index.html'),/この銘柄の出来事はまだ掲載していません/);
 assert.match(read('cases/999z-tracking/index.html'),/噂段階/);
 assert.match(read('cases/999z-tracking/index.html'),/報道なし/);
 assert.ok(!files.some(f=>/local-admin-check|__adminCheckClient/.test(f)), 'local test harness must not ship');

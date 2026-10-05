@@ -26,11 +26,11 @@ const description = `${company.nameJa}（証券コード${company.securityCode}�
   <header class="case-head">
     <p class="case-head__company"><span class="mono">{company.securityCode}</span>{company.market && <span> / {company.market}</span>}{company.industry && <span> / {company.industry}</span>}</p>
     <h1>{company.nameJa}</h1>
-    <p class="muted">この企業の案件と関連記事をまとめています。各案件の詳しい経過は、下のリンクから確認できます。</p>
+    <p class="muted">この企業の案件と関連記事をまとめています。案件名を選ぶと、現在の状況や詳しい経過を確認できます。</p>
   </header>
   <section class="section">
     <h2 class="section-title">この企業の案件</h2>
-    {company.cases.length === 0 ? <p class="empty-state">公開中の案件はありません。</p> : (
+    {company.cases.length === 0 ? <p class="empty-state">この企業の案件はまだ掲載していません。調査記事がある場合は「関連記事」に表示します。</p> : (
       <div class="company-cases">
         {company.cases.map((c) => <article class="card company-case">
           <h3><a class="research-title" href={`/cases/${c.slug}/`}><span>{c.companyName}の状況・経過を見る{company.cases.length>1 && `：${c.title}`}</span><span aria-hidden="true">→</span></a></h3>

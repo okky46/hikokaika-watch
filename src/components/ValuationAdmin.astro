@@ -4,10 +4,10 @@ import {FIELDS,METRICS} from '../lib/valuation';
 <section class="section" data-panel="valuations" hidden id="va-editor">
   <h2>財務数値・TOB比較事例</h2>
   <p>EDINETから取得した数値は原資料で確認してください。下書き保存後に公開対象へ設定し、「公開処理」でサイトを再ビルドすると反映されます。</p>
-  <div class="stock-links"><button type="button" class="btn" id="va-reload">一覧を再読込</button><button type="button" class="btn" id="va-new-financials">財務数値を新規作成</button><button type="button" class="btn" id="va-new-comparable">TOB事例を新規作成</button></div>
+  <div class="stock-links"><button type="button" class="btn" id="va-reload">一覧を再読み込み</button><button type="button" class="btn" id="va-new-financials">財務数値を新規作成</button><button type="button" class="btn" id="va-new-comparable">TOB事例を新規作成</button></div>
   <label>保存済みデータ<select id="va-list"><option value="">新規作成</option></select></label>
   <p id="va-status" aria-live="polite"></p>
-  <details class="card"><summary>EDINET取得結果・編集済みJSONを取り込む</summary><p>APIキーを含まない財務データのJSONファイルを指定してください。読み込んだ内容はまだ保存されません。</p><input type="file" id="va-import" accept="application/json,.json" aria-label="財務データのJSONファイル"/></details>
+  <details class="card"><summary>EDINET取得結果・編集済みJSONを取り込む</summary><p>APIキーを含まない財務データのJSONファイルを指定してください。取り込み後に内容を確認し、下書きを保存してください。</p><input type="file" id="va-import" accept="application/json,.json" aria-label="財務データのJSONファイル"/></details>
   <details class="card section"><summary>EDINETの財務下書き・TOB調査をまとめて取り込む</summary>
     <p>EDINET準備コマンドの出力、またはrecords配列を持つJSONを指定してください。公開対象への設定は下書き保存と分けて行います。</p>
     <input type="file" id="va-batch-import" accept="application/json,.json" aria-label="一括取込のJSONファイル"/>
@@ -46,7 +46,7 @@ import {FIELDS,METRICS} from '../lib/valuation';
   </form>
   <section class="card section" data-va-ev-preview aria-label="保存前のEV試算">
     <h3>入力した財務数値でEV/EBITDAを試す</h3>
-    <p class="small">金額は円、株式数は株です。上の5項目を有効にして入力してください。残高と株式数は同じ基準日、全項目は同じ連結・単体の範囲にそろえます。調整しない場合も、確認して調整額0を入力します。</p>
+    <p class="small">金額は円、株式数は株です。財務数値の5項目を有効にして入力してください。残高と株式数は同じ基準日、全項目は同じ連結・単体の範囲にそろえます。調整しない場合も、確認して調整額0を入力します。</p>
     <div class="va-grid">
       <label>確認用の株価（円）<input data-va-ev-price type="number" min="0.0001" step="any" inputmode="decimal"/></label>
       <label>確認用のEV/EBITDA倍率（倍）<input data-va-ev-multiple type="number" min="0.0001" max="10000" step="any" inputmode="decimal"/></label>
