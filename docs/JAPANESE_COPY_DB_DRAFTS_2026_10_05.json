@@ -1,7 +1,9 @@
 {
-  "status": "review_only_not_applied",
+  "status": "applied_and_verified_in_production",
   "reviewedOn": "2026-10-05",
-  "instructions": "公開画面の文章を基にした改稿案。DB未反映。保存前に管理画面で最新の公開版・下書きと照合する。以下の一致する文章だけを置き換え、ID、出典、確認日、数値、公開状態、その他の内容は保持する。原文が変わっている場合は自動適用しない。",
+  "appliedOn": "2026-10-05",
+  "deployment": {"id":"85551700-7841-41a9-b87e-f974e3eb89b8","commit":"de1966577040a58224ebd8e108df1a738d38a2d6","publishedAt":"2026-10-05T11:55:33.957993Z"},
+  "instructions": "ユーザー承認後、既存管理画面で原文一致を確認して適用済み。4記事17か所と7銘柄の状況説明を下書き保存・読み戻し照合・公開承認し、再ビルド後の全11ページで確認した。以下のbefore/afterは適用履歴であり、再適用用スクリプトではない。ID、出典、情報確認日、数値、分類、色設定、関連銘柄と対象外の入力項目を保持した。",
   "articles": [
     {
       "path": "/articles/6058-shareholder-sale-reports-20261003/",
