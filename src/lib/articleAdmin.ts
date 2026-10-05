@@ -46,7 +46,7 @@ export function setupArticleAdmin(supabase: SupabaseClient) {
   element('ar-source-add').addEventListener('click',()=>{if(busy)return;addSource();markDirty();});
   async function refreshCompanies() {
     const {data,error}=await supabase.from('companies').select('id,security_code,name_ja,is_active').order('security_code');
-    if(error){element('ar-list-status').textContent='関連銘柄の更新に失敗: '+error.message;return false;}
+    if(error){element('ar-list-status').textContent='関連銘柄を読み込めませんでした。通信状況と管理者のログイン状態を確認してから、一覧を再読み込みしてください。';return false;}
     const ids=companyIds();companies=data as Company[];renderCompanies(ids);buttons();return true;
   }
   function selectCompany(id:string){const ids=[...new Set([...companyIds(),id])];renderCompanies(ids);markDirty();}
@@ -71,7 +71,7 @@ export function setupArticleAdmin(supabase: SupabaseClient) {
   }
   function renderList() {
     const container=element('ar-list');container.replaceChildren();
-    if(!rows.length) {container.textContent='保存した記事はまだありません。';return;}
+    if(!rows.length) {container.textContent='保存した記事はまだありません。「記事を作成」から下書きを作成できます。';return;}
     for(const row of rows) {
       const div=document.createElement('div');div.className='card';
       const button=document.createElement('button');button.type='button';button.className='btn';button.textContent=row.draft.title || row.slug;
@@ -83,20 +83,20 @@ export function setupArticleAdmin(supabase: SupabaseClient) {
   }
   async function reload() {
     const [a,c,l]=await Promise.all([supabase.from('articles').select('*').order('updated_at',{ascending:false}),supabase.from('companies').select('id,security_code,name_ja,is_active').order('security_code'),supabase.from('article_companies').select('*')]);
-    if(a.error||c.error||l.error) {element('ar-list-status').textContent=`記事の読込に失敗しました。0007適用状況と管理者権限を確認してください: ${(a.error||c.error||l.error)?.message}`;return false;}
+    if(a.error||c.error||l.error) {element('ar-list-status').textContent='記事を読み込めませんでした。通信状況、管理者のログイン状態、DBの自動更新結果を確認してから、一覧を再読み込みしてください。';return false;}
     rows=a.data as EditorArticle[];companies=c.data as Company[];links=l.data ?? [];renderList();
     element('ar-list-status').textContent=`保存済み ${rows.length}件（下書きを含む）`;
     renderCompanies(companyIds());return true;
   }
   element('article-form').addEventListener('input',markDirty);
   element('ar-new').addEventListener('click',()=>{if(discard()){fill(null);message('新規記事です。');}});
-  element('ar-reload').addEventListener('click',()=>{if(discard())void task(async()=>{if(await reload()){fill(null);message('一覧を再読込しました。編集する記事を選択してください。');}});});
+  element('ar-reload').addEventListener('click',()=>{if(discard())void task(async()=>{if(await reload()){fill(null);message('一覧を再読み込みしました。編集する記事を選択してください。');}});});
   element('ar-save').addEventListener('click',()=>void task(async()=>{
     if(!(element('article-form') as HTMLFormElement).reportValidity())return;
     const payload=read();
     const {data,error}=await supabase.rpc('save_article_draft',{article_id:selected?.id??null,article_slug:value('slug').value.trim(),payload,company_ids:companyIds(),expected_revision:selected?.revision??null});
     if(error)throw new Error(error.message);
-    // 更新成功後の再読込が失敗しても、新規INSERTを二重送信しない。
+    // 更新成功後の再読み込みが失敗しても、新規INSERTを二重送信しない。
     selected={...(selected??{}),id:data.id,revision:data.revision,slug:value('slug').value.trim(),draft:payload} as EditorArticle;
     dirty=false;
     if(await reload()) {const row=rows.find(r=>r.id===data.id)!;fill(row,row.draft,links.filter(l=>l.article_id===row.id&&l.edition==='draft').map(l=>l.company_id));}
@@ -117,6 +117,7 @@ export function setupArticleAdmin(supabase: SupabaseClient) {
     try { if(makePublic)parseArticleContent(selected.draft,true); }
     catch(e){message(e instanceof Error?e.message:String(e));return;}
     pendingPublication=makePublic;
+    element('ar-confirm-apply').textContent=makePublic?'この記事の公開を承認':'この記事を非公開に戻す';
     element('ar-confirm-text').textContent=makePublic ? `「${selected.draft.title}」の保存済み本文・出典・関連銘柄を公開版にします。内容を確認して実行してください。反映には再ビルドが必要です。` : `「${selected.draft.title}」を非公開に戻します。再ビルド完了までは既存ページが残ります。`;
     element('ar-confirm').hidden=false;
   }
@@ -129,13 +130,13 @@ export function setupArticleAdmin(supabase: SupabaseClient) {
     void task(()=>publish(next));
   });
   element('ar-preview').addEventListener('click',()=>{
-    try {const c=read();const panel=element('ar-preview-body');panel.textContent=[c.title,c.summary,'確認できた事実',c.confirmed_facts,c.body,'編集上の解釈',c.interpretation,'未確認事項',c.unknowns,'出典',...c.sources.map(s=>`${s.name} ${s.url}`),'訂正履歴',c.correction_note].join('\n\n');panel.hidden=false;}catch(e){message(String(e));}
+    try {const c=read();const panel=element('ar-preview-body');panel.textContent=[c.title,c.summary,'確認できた事実',c.confirmed_facts,c.body,'当サイトの見方',c.interpretation,'未確認事項',c.unknowns,'出典',...c.sources.map(s=>`${s.name} ${s.url}`),'訂正履歴',c.correction_note].join('\n\n');panel.hidden=false;}catch(e){message(String(e));}
   });
   element('ar-import-run').addEventListener('click',()=>{
     try {
       if(!discard())return;const draft=parseResearchDraft(JSON.parse(value('import').value));
       const missing=draft.company_codes.filter(code=>!companies.some(c=>c.security_code===code));if(missing.length)throw new Error(`先に会社を登録してください: ${missing.join(', ')}`);
-      if(rows.some(r=>r.slug===draft.slug))throw new Error('同じslugの記事があります。一覧から既存記事を開いてください');
+      if(rows.some(r=>r.slug===draft.slug))throw new Error('同じURLの記事が登録されています。一覧から既存の記事を開いてください。');
       fill(null,draft.content,companies.filter(c=>draft.company_codes.includes(c.security_code)).map(c=>c.id));value('slug').value=draft.slug;dirty=true;buttons();message('入力欄に取り込みました。内容を確認して下書きを保存してください。');
     }catch(e){message(e instanceof Error?e.message:String(e));}
   });

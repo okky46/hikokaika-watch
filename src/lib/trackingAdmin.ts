@@ -24,7 +24,7 @@ export function setupTrackingAdmin(db:SupabaseClient,options:Options) {
   function markDirty(){dirty=true;pending=null;el('tp-confirm').hidden=true;buttons();}
   const discard=()=>!dirty||confirm('保存していない銘柄の入力を破棄しますか？');
   async function task(action:()=>Promise<void>){if(busy)return;busy=true;buttons();try{await action();}catch(e){message(e instanceof Error?e.message:String(e));}finally{busy=false;buttons();}}
-  async function loadMedia(){const r=await db.from('media_outlets').select('*').order('name');if(r.error)throw new Error(`媒体の読込に失敗: ${r.error.message}`);media=r.data;}
+  async function loadMedia(){const r=await db.from('media_outlets').select('*').order('name');if(r.error)throw new Error(`媒体の読み込みに失敗: ${r.error.message}`);media=r.data;}
   async function readEvents(id:string){const r=await db.from('case_events').select('*').eq('case_id',id);if(r.error)throw new Error(r.error.message);return r.data as RawEvent[];}
   const eventOptions=()=>events.map(e=>({id:e.id,label:`${publicEventDate(e).label} ${e.title}${e.is_visible?'':'（非公開）'}`}));
   function select(key:string,label:string,values:{id:string;label:string}[],value:string,optional=false) {
@@ -104,7 +104,7 @@ export function setupTrackingAdmin(db:SupabaseClient,options:Options) {
     edition={...(edition??{published:null,publication_version:null,published_at:null}),case_id:r.data.id,draft:p,revision:r.data.revision};dirty=false;input('ca-id').value=current.id;
     await options.afterSave(current.id,false);message('下書きを保存しました。内容をプレビューし、公開を承認してください。');
   }));
-  function request(on:boolean){if(busy||dirty||!current)return;try{if(on){const p=read(true);validateProfileReferences(p,current,events,media);diff(p);}pending=on;el('tp-confirm-text').textContent=on?`「${options.companies().find(c=>c.id===input('ca-company').value)?.name_ja ?? '会社未選択'}」の保存済み分類・説明・日付を公開版にします。反映には再ビルドが必要です。`:'銘柄を非公開に戻します。メモや記事は削除しません。反映には再ビルドが必要です。';el('tp-confirm').hidden=false;}catch(e){message(String(e));}}
+  function request(on:boolean){if(busy||dirty||!current)return;try{if(on){const p=read(true);validateProfileReferences(p,current,events,media);diff(p);}pending=on;el('tp-confirm-apply').textContent=on?'この銘柄の公開を承認':'この銘柄を非公開に戻す';el('tp-confirm-text').textContent=on?`「${options.companies().find(c=>c.id===input('ca-company').value)?.name_ja ?? '会社未選択'}」の保存済み分類・説明・日付を公開版にします。反映には再ビルドが必要です。`:'銘柄を非公開に戻します。メモや記事は削除しません。反映には再ビルドが必要です。';el('tp-confirm').hidden=false;}catch(e){message(String(e));}}
   el('tp-publish').addEventListener('click',()=>request(true));el('tp-unpublish').addEventListener('click',()=>request(false));
   el('tp-confirm-cancel').addEventListener('click',()=>{pending=null;el('tp-confirm').hidden=true;});
   el('tp-confirm-apply').addEventListener('click',()=>{if(pending===null||dirty||!current||!edition)return;const on=pending;pending=null;el('tp-confirm').hidden=true;void task(async()=>{

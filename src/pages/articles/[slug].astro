@@ -18,8 +18,8 @@ const {article:a,isSampleData,cases}=Astro.props;
     <p class="small muted">初回公開: {formatDate(a.firstPublishedAt)} / 更新: {formatDate(a.publishedAt)} / 情報確認日: {formatDate(a.checked_on)}</p>
     {cases.length>0 && <nav class="article-case-entry" aria-label="関連銘柄の状況・経過"><ul class="related-case-links">{cases.map(c=><li><a class="navigation-link" href={`/cases/${c.slug}/`}><span>{c.companyName}の状況・経過を見る{cases.filter(other=>other.companyId===c.companyId).length>1 && `：${c.title}`}</span><span aria-hidden="true">→</span></a></li>)}</ul></nav>}
     <section class="section"><h2 class="section-title">確認できた事実</h2><p class="article-body">{a.confirmed_facts}</p></section>
-    {a.body && <section class="section"><h2 class="section-title">経緯・整理</h2><p class="article-body">{a.body}</p></section>}
-    {a.interpretation && <section class="section"><h2 class="section-title">編集上の解釈</h2><p class="article-body">{a.interpretation}</p></section>}
+    {a.body && <section class="section"><h2 class="section-title">これまでの経緯</h2><p class="article-body">{a.body}</p></section>}
+    {a.interpretation && <section class="section"><h2 class="section-title">当サイトの見方</h2><p class="article-body">{a.interpretation}</p></section>}
     {a.unknowns && <section class="section"><h2 class="section-title">未確認事項</h2><p class="article-body">{a.unknowns}</p></section>}
     <section class="section"><h2 class="section-title">出典</h2><ul class="source-list">{a.sources.map(s => <li><a class="source-link" href={s.url} target="_blank" rel="noopener noreferrer nofollow">{s.name} <span aria-hidden="true">↗</span></a><span class="small muted"> 公表日: {formatDate(s.published_on)} / 確認日: {formatDate(s.checked_on)}</span></li>)}</ul></section>
     {a.correction_note && <section class="section card"><h2 class="section-title">訂正履歴</h2><p class="article-body">{a.correction_note}</p></section>}

@@ -91,7 +91,7 @@ export function chooseNoteSaveBody(note: StructuredNotePayload, loadedFormat: Lo
     return { ok: true, body: note.freeText, format: 'legacy', length: rawLength };
   }
 
-  return { ok: false, message: '構造化項目を含めると1,000文字を超えるため保存できません。自由メモを短くしてください', length: jsonLength };
+  return { ok: false, message: '項目名などの保存用データを含めると1,000文字を超えます。自由メモを短くしてから、もう一度保存してください。', length: jsonLength };
 }
 
 

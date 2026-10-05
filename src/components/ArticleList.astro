@@ -12,4 +12,4 @@ const { cases } = await loadPublicData();
     const related=cases.filter(c=>c.companyId===company.id);
     return related.length ? related.map(c=><a class="navigation-link" href={`/cases/${c.slug}/`}>{company.nameJa}の状況・経過{related.length>1 && `：${c.title}`}<span aria-hidden="true">→</span></a>) : <a class="entity-link" href={`/companies/${company.securityCode}/`}>{company.nameJa}の案件・記事<span aria-hidden="true">→</span></a>;
   })}</div>
-</li>)}</ul> : <p class="empty-state">調査記事はまだありません。</p>}
+</li>)}</ul> : <p class="empty-state">調査記事はまだ掲載していません。銘柄の状況や追跡のきっかけは、各銘柄の詳細ページをご覧ください。</p>}

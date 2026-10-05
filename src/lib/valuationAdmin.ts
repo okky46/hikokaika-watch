@@ -37,7 +37,7 @@ export function setupValuationAdmin(client:SupabaseClient){
   function historyRow(h?:Comparable['history'][number]){
     const div=document.createElement('div');div.className='card section';
     for(const [key,label,type] of [['date','日付','date'],['price','価格（円）','number'],['note','経緯・算定根拠','text'],['sourceUrl','出典URL','url']]){const l=document.createElement('label'),i=document.createElement('input');l.textContent=label;i.dataset.h=key;i.type=type;i.value=String(h?.[key as keyof typeof h]??'');if(type==='number'){i.min='0.0001';i.step='any';}l.append(i);div.append(l);}
-    const b=document.createElement('button');b.type='button';b.className='btn';b.textContent='この履歴を除く';b.onclick=()=>{div.remove();dirty=true;buttons();};div.append(b);el<HTMLElement>('va-history').append(div);
+    const b=document.createElement('button');b.type='button';b.className='btn';b.textContent='この履歴を削除';b.onclick=()=>{div.remove();dirty=true;buttons();};div.append(b);el<HTMLElement>('va-history').append(div);
   }
   function render(record?:ValuationRecord){
     form.reset();kind=record?.kind??kind;
@@ -69,7 +69,7 @@ export function setupValuationAdmin(client:SupabaseClient){
     return parseValuation(p);
   }
   function options(){list.replaceChildren(new Option('新規作成',''));rows.forEach(r=>list.add(new Option(`${r.draft.name}（${r.draft.code}）・${r.draft.kind==='financials'?'財務':'TOB'}・${r.published?'公開対象あり':'下書き'}`,r.id)));list.value=current?.id??'';}
-  async function run(fn:()=>Promise<void>){if(busy)return;busy=true;root.inert=true;buttons();try{await fn();}catch{status.textContent='保存・読込に失敗しました。入力内容、管理者ログイン、DB更新状況を確認してください。競合時は内容を控えて再読込してください。';}finally{root.inert=false;busy=false;buttons();}}
+  async function run(fn:()=>Promise<void>){if(busy)return;busy=true;root.inert=true;buttons();try{await fn();}catch{status.textContent='保存または読み込みができませんでした。入力内容を控え、管理者のログイン状態とDBの更新状況を確認してください。他の編集と競合している場合は、再読み込みして最新の内容を確認してください。';}finally{root.inert=false;busy=false;buttons();}}
   async function reload(){if(!discard())return;await run(async()=>{const {data,error}=await client.from('valuation_editions').select('*').order('updated_at',{ascending:false});if(error)throw error;rows=data??[];current=current?rows.find(r=>r.id===current!.id)??null:null;options();render(current?.draft);status.textContent='一覧を読み込みました。';});}
   root.querySelector<HTMLElement>('[data-va-ev-preview]')!.addEventListener('input',updateEvPreview);
   form.addEventListener('input',()=>{updateEvPreview();dirty=true;buttons();});
