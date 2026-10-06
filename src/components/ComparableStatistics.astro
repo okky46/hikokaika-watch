@@ -2,6 +2,7 @@
 import {METRICS,basisLabel} from '../lib/valuation';
 import {comparableStats} from '../lib/comparableStats';
 import {referencePeriod} from '../lib/valuationReference';
+import {comparableAnchor} from '../lib/comparableAnchor';
 import type {Comparable} from '../lib/valuation';
 interface Props {records:Comparable[];industry:string;excludeCode?:string}
 const {records,industry,excludeCode}=Astro.props;
@@ -12,6 +13,6 @@ const fmt=(n:number)=>n.toLocaleString('ja-JP',{minimumFractionDigits:1,maximumF
   <h3>{industry}の取引倍率</h3>
   <p class="small">成立・完了した案件の最終価格を基に、実績・会社予想、連結・単体、計算定義ごとに分けて集計しています。算定機関の評価レンジは集計対象外です。</p>
   {groups.length?groups.map(g=><div class="card section"><p><strong>{METRICS[g.metric]} ／ {basisLabel(g.basis)} ／ {g.scope==='consolidated'?'連結':'単体'} ／ 対象{g.count}件</strong></p><p class="small">TOB公表年月：{referencePeriod(g)}</p><p>平均 {fmt(g.mean)}倍 ／ 中央値 {fmt(g.median)}倍 ／ 最小 {fmt(g.min)}倍〜最大 {fmt(g.max)}倍</p><p class="small">{g.definition}</p>
-    <details><summary>集計した{g.count}案件を見る</summary><ul>{g.samples.map(c=><li><a href={`/tob-comparables/#deal-${c.research!.dealId}`}>{c.name}（{c.code}）</a> ／ {c.announcedOn} ／ {fmt(c.multiples[g.metric]!.value)}倍</li>)}</ul></details>
+    <details><summary>集計した{g.count}案件を見る</summary><ul>{g.samples.map(c=><li><a href={`/tob-comparables/#${comparableAnchor(c)}`}>{c.name}（{c.code}）</a> ／ {c.announcedOn} ／ {fmt(c.multiples[g.metric]!.value)}倍</li>)}</ul></details>
   </div>):<p class="empty-state">この業種では、集計条件がそろう取引倍率をまだ掲載していません。各案件の数値と出典は事例の詳細で確認できます。</p>}
 </div>

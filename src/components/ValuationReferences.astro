@@ -2,6 +2,7 @@
 import {METRICS,basisLabel,prerequisites} from '../lib/valuation';
 import type {Financials,Comparable,Metric} from '../lib/valuation';
 import {comparableStats} from '../lib/comparableStats';
+import {comparableAnchor} from '../lib/comparableAnchor';
 import {matchingReferences,referencePeriod,referenceScenarios} from '../lib/valuationReference';
 interface Props {financials?:Financials;comparables:Comparable[];industry:string}
 const {financials,comparables,industry}=Astro.props;
@@ -35,7 +36,7 @@ const price=(n:number|null)=>n===null?'試算できません':`${n.toLocaleStrin
             </div>
             {reason&&<p class="small">{reason}</p>}
             {!reason&&scenarios.some(s=>s.price===null)&&<p class="small">正の株価にならない条件は試算できません。</p>}
-            <details class="reference-sources"><summary>集計した{g.count}案件</summary><ul>{g.samples.map(c=><li><a href={`/tob-comparables/#deal-${c.research!.dealId}`}>{c.name}（{c.code}）</a> ／ {c.announcedOn} ／ {multiple(c.multiples[metric]!.value)}倍</li>)}</ul></details>
+            <details class="reference-sources"><summary>集計した{g.count}案件</summary><ul>{g.samples.map(c=><li><a href={`/tob-comparables/#${comparableAnchor(c)}`}>{c.name}（{c.code}）</a> ／ {c.announcedOn} ／ {multiple(c.multiples[metric]!.value)}倍</li>)}</ul></details>
           </div>;
         }):<><p class="reference-price muted">参考値なし</p><p class="small">この銘柄と比較条件がそろう取引倍率は未登録です。財務数値と対象事例の条件をご確認ください。</p></>}
       </article>;
