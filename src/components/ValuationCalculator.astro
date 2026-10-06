@@ -2,6 +2,7 @@
 import {METRICS,FIELDS,basisLabel,prerequisites} from '../lib/valuation';
 import type {Financials,Comparable,Metric,Field} from '../lib/valuation';
 import ComparableStatistics from './ComparableStatistics.astro';
+import {comparableAnchor} from '../lib/comparableAnchor';
 import ValuationReferences from './ValuationReferences.astro';
 interface Props {financials?:Financials;comparables:Comparable[];industry?:string|null;sample?:boolean}
 const {financials,comparables,industry,sample}=Astro.props;
@@ -47,7 +48,7 @@ const entries=(p:Comparable)=>Object.entries(p.multiples) as [Metric,NonNullable
   <details class="section peer-details"><summary>他の集計条件・個別事例を見る</summary>
   {(financials?.industry||industry)&&<ComparableStatistics records={comparables} industry={financials?.industry||industry!} excludeCode={financials?.code}/> }
   <p class="small">倍率を選ぶ際は、過去事例との取引条件の違いに加え、実績・会社予想の区分と対象期を確認してください。</p>
-  {peers.length?peers.map(p=><article class="card section"><h4>{p.name}（{p.code}）</h4><p class="small">{p.announcedOn}公表 ／ {p.priceStage} {fmt(p.offerPrice)}円</p>{entries(p).map(([key,m])=><div class="peer-multiple"><span>{METRICS[key]} {fmt(m.value)}倍（{basisLabel(m.basis)}・{m.period}）</span><p class="small">{m.method==='calculated'?'当サイトで計算':'資料に記載された倍率'}：{m.calculation}</p></div>)}<p>{p.notes}</p><a href={p.research?`/tob-comparables/#deal-${p.research.dealId}`:'/tob-comparables/'}>出典・第三者機関の算定・価格履歴を見る</a></article>):<p class="empty-state">同じ業種の事例はまだ掲載していません。他の業種は「過去のTOB事例をすべて見る」から確認できます。</p>}
+  {peers.length?peers.map(p=><article class="card section"><h4>{p.name}（{p.code}）</h4><p class="small">{p.announcedOn}公表 ／ {p.priceStage} {fmt(p.offerPrice)}円</p>{entries(p).map(([key,m])=><div class="peer-multiple"><span>{METRICS[key]} {fmt(m.value)}倍（{basisLabel(m.basis)}・{m.period}）</span><p class="small">{m.method==='calculated'?'当サイトで計算':'資料に記載された倍率'}：{m.calculation}</p></div>)}<p>{p.notes}</p><a href={p.research?`/tob-comparables/#${comparableAnchor(p)}`:'/tob-comparables/'}>出典・第三者機関の算定・価格履歴を見る</a></article>):<p class="empty-state">同じ業種の事例はまだ掲載していません。他の業種は「過去のTOB事例をすべて見る」から確認できます。</p>}
   <a href="/tob-comparables/">過去のTOB事例をすべて見る</a>
   </details>
   <p class="small muted section">試算株価は、入力した倍率と財務数値に基づく計算結果です。将来の市場価格・TOB価格の予測や、売買の推奨は行っていません。</p>
