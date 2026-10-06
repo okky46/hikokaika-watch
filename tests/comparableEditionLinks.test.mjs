@@ -44,5 +44,8 @@ test('同じ案件の価格版リンクと平均の根拠が各版へ到達し�
   const References=(await import(await component(path.resolve('src/components/ValuationReferences.astro')))).default;
   const references=new JSDOM(await container.renderToString(References,{props:{financials:{kind:'financials',code:'0009',industry:'情報・通信業',facts:{eps}},comparables:records,industry:'情報・通信業'}})).window.document;
   assert.equal(references.querySelector('.reference-sources a').getAttribute('href'),'/tob-comparables/#deal-0001-20260101-final');
+  const Calculator=(await import(await component(path.resolve('src/components/ValuationCalculator.astro')))).default;
+  const calculator=new JSDOM(await container.renderToString(Calculator,{props:{financials:{kind:'financials',code:'0009',industry:'情報・通信業',facts:{eps}},comparables:records,industry:'情報・通信業'}})).window.document;
+  assert.deepEqual([...calculator.querySelectorAll('.peer-details article>a')].map(a=>a.getAttribute('href')).filter(h=>h.includes('0001-')),['/tob-comparables/#deal-0001-20260101-initial','/tob-comparables/#deal-0001-20260101-revised','/tob-comparables/#deal-0001-20260101-final']);
   assert.equal(JSON.stringify((await import(fixtures)).comparables),original);
 });
