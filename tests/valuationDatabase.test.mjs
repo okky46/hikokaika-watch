@@ -17,6 +17,7 @@ test('財務DB：管理者限定・下書き隔離・競合拒否・公開撤回
  await db.exec(fs.readFileSync('supabase/migrations/0014_comparable_research.sql','utf8'));
  await db.exec(fs.readFileSync('supabase/migrations/0015_long_valuation_forecasts.sql','utf8'));
  await db.exec(fs.readFileSync('supabase/migrations/0016_review_research_preservation.sql','utf8'));
+ await db.exec(fs.readFileSync('supabase/migrations/0017_market_forecast_inputs.sql','utf8'));
  assert.deepEqual((await db.query("select * from pg_policies where tablename like 'user_%' order by tablename,policyname")).rows,policies);
  const session=async(role,id='')=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec(`set role ${role}`);};
  const save=async(p,revision=null,id='financials:0001')=>(await db.query('select to_jsonb(save_valuation_draft($1,$2,$3)) as r',[id,p,revision])).rows[0].r;
@@ -34,6 +35,12 @@ test('財務DB：管理者限定・下書き隔離・競合拒否・公開撤回
  await session('service_role');assert.equal((await read())[0].content.facts.eps.value,200);
  await session('postgres');await db.exec('update cases set is_visible=false');await session('service_role');assert.equal((await read()).length,1);assert.equal((await read())[0].content.kind,'comparable');
  await session('authenticated',admin);row=await publish(row.revision,false);await publish(peerRow.revision+1,false,'tob:sample');
+ await session('postgres');await db.exec('update cases set is_visible=true');await session('authenticated',admin);
+ const forecastData=structuredClone(data);forecastData.forecastFacts=structuredClone(data.facts);forecastData.forecastFacts.eps.basis='company_forecast';forecastData.forecastFacts.ebitda.basis='company_forecast';
+ row=await save(forecastData,row.revision);assert.deepEqual(row.draft.forecastFacts,forecastData.forecastFacts);
+ row=await publish(row.revision);await session('service_role');assert.deepEqual((await read())[0].content.forecastFacts,forecastData.forecastFacts);await session('authenticated',admin);row=await publish(row.revision,false);
+ for(const forecasts of [null,{}, {cash:data.facts.cash}, {...forecastData.forecastFacts,eps:data.facts.eps}, {...forecastData.forecastFacts,cash:{...data.facts.cash,basis:'company_forecast'}}, {...forecastData.forecastFacts,eps:{...forecastData.forecastFacts.eps,sourceUrl:'https://example.com/?api_key=secret'}}])await assert.rejects(save({...data,forecastFacts:forecasts},row.revision));
+ await assert.rejects(save({...peer,forecastFacts:forecastData.forecastFacts},null,'tob:forecast-invalid'));
  for(const bad of [{...data,checkedOn:'2026-02-30'},{...data,facts:{}},{...data,facts:{eps:{...data.facts.eps,value:null}}},{...data,facts:{eps:{...data.facts.eps,sourceUrl:'javascript:alert(1)'}}}])await assert.rejects(save(bad,row.revision));
  const batchSave=async items=>(await db.query('select save_valuation_batch($1) as r',[items])).rows[0].r;
  const batchPublish=async items=>(await db.query('select publish_valuation_batch($1,true) as r',[items])).rows[0].r;
