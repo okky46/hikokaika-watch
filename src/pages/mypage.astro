@@ -1,7 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
-import { loadPublicData } from '../lib/publicData';
-const {cases}=await loadPublicData();
+
+
 import { CASE_STATUS, STATUS_ORDER } from '../lib/status';
 
 // ステータスのラベル・トーンをクライアントJSへ渡す(表示用)
@@ -11,25 +11,19 @@ const statusMap = Object.fromEntries(
 ---
 
 <Base
-  title="マイページ"
+  title="記録・アカウント"
   description="お気に入りの銘柄と、自分専用のメモを管理するページ。"
   noindex
 >
-  <h1>マイページ</h1>
+  <h1>記録・アカウント</h1>
   <p class="small muted">
-    お気に入りとメモを、ご本人だけが使える場所にまとめています。
+    アカウントの保存データを確認できます。日々の監視はホームにまとめています。
   </p>
 
   <div id="mp-unavailable" class="notice" hidden>
     現在ログインできません。銘柄や記事は引き続き閲覧できます。
   </div>
-  <section class="section" aria-label="このブラウザーで確認した銘柄">
-    <h2 class="section-title">確認した銘柄の、その後</h2>
-    <p class="small muted">詳細ページで「ここまで確認済みにする」を押した銘柄を表示します。このブラウザーだけの記録です。</p>
-    <label class="filter-check"><input type="checkbox" data-watch-updates-only/> 確認後に更新があった銘柄だけ</label>
-    <ul class="revisit-list">{cases.map(c=><li class="card" data-revisit-row data-watch-case={c.id} data-watch-manifest={JSON.stringify(c.watch)} hidden><a href={`/cases/${c.slug}/`}>{c.companyName}（{c.securityCode}）</a><span class="watch-badge" data-watch-badge hidden></span><p>{c.tracking?.status_note||c.summary}</p></li>)}</ul>
-    <p class="empty-state" data-revisit-empty>該当する銘柄はまだありません。<a href="/">銘柄一覧</a>から経過を読み、確認済みにするとここで追えます。</p>
-  </section>
+  <p><a class="btn btn--primary" href="/#my-watch">監視ホームで確認・記録を続ける</a></p>
 
   <section class="section card" id="mp-auth">
     <div id="mp-logged-out" hidden>
@@ -61,7 +55,7 @@ const statusMap = Object.fromEntries(
       </div>
       <div id="mp-favorites"></div>
       <p class="empty-state" id="mp-fav-empty" hidden>
-        お気に入りはまだありません。<a href="/">追跡銘柄の一覧</a>の☆から登録できます。
+        お気に入りはまだありません。<a href="/stocks/">銘柄の一覧</a>の☆から登録できます。
       </p>
     </section>
 

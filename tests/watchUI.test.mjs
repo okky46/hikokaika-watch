@@ -18,8 +18,32 @@ async function render(name,props={}){
  const component=(await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)).default;
  return (await AstroContainer.create()).renderToString(component,{props});
 }
-async function bundle(contents){return (await build({stdin:{contents,loader:'ts',resolveDir:path.resolve('src/lib')},bundle:true,write:false,format:'iife',platform:'browser'})).outputFiles[0].text;}
+async function bundle(contents){return (await build({stdin:{contents,loader:'ts',resolveDir:path.resolve('src/lib')},bundle:true,write:false,format:'iife',platform:'browser',define:{'import.meta.env':'{}'}})).outputFiles[0].text;}
 const quickClient=await bundle("import {setupQuickValuation} from './quickValuationUI.ts';setupQuickValuation(document.querySelector('[data-quick-valuation]'));");
+
+test('監視の往復：理由と確認日を保存、追加観察を再訪ホームに表示、読了で差分だけ消す',async()=>{
+ const manifest={summary:'1111111111111111'},id='demo';
+ const c={id,slug:'demo',companyName:'架空の会社',securityCode:'0000',watch:manifest,events:[],trackingReason:'起点',summary:'状況'};
+ const notebook=await render('WatchNotebook',{caseId:id});
+ const client=await bundle("import {setupWatchWorkspace} from './watchWorkspaceUI.ts';import {setupWatchReadState} from './watchReadState.ts';setupWatchReadState();window.ready=setupWatchWorkspace();");
+ const html=`<section data-watch-case="${id}" data-watch-manifest='${JSON.stringify(manifest)}'><p data-watch-message></p><div data-watch-change-links></div><button data-watch-mark>確認済み</button>${notebook}</section>`;
+ async function open(html,saved={}){const dom=new JSDOM(html,{url:'https://local.invalid',runScripts:'outside-only'});dom.window.matchMedia=()=>({matches:false});for(const [k,v] of Object.entries(saved))dom.window.localStorage.setItem(k,v);dom.window.eval(client);await dom.window.ready;return dom;}
+ const snapshot=dom=>Object.fromEntries(Object.keys(dom.window.localStorage).map(k=>[k,dom.window.localStorage.getItem(k)]));
+ const detail=await open(html),d=detail.window.document;
+ d.querySelector('[name=scenario]').value='材料が見当たらない上昇';d.querySelector('[name=freeText]').value='交渉開始時期を確認';d.querySelector('[name=nextCheckDate]').value='2020-01-01';
+ d.querySelector('form').dispatchEvent(new detail.window.Event('submit',{cancelable:true}));
+ await new Promise(resolve=>setTimeout(resolve,0));assert.match(d.querySelector('[data-notebook-status]').textContent,/記録を保存しました/);
+ const saved=snapshot(detail);detail.window.close();
+ const record={id:'81000000-0000-4000-8000-000000000001',kind:'origin',title:'再び出来高が増加',facts:'架空の観察',occurred_on:'2026-04-10',updated_at:'2026-10-07T00:00:00Z'};
+ const changed={...manifest,['observation-'+record.id]:'2222222222222222'};
+ const home=await open(await render('WatchDesk',{cases:[{...c,watch:changed,tracking:{observations:[record]}}]}),saved);
+ assert.match(home.window.document.querySelector('[data-desk-list]').textContent,/材料が見当たらない上昇/);assert.match(home.window.document.querySelector('[data-desk-list]').textContent,/交渉開始時期を確認/);
+ assert.equal(home.window.document.querySelector('[data-count=changed]').textContent,'1');assert.equal(home.window.document.querySelector('[data-count=due]').textContent,'1');
+ assert(home.window.document.querySelector(`a[href="/cases/demo/#observation-${record.id}"]`));home.window.close();
+ const revisit=await open(html.replace(JSON.stringify(manifest),JSON.stringify(changed)),saved);assert.equal(revisit.window.document.querySelector('[name=scenario]').value,'材料が見当たらない上昇');
+ revisit.window.document.querySelector('[data-watch-mark]').click();const read=snapshot(revisit);revisit.window.close();
+ const done=await open(await render('WatchDesk',{cases:[{...c,watch:changed}]}),read);assert.equal(done.window.document.querySelector('[data-count=changed]').textContent,'0');assert.match(done.window.document.querySelector('[data-desk-list]').textContent,/交渉開始時期を確認/);done.window.close();
+});
 test('価格画面：登録値を読み込み、手入力・方式切替を保持し、時点不一致を反映しない',async()=>{
  const financials=JSON.parse(fs.readFileSync('data/sample/valuations.json','utf8'))[0];
  const original=JSON.stringify(financials);

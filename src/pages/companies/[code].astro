@@ -24,7 +24,7 @@ const description = `${company.nameJa}（証券コード${company.securityCode}�
 ---
 <Base title={title} description={description} path={`/companies/${company.securityCode}/`}>
   {isSampleData && <p class="notice">このページは開発・デモ用の<strong>架空のサンプルデータ</strong>です。</p>}
-  <nav class="small" aria-label="パンくず" style="margin-bottom:0.8rem"><a href="/">追跡銘柄</a> › <span class="muted">{company.nameJa}</span></nav>
+  <nav class="small" aria-label="パンくず" style="margin-bottom:0.8rem"><a href="/stocks/">銘柄を探す</a> › <span class="muted">{company.nameJa}</span></nav>
   <header class="case-head">
     <p class="case-head__company"><span class="mono">{company.securityCode}</span>{company.market && <span> / {company.market}</span>}{company.industry && <span> / {company.industry}</span>}</p>
     <h1>{company.nameJa}</h1>

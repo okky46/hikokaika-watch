@@ -1,18 +1,16 @@
 ---
 import Base from '../../layouts/Base.astro';
 import QuickValuation from '../../components/QuickValuation.astro';
-import WatchHistory from '../../components/WatchHistory.astro';
+import CaseJourney from '../../components/CaseJourney.astro';
+import WatchNotebook from '../../components/WatchNotebook.astro';
+import {watchWorkspaceCase} from '../../lib/watchWorkspace';
 import TrackingStatus from '../../components/TrackingStatus.astro';
 import { REPORT_METHOD, REPORT_ACCESS } from '../../lib/trackingProfile';
 import StockLinks from '../../components/StockLinks.astro';
 import ArticleList from '../../components/ArticleList.astro';
 import { loadValuations } from '../../lib/valuationData';
-import EventTypeBadge from '../../components/EventTypeBadge.astro';
-import AdSlot from '../../components/AdSlot.astro';
-import { timelineGroup } from '../../lib/trackingDates';
-import { orderTimeline, latestDatedEvent } from '../../lib/timelineOrder';
 import { loadPublicData } from '../../lib/publicData';
-import { formatDate, formatDateTime } from '../../lib/format';
+import { formatDate } from '../../lib/format';
 import type { CaseDetail } from '../../lib/types';
 
 export async function getStaticPaths() {
@@ -40,19 +38,9 @@ const timelineAdSlots = [
   import.meta.env.PUBLIC_ADSENSE_SLOT_CASE_TIMELINE_1 ?? '',
   import.meta.env.PUBLIC_ADSENSE_SLOT_CASE_TIMELINE_2 ?? '',
 ];
-const orderedEvents = orderTimeline(c.events, 'newest');
-const oldestRanks = new Map(orderTimeline(c.events, 'oldest').map((e,index)=>[e.id,index]));
-const latestEvent = latestDatedEvent(c.events, new Date(Astro.props.generatedAt));
-const timelineRows = orderedEvents.flatMap((event, index) => {
-  const rows: ({ type: 'event'; event: typeof event } | { type: 'ad'; slotNumber: number } | {type:'heading';label:string})[] = [];
-  const label=timelineGroup(event.date);
-  if(index===0 || timelineGroup(orderedEvents[index-1].date)!==label)rows.push({type:'heading',label});
-  rows.push({type:'event',event});
-  const slotNumber = Math.floor((index + 1) / 3);
-  if ((index + 1) % 3 === 0 && slotNumber <= 2 && timelineAdSlots[slotNumber - 1]) rows.push({ type: 'ad', slotNumber });
-  return rows;
-});
-const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelineRows.some((row) => row.type === 'ad');
+const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && c.events.some((_,i)=> (i+1)%3===0 && timelineAdSlots[(i+1)/3-1]);
+const workspace=watchWorkspaceCase(c);
+
 ---
 
 <Base title={title} description={description} path={`/cases/${c.slug}/`} hasAdSlots={hasTimelineAds}>
@@ -63,7 +51,7 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
   )}
 
   <nav class="case-breadcrumb small" aria-label="パンくず">
-    <a href="/" id="return-to-results"><span aria-hidden="true">←</span> 銘柄一覧</a><span class="muted">銘柄の経過</span>
+    <a href="/stocks/" id="return-to-results"><span aria-hidden="true">←</span> 銘柄を探す</a><a href="/#my-watch">監視ホーム</a><span class="muted">銘柄の経過</span>
   </nav>
 
   <div data-watch-case={c.id} data-watch-manifest={JSON.stringify(c.watch)}>
@@ -77,20 +65,7 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
           <span class="muted">最終確認 {formatDate(c.lastCheckedOn)}</span>
         </div>
       </div>
-      <div class="case-overview__personal">
-      <button
-        type="button"
-        class="btn"
-        id="fav-btn"
-        data-case-id={c.id}
-        hidden
-      >☆ お気に入りに登録</button>
-      <select id="fav-intensity" class="small" hidden aria-label="関心度">
-        <option value="1">関心度 1: 経過確認</option>
-        <option value="2">関心度 2: 注目</option>
-        <option value="3">関心度 3: 最重要</option>
-      </select>
-      </div>
+
     </div>
     <div class="case-overview__summary">
       <section class="case-overview__reason" aria-label="追跡のきっかけ">
@@ -103,11 +78,6 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
         <TrackingStatus profile={c.tracking} activity={c.activity}/>
       </section>
     </div>
-    {latestEvent && <section class="latest-event" aria-label="公表日を確認できた直近の出来事">
-      <h2>公表日を確認できた直近の出来事</h2>
-      <p class="small muted">{latestEvent.dateLabel} · {latestEvent.sourceName}{latestEvent.corrected && ' · 訂正あり'}</p>
-      <a class="research-title" href={`#event-${latestEvent.id}`}><span>{latestEvent.title}</span><span aria-hidden="true">→</span></a>
-    </section>}
     <StockLinks code={c.securityCode}/>
   </header>
 
@@ -116,64 +86,15 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
       <span class="case-section-nav__code">{c.securityCode}</span>
       <span class="case-section-nav__name" title={c.companyName}>{c.companyName}</span>
     </div>
-    <a href="#watch-history">観察</a>
-    <a href="#timeline" aria-current="location">報道・開示<span class="case-section-nav__count">{c.events.length}</span></a>
-    <a href="#evidence">根拠・媒体</a>
-    <a href="#related-articles">関連記事<span class="case-section-nav__count">{Astro.props.articles.length}</span></a>
+    <a href="#watch-review">変化を確認</a>
+    <a href="#watch-history">起点と経過</a>
+    <a href="#note-section">気づきを記録</a>
     <a href="#quick-valuation">価格の試算</a>
-    <a href="/mypage/" id="personal-note-link" aria-label="ログインして自分のメモを利用">自分のメモ</a>
   </nav>
-  <section class="watch-read-bar" aria-label="前回からの変化"><div><strong>前回の確認から</strong><p data-watch-message class="small" aria-live="polite"></p><div data-watch-change-links class="small watch-links" aria-label="更新箇所へのリンク"></div><p class="small muted">確認状態はこのブラウザーに保存します。ログイン中のお気に入り・メモは従来どおりアカウントに保存します。</p></div><button type="button" class="btn" data-watch-mark>ここまで確認済みにする</button></section>
-  <WatchHistory observations={c.tracking?.observations??[]} lastCheckedOn={c.lastCheckedOn}/>
-
-  <section class="section" aria-label="出来事タイムライン" id="timeline">
-    <div class="timeline-toolbar"><h2 class="section-title">経過タイムライン</h2>
-      {c.events.length>1 && <label class="timeline-sort" hidden>並び順<select id="timeline-order" aria-controls="case-timeline"><option value="newest">新しい順</option><option value="oldest">古い順</option></select></label>}
-    </div>
-    {c.events.some(e=>['month','issue','unknown'].includes(e.date.precision)) && <p class="small muted">号数・月のみの記録は参考位置に表示します。年月も不明な記録は末尾にまとめています。</p>}
-    {c.events.length === 0 ? (
-      <p class="empty-state">この銘柄の出来事はまだ掲載していません。追跡のきっかけは「根拠・媒体」で確認できます。</p>
-    ) : (
-      <ol class="timeline" id="case-timeline">
-        {timelineRows.map((row) => row.type === 'heading' ? <li class="timeline-group"><h3>{row.label}</h3></li> : row.type === 'ad' ? (
-          <li class="timeline__item timeline__item--ad">
-            <AdSlot placement={`case-timeline-${row.slotNumber}`} slotId={timelineAdSlots[row.slotNumber - 1]} />
-          </li>
-        ) : (
-          <li class="timeline__item" id={`event-${row.event.id}`} data-watch-item={`event-${row.event.id}`} data-timeline-event data-oldest-rank={oldestRanks.get(row.event.id)} data-newest-rank={orderedEvents.indexOf(row.event)} data-timeline-group={timelineGroup(row.event.date)}>
-            <article class="event-card">
-              <div class="event-card__head">
-                <EventTypeBadge type={row.event.eventType} />
-                <span class="event-card__date">{row.event.dateLabel}</span>
-                {row.event.date.precision==='issue' && <span class="small muted">号数のみ確認・公表日は未確認{row.event.date.referenceMonth && `（参考年月：${row.event.date.referenceMonth}）`}</span>}
-                {row.event.corrected && (
-                  <span class="badge badge--stop"><span class="badge__mark" aria-hidden="true">!</span>訂正あり</span>
-                )}
-              </div>
-              <h3 class="event-card__title">{row.event.title}</h3>
-              {row.event.summary && <p class="event-card__summary">{row.event.summary}</p>}
-              {row.event.largeShareholding && (
-                <p class="event-card__summary"><strong>{row.event.largeShareholding.holderName}</strong> — <strong>保有 {row.event.largeShareholding.ratio.toFixed(2)}%</strong>{row.event.largeShareholding.previousRatio !== null && ` (前回 ${row.event.largeShareholding.previousRatio.toFixed(2)}%)`}</p>
-              )}
-              {row.event.corrected && row.event.correctionNote && (
-                <p class="event-card__summary" style="color:var(--tone-stop-fg)">訂正: {row.event.correctionNote}</p>
-              )}
-              <div class="event-card__meta">
-                <span>出典: {row.event.sourceUrl ? (
-                  <a href={row.event.sourceUrl} target="_blank" rel="noopener noreferrer nofollow">{row.event.sourceName || '元情報'}</a>
-                ) : (
-                  row.event.sourceName || '—'
-                )}</span>
-                <span>本サイト初回掲載: {formatDateTime(row.event.sitePublishedAt)}</span>
-                {row.event.updatedAt !== row.event.sitePublishedAt && <span>最終修正: {formatDateTime(row.event.updatedAt)}</span>}
-              </div>
-            </article>
-          </li>
-        ))}
-      </ol>
-    )}
-  </section>
-
+  <section class="watch-read-bar" id="watch-review" aria-label="前回からの変化"><div><span class="eyebrow">今回見るところ</span><h2>前回からの変化</h2><p data-watch-message aria-live="polite"></p><div data-watch-change-links class="watch-links" aria-label="更新箇所へのリンク"></div><details class="recent-context"><summary>直近に記録された動き</summary><ul>{workspace.records.slice(0,3).map(r=><li><a href={`#${r.key}`}>{r.kind}：{r.title}</a><span class="small muted"> 出来事：{r.when} ／ 記録の更新：{r.recorded.slice(0,10)}</span></li>)}</ul>{!workspace.records.length&&<p>公開の観察・報道はまだありません。追跡のきっかけを起点に記録できます。</p>}</details></div><div class="review-actions"><button type="button" class="btn btn--primary" data-watch-mark>ここまで確認済みにする</button><span class="small muted">確認状態はこのブラウザーに保存</span></div></section>
+  <div class="case-workspace">
+  <div class="case-workspace-main">
+  <CaseJourney c={c} adSlots={timelineAdSlots}/>
   <section class="section" id="evidence" aria-label="媒体と確認した根拠">
     <details class="card evidence-details"><summary>追跡理由と、媒体ごとに確認した根拠を読む</summary>
       <p>{c.trackingReason || '詳しい追跡理由はまだ掲載していません。'}</p>
@@ -188,27 +109,14 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
 
   <section class="section" id="related-articles"><h2 class="section-title">関連記事</h2><ArticleList articles={Astro.props.articles}/></section>
 
+  <details class="section valuation-tool" data-valuation-tool><summary>価格の試算を開く</summary>
   <QuickValuation financials={valuations.financials.find(f=>f.code===c.securityCode)} observations={c.tracking?.observations??[]} preReportClose={c.preReportClose} industry={c.industry}/>
+  </details>
 
-  <section class="section" aria-label="自分のメモ" id="note-section" hidden>
-    <h2 class="section-title">自分のメモ</h2>
-    <div class="card">
-      <p class="small muted" style="margin-bottom:0.5rem">
-        このメモを閲覧・編集できるのは、ご本人だけです。
-      </p>
-      <div class="note-grid">
-        <label>想定シナリオ<input type="text" id="note-scenario" /></label>
-        <label>目標価格<input type="text" id="note-target-price" /></label>
-        <label>撤退条件<input type="text" id="note-exit-condition" /></label>
-        <label>次のチェック日<input type="date" id="note-next-check-date" /></label>
-        <label style="grid-column:1/-1">自由メモ<textarea id="note-body" maxlength="1000" placeholder="この銘柄についての自分のメモ"></textarea></label>
-      </div>
-      <div style="display:flex; gap:0.6rem; align-items:center; margin-top:0.5rem;">
-        <button type="button" class="btn btn--primary" id="note-save">メモを保存</button>
-        <span class="small muted" id="note-count">入力：0文字</span><span class="small muted" id="note-status" aria-live="polite"></span>
-      </div>
-    </div>
-  </section>
+  </div>
+  <WatchNotebook caseId={c.id}/>
+  </div>
+
   </div>
 
   <section class="section">
@@ -236,14 +144,11 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
         if((index+1)%3===0 && ads[(index+1)/3-1])fragment.append(ads[(index+1)/3-1]);
       });
       timeline.replaceChildren(fragment);
+      document.dispatchEvent(new Event('journey-order-changed'));
     });
   }
-  import { getSupabase } from '../../lib/supabaseBrowser';
-  import { chooseNoteSaveBody, parseStructuredNote, textLength } from '../../lib/noteMetadataHelpers';
-  import type { LoadedNoteFormat, SaveNoteResult, StructuredNotePayload } from '../../lib/noteMetadataHelpers';
-
   const back=document.getElementById('return-to-results') as HTMLAnchorElement;
-  try {const query=sessionStorage.getItem('tracking-public-search');if(query)back.href='/?'+query;}catch{}
+  try {const query=sessionStorage.getItem('tracking-public-search');if(query)back.href='/stocks/?'+query;}catch{}
   const evidenceSection=document.getElementById('evidence')!;
   const evidenceDetails=evidenceSection.querySelector<HTMLDetailsElement>('details')!;
   // Expand before the browser positions the anchor, including repeat clicks on the same hash.
@@ -255,10 +160,10 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
     const links=[...sectionNav.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')];
     const visible=links.map(link=>({link,section:document.getElementById(link.hash.slice(1))})).filter(item=>item.section && !item.section.hidden);
     const cutoff=sectionNav.getBoundingClientRect().bottom+32;
-    let current=visible.filter(item=>item.section!.getBoundingClientRect().top<=cutoff).at(-1) ?? visible[0];
+    let current=visible.filter(item=>item.link.hash!=='#note-section'&&item.section!.getBoundingClientRect().top<=cutoff).at(-1) ?? visible[0];
     // A short final section cannot always scroll all the way to the sticky navigation.
     const hashTarget=visible.find(item=>item.link.hash===location.hash);
-    if(hashTarget && window.scrollY+window.innerHeight>=document.documentElement.scrollHeight-2 && hashTarget.section!.getBoundingClientRect().top<window.innerHeight)current=hashTarget;
+    if(hashTarget && hashTarget.section!.getBoundingClientRect().top<window.innerHeight && hashTarget.section!.getBoundingClientRect().bottom>cutoff)current=hashTarget;
     for(const link of links) {
       if(link===current?.link)link.setAttribute('aria-current','location');else link.removeAttribute('aria-current');
     }
@@ -271,140 +176,8 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
   window.addEventListener('pageshow',scheduleNav);
   document.querySelector('#evidence details')?.addEventListener('toggle',scheduleNav);
   scheduleNav();
-  const supabase = getSupabase();
-  const favBtn = document.getElementById('fav-btn') as HTMLButtonElement;
-  const intensitySel = document.getElementById('fav-intensity') as HTMLSelectElement;
-  const noteSection = document.getElementById('note-section') as HTMLElement;
-  const noteBody = document.getElementById('note-body') as HTMLTextAreaElement;
-  const noteScenario = document.getElementById('note-scenario') as HTMLInputElement;
-  const noteTargetPrice = document.getElementById('note-target-price') as HTMLInputElement;
-  const noteExitCondition = document.getElementById('note-exit-condition') as HTMLInputElement;
-  const noteNextCheckDate = document.getElementById('note-next-check-date') as HTMLInputElement;
-  const noteSave = document.getElementById('note-save') as HTMLButtonElement;
-  const noteStatus = document.getElementById('note-status') as HTMLElement;
-  const caseId = favBtn?.dataset.caseId ?? '';
-
-  let userId: string | null = null;
-  let isFavorite = false;
-  let loadedNoteFormat: LoadedNoteFormat = 'v1';
-
-  function fillNote(body: string) {
-    const parsed = parseStructuredNote(body);
-    const n = parsed.note;
-    loadedNoteFormat = parsed.format;
-    noteScenario.value = n.scenario;
-    noteTargetPrice.value = n.targetPrice;
-    noteExitCondition.value = n.exitCondition;
-    noteNextCheckDate.value = n.nextCheckDate;
-    noteBody.value = n.freeText;
-  }
-
-  function currentNotePayload(): StructuredNotePayload {
-    return { v: 1, scenario: noteScenario.value, targetPrice: noteTargetPrice.value, exitCondition: noteExitCondition.value, nextCheckDate: noteNextCheckDate.value, freeText: noteBody.value };
-  }
-
-  function buildSaveNoteBody(): SaveNoteResult {
-    return chooseNoteSaveBody(currentNotePayload(), loadedNoteFormat);
-  }
-
-  function renderFav() {
-    favBtn.textContent = isFavorite ? '★ お気に入り登録済み' : '☆ お気に入りに登録';
-    intensitySel.hidden = !isFavorite;
-  }
-
-  async function init() {
-    if (!supabase) return;
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user;
-    if (!user) return;
-    userId = user.id;
-
-    favBtn.hidden = false;
-    noteSection.hidden = false;
-    const personalLink=document.getElementById('personal-note-link') as HTMLAnchorElement;
-    personalLink.href='#note-section';
-    personalLink.setAttribute('aria-label','自分のメモを書く');
-    if(location.hash==='#note-section')noteSection.scrollIntoView();
-    scheduleNav();
-
-    const [{ data: fav }, { data: note }] = await Promise.all([
-      supabase
-        .from('user_case_favorites')
-        .select('intensity')
-        .eq('case_id', caseId)
-        .maybeSingle(),
-      supabase
-        .from('user_case_notes')
-        .select('body')
-        .eq('case_id', caseId)
-        .maybeSingle(),
-    ]);
-
-    if (fav) {
-      isFavorite = true;
-      intensitySel.value = String(fav.intensity);
-    }
-    if (note) fillNote(note.body);
-    renderFav();
-  }
-
-  favBtn?.addEventListener('click', async () => {
-    if (!supabase || !userId) return;
-    favBtn.disabled = true;
-    if (isFavorite) {
-      const { error } = await supabase
-        .from('user_case_favorites')
-        .delete()
-        .eq('user_id', userId)
-        .eq('case_id', caseId);
-      if (!error) isFavorite = false;
-    } else {
-      const { error } = await supabase
-        .from('user_case_favorites')
-        .upsert({ user_id: userId, case_id: caseId, intensity: Number(intensitySel.value) || 1 });
-      if (!error) isFavorite = true;
-    }
-    favBtn.disabled = false;
-    renderFav();
-  });
-
-  intensitySel?.addEventListener('change', async () => {
-    if (!supabase || !userId || !isFavorite) return;
-    await supabase
-      .from('user_case_favorites')
-      .update({ intensity: Number(intensitySel.value) })
-      .eq('user_id', userId)
-      .eq('case_id', caseId);
-  });
-
-  noteSave?.addEventListener('click', async () => {
-    if (!supabase || !userId) return;
-    const saveBody = buildSaveNoteBody();
-    if (!saveBody.ok) { noteStatus.textContent = saveBody.message; updateNoteCount(); return; }
-    const body = saveBody.body;
-    noteSave.disabled = true;
-    noteStatus.textContent = '保存中…';
-    const { error } = await supabase
-      .from('user_case_notes')
-      .upsert({ user_id: userId, case_id: caseId, body });
-    if (!error) loadedNoteFormat = saveBody.format;
-    noteStatus.textContent = error ? 'メモを保存できませんでした。入力内容を控え、通信状況とログイン状態を確認してから、もう一度保存してください。' : '保存しました';
-    noteSave.disabled = false;
-    updateNoteCount();
-  });
-
-  const updateNoteCount = () => {
-    const el = document.getElementById('note-count');
-    if (!el) return;
-    const saveBody = buildSaveNoteBody();
-    const n=currentNotePayload();
-    const entered=[n.scenario,n.targetPrice,n.exitCondition,n.nextCheckDate,n.freeText].reduce((total,text)=>total+textLength(text),0);
-    el.textContent = `入力：${entered}文字${saveBody.ok ? '' : '（保存上限を超えています。入力を短くしてください）'}`;
-  };
-  noteBody?.addEventListener('input', updateNoteCount);
-  noteScenario?.addEventListener('input', updateNoteCount);
-  noteTargetPrice?.addEventListener('input', updateNoteCount);
-  noteExitCondition?.addEventListener('input', updateNoteCount);
-  noteNextCheckDate?.addEventListener('input', updateNoteCount);
-  init().then(updateNoteCount);
+  const valuationTool=document.querySelector<HTMLDetailsElement>('[data-valuation-tool]')!;
+  function revealValuation(){if(['#quick-valuation','#valuation','#valuation-sources'].includes(location.hash)){valuationTool.open=true;document.getElementById(location.hash.slice(1))?.scrollIntoView();}}
+  document.querySelectorAll('a[href="#quick-valuation"]').forEach(link=>link.addEventListener('click',()=>valuationTool.open=true));
+  window.addEventListener('hashchange',revealValuation);revealValuation();
 </script>

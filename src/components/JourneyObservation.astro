@@ -1,0 +1,14 @@
+---
+import {OBSERVATION_KIND,OBSERVATION_OUTCOME,type WatchObservation} from '../lib/watchHistory';
+import {formatDateTime} from '../lib/format';
+interface Props {o:WatchObservation;observations:WatchObservation[]}
+const {o,observations}=Astro.props;
+---
+<div class="watch-observation-head"><span class="watch-badge">{OBSERVATION_KIND[o.kind]}</span><time>{o.occurred_on||o.date_note}</time><span class="small muted">{OBSERVATION_OUTCOME[o.outcome]}</span></div>
+    <h3>{o.title}</h3><p><strong class="small">観測した事実</strong><br/>{o.facts}</p>
+    {o.interpretation&&<p class="watch-interpretation"><strong class="small">見立て</strong><br/>{o.interpretation}</p>}
+    {(o.price!==null||o.volume!==null)&&<p class="small">{o.price!==null&&<>株価 {o.price.toLocaleString('ja-JP')}円（{o.price_on}）</>}{o.volume!==null&&<> ／ 出来高 {o.volume.toLocaleString('ja-JP')}株</>}</p>}
+    {o.date_note&&o.occurred_on&&<p class="small muted">時期の補足：{o.date_note}</p>}
+    <div class="small watch-links">{o.related_id&&<a href={`#observation-${o.related_id}`}>関連する観察：{observations.find(x=>x.id===o.related_id)?.title}</a>}{o.event_id&&<a href={`#event-${o.event_id}`}>関連する報道・開示へ</a>}{o.source_url?<a href={o.source_url} target="_blank" rel="noopener noreferrer">出典：{o.source_name}</a>:o.source_name&&<span>情報源：{o.source_name}</span>}</div>
+    <p class="small muted watch-recorded">記録 {formatDateTime(o.recorded_at)} ／ {o.observer}{o.updated_at!==o.recorded_at&&<> · 修正 {formatDateTime(o.updated_at)}</>}</p>
+  

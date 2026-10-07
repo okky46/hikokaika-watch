@@ -1,0 +1,146 @@
+---
+import Base from '../layouts/Base.astro';
+import TrackingTable from '../components/TrackingTable.astro';
+import TrackingLegend from '../components/TrackingLegend.astro';
+import RecentMovements from '../components/RecentMovements.astro';
+import AdSlot from '../components/AdSlot.astro';
+import { loadPublicData } from '../lib/publicData';
+import { PUBLIC_TRACKING_STATUS, validDate } from '../lib/trackingProfile';
+import { formatDate } from '../lib/format';
+import { STATEMENT_FILTERS } from '../lib/trackingSearch';
+const { cases, details, mediaOutlets, isSampleData, generatedAt } = await loadPublicData();
+const latestCheckedOn=cases.map(c=>c.lastCheckedOn).filter((date):date is string=>!!date && validDate(date)).sort().at(-1);
+const activeMedia = new Set(cases.flatMap(c=>c.search.media));
+const media = [...mediaOutlets.filter(m=>m.is_active || activeMedia.has(m.id)), {id:'none',name:'報道なし'}, ...(activeMedia.has('unreviewed') ? [{id:'unreviewed',name:'媒体を確認中'}] : [])];
+const searchData=JSON.stringify(cases.map(c=>({...c.search,slug:c.slug}))).replaceAll('<','\\u003c');
+const years=[...new Set(cases.flatMap(c=>c.search.events.map(e=>e.date.start?.slice(0,4)).filter((x):x is string=>!!x)))].sort().reverse();
+const homeAdSlot = import.meta.env.PUBLIC_ADSENSE_SLOT_HOME ?? '';
+const hasHomeAd = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT && homeAdSlot);
+const stages=[{id:'',label:'すべて'},{id:'pre',label:'正式発表前'},{id:'post',label:'正式発表後'},{id:'closed',label:'完了・終了'},{id:'unreviewed',label:'分類確認中'}];
+---
+<Base title="銘柄を探す" description="以前、非公開化の噂になっていた銘柄は今どうなっている？ 非公開化・MBO・親子上場解消の噂、報道、会社説明とその後を時系列で追うデータベース。" path="/stocks/" hasAdSlots={hasHomeAd}>
+  {isSampleData && <p class="notice">開発・デモ用の<strong>架空のサンプルデータ</strong>です。実在の企業・報道とは関係ありません。</p>}
+  <section class="tracking-intro" aria-label="サービス概要">
+    <h1>次に追う銘柄を見つける</h1>
+    <p class="muted">報道前の違和感から、非公開化に至った結果まで。気になる銘柄の経過を開き、「監視する」でホームに残せます。<a class="small" href="/guidelines/">掲載基準</a></p>
+  </section>
+  <section class="section" aria-label="銘柄の検索・絞り込み">
+    <form class="card tracking-filters" id="filter-form" role="search">
+      <div class="filter-topline">
+        <fieldset class="stage-options"><legend class="sr-only">段階</legend>{stages.map(s=><label class:list={['stage-option',{'stage-option--unreviewed':s.id==='unreviewed' && !cases.some(c=>c.search.stage==='unreviewed')}]}><input type="radio" name="stage" value={s.id} checked={s.id===''} data-label={s.label}/><span>{s.label}<small>{s.id ? cases.filter(c=>c.search.stage===s.id).length : cases.length}</small></span></label>)}</fieldset>
+        <label class="favorite-filter" data-login-only hidden><input type="checkbox" id="f-fav"/><span>☆ お気に入り</span></label>
+      </div>
+      <div class="filter-bar primary-filters">
+        <div class="filter-field filter-field--wide"><label for="f-q">会社名・証券コード・噂</label><input name="q" type="search" id="f-q" maxlength="150" placeholder="会社名・コードなど" autocomplete="off"/></div>
+      </div>
+      <details class="search-more"><summary>状況・媒体・期間で絞り込む<span id="advanced-filter-count" class="small muted"></span></summary>
+        <div class="filter-field"><label for="f-status">今の状況</label><select name="status" id="f-status"><option value="">すべて</option>{Object.entries(PUBLIC_TRACKING_STATUS).map(([id,s])=><option value={id}>{s.label}</option>)}<option value="unreviewed">状況を確認中</option></select></div>
+        <fieldset class="media-filter"><legend>媒体 <span class="small muted">複数選択可</span></legend><div class="media-options">{media.map(m=><label><input type="checkbox" name="media" value={m.id} data-label={m.name}/><span class="media-choice"><span class="media-choice-check" aria-hidden="true">✓</span>{m.name}<small data-media-count={m.id}>{cases.filter(c=>c.search.media.includes(m.id)).length}</small></span></label>)}</div></fieldset>
+        <div class="filter-bar">
+          <div class="filter-field"><label for="f-statement">会社説明（過去の説明も含む）</label><select name="statement" id="f-statement"><option value="">すべて</option>{Object.entries(STATEMENT_FILTERS).map(([id,label])=><option value={id}>{label}</option>)}</select></div>
+          <div class="filter-field"><label for="f-from">期間の開始日</label><input id="f-from" name="from" type="date"/></div>
+          <div class="filter-field"><label for="f-to">終了日</label><input id="f-to" name="to" type="date"/></div>
+          <div class="filter-field"><label for="f-year">年を指定</label><select id="f-year"><option value="">年を選ぶ</option>{years.map(y=><option value={y}>{y}年</option>)}</select></div><button type="button" class="btn" id="last-twelve-months">直近12か月</button>
+        </div>
+        <label class="filter-check"><input type="checkbox" name="issues"/>号数しか分からない情報も、参考年月で検索する</label>
+        <p class="small muted">指定した期間に出来事がある銘柄を表示します。媒体の条件は銘柄ごとの全記録、「今の状況」の条件は最新の確認内容に適用します。</p>
+        <p class="small muted">号数は検索用の参考年月として使います。実際の公表日は各出来事で確認してください。</p>
+        <p class="notice" id="date-error" hidden>終了日は開始日以降にしてください。</p>
+        <div class="filter-field" data-login-only hidden><label for="f-intensity">お気に入りの関心度</label><select id="f-intensity"><option value="">すべて</option><option value="3">3: 最重要</option><option value="2">2: 注目</option><option value="1">1: 経過確認</option></select></div>
+      </details>
+      <div class="filter-actions"><div id="active-filters" class="active-filters" aria-label="適用中の条件"></div><button type="button" class="btn small" data-clear-search data-clear-main hidden>条件をすべて解除</button></div>
+      <p id="search-warning" class="notice" hidden>URLの検索条件に使えない指定があるため、その指定を除いて表示しています。検索欄で条件を選び直してください。</p>
+      <noscript><p class="notice">検索にはJavaScriptが必要です。すべての銘柄は下の一覧から閲覧できます。</p></noscript>
+    </form>
+    <RecentMovements cases={details} generatedAt={generatedAt}/>
+    <div class="list-toolbar"><div><h2 class="section-title">追跡銘柄 <span class="small muted" id="filter-count" aria-live="polite">全{cases.length}件</span></h2><div class="list-checked small"><strong>最終確認日: {latestCheckedOn ? <time datetime={latestCheckedOn}>{formatDate(latestCheckedOn)}</time> : '未確認'}</strong><details class="list-help"><summary aria-label="確認日と並び順について">ⓘ</summary><p>掲載銘柄の確認日のうち、最も新しい日を表示しています。確認日は銘柄ごとに異なるため、個別の日付は詳細ページをご覧ください。</p><p>通常は、公表日が分かる出来事の新しい順に並びます。日付を確認できた出来事がない銘柄は、その後にサイト登録順で表示します。</p></details></div></div><div class="filter-field"><label class="sr-only" for="f-sort">並び順</label><select id="f-sort" name="sort" form="filter-form"><option value="event">出来事が新しい順</option><option value="registered">サイト登録が新しい順</option><option value="updated">編集が新しい順</option><option value="code">証券コード順</option></select></div></div>
+    <TrackingLegend/>
+    <div class="tracking-results">
+      <div class="watch-list-controls"><label class="filter-check"><input id="watch-updated-only" type="checkbox"/> 前回確認してから更新があった銘柄</label><a class="small" href="/#my-watch">自分の監視ホームへ →</a></div>
+      <TrackingTable cases={cases}/>
+    </div>
+    {hasHomeAd && <AdSlot placement="home-between-sections" slotId={homeAdSlot}/>}
+  </section>
+  <script is:inline type="application/json" id="tracking-search-data" set:html={searchData}/>
+</Base>
+<script>
+  import { getSupabase } from '../lib/supabaseBrowser';
+  import { setupTrackingList } from '../lib/trackingList';
+  const favOnly=document.getElementById('f-fav') as HTMLInputElement;
+  const intensitySel=document.getElementById('f-intensity') as HTMLSelectElement;
+  let favorites=new Map<string,number>();
+  let loggedIn=false;
+  const clearPersonal=()=>{favOnly.checked=false;intensitySel.value='';};
+  const applyFilters=setupTrackingList(id=>(!favOnly.checked||favorites.has(id))&&(!intensitySel.value||favorites.get(id)===Number(intensitySel.value)),clearPersonal);
+  // ---------- お気に入り(ログイン時のみ Supabase に接続) ----------
+  const supabase = getSupabase();
+
+  function renderFavButtons() {
+    for (const btn of document.querySelectorAll<HTMLButtonElement>('[data-fav-toggle]')) {
+      const id = btn.dataset.favToggle ?? '';
+      const on = favorites.has(id);
+      btn.textContent = on ? '★' : '☆';
+      btn.setAttribute('aria-pressed', String(on));
+      btn.title = loggedIn
+        ? on
+          ? 'お気に入りから外す'
+          : 'お気に入りに登録'
+        : 'ログインしてお気に入りに登録';
+    }
+  }
+
+  async function initFavorites() {
+    if (!supabase) return; // ログイン機能が無効な環境ではお気に入りUIは初期状態のまま
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData.session?.user;
+    if (!user) return;
+    loggedIn = true;
+    for (const el of document.querySelectorAll<HTMLElement>('[data-login-only]')) {
+      el.hidden = false;
+    }
+    const { data: favs } = await supabase
+      .from('user_case_favorites')
+      .select('case_id, intensity');
+    favorites = new Map((favs ?? []).map((f) => [f.case_id as string, f.intensity as number]));
+    renderFavButtons();
+    applyFilters();
+  }
+
+  document.addEventListener('click', async (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-fav-toggle]');
+    if (!btn) return;
+    if (!supabase || !loggedIn) {
+      if (confirm('お気に入りに登録するにはログインが必要です。マイページでログインしますか？')) {
+        location.href = '/mypage/';
+      }
+      return;
+    }
+    const caseId = btn.dataset.favToggle ?? '';
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData.session?.user?.id;
+    if (!userId) return;
+
+    btn.disabled = true;
+    if (favorites.has(caseId)) {
+      const { error } = await supabase
+        .from('user_case_favorites')
+        .delete()
+        .eq('user_id', userId)
+        .eq('case_id', caseId);
+      if (!error) favorites.delete(caseId);
+    } else {
+      const { error } = await supabase
+        .from('user_case_favorites')
+        .upsert({ user_id: userId, case_id: caseId, intensity: 1 });
+      if (!error) favorites.set(caseId, 1);
+    }
+    btn.disabled = false;
+    renderFavButtons();
+    applyFilters();
+  });
+
+  supabase?.auth.onAuthStateChange((event) => {
+    if(event==='SIGNED_OUT') { loggedIn=false;favorites.clear();clearPersonal();document.querySelectorAll<HTMLElement>('[data-login-only]').forEach(el=>el.hidden=true);renderFavButtons();applyFilters(); }
+  });
+  initFavorites();
+</script>

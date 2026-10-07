@@ -1,0 +1,19 @@
+---
+interface Props {caseId:string}
+const {caseId}=Astro.props;
+---
+<aside class="watch-notebook card" id="note-section" data-notebook={caseId} aria-label="自分の監視記録">
+  <div class="workspace-heading"><div><span class="eyebrow">自分だけの記録</span><h2>次に確かめたいこと</h2></div><button type="button" class="btn" data-follow disabled>監視する</button></div>
+  <p class="small muted" data-personal-scope>保存先を確認しています。</p>
+  <details class="note-entry" open><summary>気づき・次の確認日を記録する</summary>
+  <form data-notebook-form>
+    <label>見立て・気になる理由<input name="scenario" type="text" maxlength="1000" placeholder="例：材料が見当たらない上昇が続いている" disabled/></label>
+    <label>今回の気づき・次に確認すること<textarea name="freeText" rows="4" maxlength="1000" placeholder="観測した動きや、次に確かめたい点を残す" disabled></textarea></label>
+    <label>次に確認する日<input name="nextCheckDate" type="date" disabled/></label>
+    <details><summary>価格・見直す条件も残す</summary><label>目標価格<input name="targetPrice" type="text" maxlength="1000" disabled/></label><label>見立てを見直す条件<input name="exitCondition" type="text" maxlength="1000" disabled/></label></details>
+    <button type="submit" class="btn btn--primary" disabled>記録して監視を続ける</button>
+  </form>
+  </details>
+  <p class="small" data-notebook-status role="status"></p>
+  <a class="small" href="/#my-watch">監視ホームへ戻る →</a>
+</aside>

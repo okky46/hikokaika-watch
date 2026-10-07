@@ -56,5 +56,5 @@ export function setupWatchReadState(){
     try{saveChecked(localStorage,root.dataset.watchCase!,JSON.parse(root.dataset.watchManifest??'{}'));refresh();}
     catch{const message=root.querySelector('[data-watch-message]');if(message)message.textContent='確認状態を保存できませんでした。ブラウザーの保存設定を確認して、もう一度お試しください。';}
   });
-  filter?.addEventListener('change',refresh);window.addEventListener('storage',refresh);window.addEventListener('pageshow',refresh);refresh();
+  filter?.addEventListener('change',refresh);window.addEventListener('storage',refresh);window.addEventListener('pageshow',refresh);document.addEventListener('watch-baseline-saved',refresh);refresh();
 }

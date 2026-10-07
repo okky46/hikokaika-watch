@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import '../styles/workspace.css';
 
 interface Props {
   title: string;
@@ -22,9 +23,9 @@ const SITE_NAME = '非公開化ウォッチ';
 const fullTitle = title === SITE_NAME ? title : `${title} | ${SITE_NAME}`;
 const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
 const navigation = [
-  { href: '/', label: '追跡銘柄', active: currentPath === '/' || /^\/(cases|companies)\//.test(currentPath) },
-  { href: '/articles/', label: '調査記事', active: currentPath === '/articles' || currentPath.startsWith('/articles/') },
-  { href: '/mypage/', label: 'マイページ', active: currentPath === '/mypage' },
+  { href: '/', label: '監視ホーム', active: currentPath === '/' },
+  { href: '/stocks/', label: '銘柄を探す', active: currentPath === '/stocks' || /^\/(cases|companies)\//.test(currentPath) },
+  { href: '/mypage/', label: '記録・アカウント', active: currentPath === '/mypage' },
 ];
 ---
 
@@ -66,12 +67,12 @@ const navigation = [
     <footer class="site-footer">
       <div class="site-footer__inner">
         <nav class="site-footer__nav" aria-label="フッターメニュー">
-          <a href="/">追跡銘柄</a>
+          <a href="/">監視ホーム</a>
           <a href="/articles/">調査記事</a>
           <a href="/guidelines/">掲載基準・FAQ</a>
           <a href="/disclaimer/">免責事項</a>
           <a href="/privacy/">プライバシーポリシー</a>
-          <a href="/mypage/">マイページ</a>
+          <a href="/mypage/">記録・アカウント</a>
           <a href="/requests/">追加掲載・訂正依頼</a>
         </nav>
         <p class="site-footer__note">
@@ -86,6 +87,8 @@ const navigation = [
 <script>
 import {setupWatchReadState} from '../lib/watchReadState';
 setupWatchReadState();
+import {setupWatchWorkspace} from '../lib/watchWorkspaceUI';
+void setupWatchWorkspace();
 </script>
   </body>
 </html>

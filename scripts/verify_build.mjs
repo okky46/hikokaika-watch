@@ -11,6 +11,13 @@ for(const file of files.filter(f=>/\.(html|json|xml|js)$/.test(f))){
   if(file.endsWith('.html')&&!file.includes(`${path.sep}admin${path.sep}`))assert.doesNotMatch(text,/第0報|aria-label="株価推移/);
 }
 const read=file=>fs.readFileSync(`dist/${file}`,'utf8');
+assert.match(read('index.html'),/data-watch-desk/);
+assert.doesNotMatch(read('index.html'),/id="filter-form"/);
+assert.match(read('stocks/index.html'),/銘柄を探す/);
+assert.match(read('sitemap.xml'),/\/stocks\//);
+assert.match(read('cases/0001-toyo-demo-seiki/index.html'),/data-notebook=/);
+assert.match(read('cases/0001-toyo-demo-seiki/index.html'),/観察と報道の経過/);
+assert.match(read('cases/0001-toyo-demo-seiki/index.html'),/data-valuation-tool/);
 assert.match(read('cases/0001-toyo-demo-seiki/index.html'),/価格の試算/);
 assert.match(read('companies/0001/index.html'),/試算に使う登録値と出典/);
 assert.match(read('tob-comparables/index.html'),/過去TOBデータの掲載は終了しました/);

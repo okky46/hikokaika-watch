@@ -1,0 +1,20 @@
+---
+import type {CaseDetail} from '../lib/types';
+import {watchWorkspaceCase} from '../lib/watchWorkspace';
+interface Props {cases:CaseDetail[]}
+const {cases}=Astro.props;
+const items=cases.map(watchWorkspaceCase);
+---
+<section id="my-watch" class="watch-desk section" data-watch-desk data-workspace-cases={JSON.stringify(items)} aria-label="自分の監視銘柄">
+  <div class="workspace-heading"><div><span class="eyebrow">自分の監視</span><h2>続きから確認する</h2></div><a class="btn" href="/stocks/">銘柄を探す・追加する</a></div>
+  <p class="small muted" data-personal-scope>監視中の銘柄を読み込んでいます。</p>
+  <div class="desk-filters" role="group" aria-label="確認する銘柄の絞り込み">
+    <button type="button" class="btn" data-desk-filter="all" aria-pressed="true">監視中 <span data-count="all">0</span></button>
+    <button type="button" class="btn" data-desk-filter="changed" aria-pressed="false">確認後に更新 <span data-count="changed">0</span></button>
+    <button type="button" class="btn" data-desk-filter="due" aria-pressed="false">確認日になった <span data-count="due">0</span></button>
+  </div>
+  <div class="desk-list" data-desk-list></div>
+  <div class="watch-start card" data-desk-empty hidden><h3>気になる銘柄を、次も見つけられる場所に。</h3><p>銘柄の「監視する」でここに残せます。自分の気づきと次の確認日も、経過を読みながら記録できます。</p><a href="/stocks/" class="btn btn--primary">最初の銘柄を選ぶ</a></div>
+  <p class="small" data-desk-status role="status"></p>
+  <noscript><p>監視中の銘柄と自分の記録にはJavaScriptが必要です。<a href="/stocks/">銘柄の経過は一覧から閲覧できます。</a></p></noscript>
+</section>

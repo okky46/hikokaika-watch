@@ -52,7 +52,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       <button class="btn" data-tab="companies">会社</button>
       <button class="btn" data-tab="cases">追跡銘柄</button>
       <button class="btn" data-tab="articles">調査記事</button>
-      <button class="btn" data-tab="valuations">財務・TOB比較</button>
+      <details><summary>保管データの管理</summary><p class="small">過去TOBの詳細データは掲載を終了しています。</p><button class="btn" data-tab="valuations">財務・TOBの保管データ</button></details>
       <button class="btn" data-tab="events">出来事</button>
       <button class="btn" data-tab="prices">株価</button>
       <button class="btn" data-tab="corrections">訂正履歴</button>
@@ -471,6 +471,9 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     $('ad-main').hidden = false;
     await reloadAll();
     showTab('cases');
+    const requestedCase=new URLSearchParams(location.search).get('case');
+    const target=cases.find(c=>c.id===requestedCase);
+    if(target&&await trackingAdmin?.open(target))$('observation-editor').scrollIntoView();
   }
 
   $('ad-login')?.addEventListener('click', async () => {
