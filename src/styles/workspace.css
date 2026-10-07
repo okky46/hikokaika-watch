@@ -87,17 +87,22 @@ body:has(.case-section-nav) :is(#watch-review,#note-section) { scroll-margin-top
 
 /* 一覧では株価と倍率を独立した列にし、銘柄名の下に積み重ねない。 */
 .tracking-table th:nth-child(1){width:18%}
-.tracking-table th:nth-child(2){width:12%}
-.tracking-table th:nth-child(3){width:13%}
-.tracking-table th:nth-child(4){width:35%}
-.tracking-table th:nth-child(5){width:22%}
+.tracking-table th:nth-child(2){width:22%}
+.tracking-table th:nth-child(3){width:35%}
+.tracking-table th:nth-child(4){width:12%}
+.tracking-table th:nth-child(5){width:13%}
 .tracking-table :is(.tracking-price,.tracking-multiple) strong{display:block;font-size:1.05rem;font-variant-numeric:tabular-nums;white-space:nowrap}
 .tracking-table :is(.tracking-price,.tracking-multiple) small{display:block;color:var(--color-ink-soft);font-size:.73rem;line-height:1.5;margin-top:.25rem}
 .tracking-table .tracking-multiple strong{color:#1b4a69}
 @media(max-width:760px){
  .case-table.tracking-table tbody tr{grid-template-columns:repeat(2,minmax(0,1fr))}
- .tracking-table .tracking-price{grid-column:1;grid-row:3}
- .tracking-table .tracking-multiple{grid-column:2;grid-row:3}
- .tracking-table .tracking-summary{grid-row:4}
+ .tracking-table .tracking-price{grid-column:1;grid-row:4}
+ .tracking-table .tracking-multiple{grid-column:2;grid-row:4}
+ .tracking-table .tracking-summary{grid-row:3}
  .tracking-table :is(.tracking-price,.tracking-multiple)[data-label]::before{display:block}
 }
+
+.tracking-table .tracking-links{display:flex;gap:.8rem;margin-top:.2rem}
+.tracking-table .tracking-links a{color:var(--color-ink-soft);padding:.2rem 0;text-decoration:none}
+.tracking-table .tracking-links a:hover{text-decoration:underline;text-underline-offset:.2em}
+.tracking-table .tracking-missing{color:var(--color-ink-soft);font-size:.9rem;font-weight:400}
