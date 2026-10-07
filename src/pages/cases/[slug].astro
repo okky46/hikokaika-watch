@@ -189,7 +189,6 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
 
   <section class="section" id="related-articles"><h2 class="section-title">関連記事</h2><ArticleList articles={Astro.props.articles}/></section>
 
-  </div>
   <QuickValuation financials={valuations.financials.find(f=>f.code===c.securityCode)} observations={c.tracking?.observations??[]} preReportClose={c.preReportClose} industry={c.industry}/>
   <ValuationCalculator financials={valuations.financials.find(f=>f.code===c.securityCode)} comparables={valuations.comparables} industry={c.industry} sample={isSampleData}/>
 
@@ -212,7 +211,7 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
       </div>
     </div>
   </section>
-
+  </div>
 
   <section class="section">
     <p class="small">
