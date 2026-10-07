@@ -1,17 +1,20 @@
 ---
 import type { Financials } from '../lib/valuation';
-import { valuationFactSets } from '../lib/valuation';
+import { valuationFactSets, basisLabel } from '../lib/valuation';
 import type { WatchObservation } from '../lib/watchHistory';
 import type { PricePoint } from '../lib/types';
 interface Props { financials?:Financials; observations?:WatchObservation[]; preReportClose?:PricePoint|null; industry?:string|null }
 const {financials,observations=[],preReportClose,industry}=Astro.props;
-const sets=valuationFactSets(financials);
+const sourceFields={ebitda:'EBITDA（百万円）',debt:'有利子負債（百万円）',cash:'EVから控除する現金等（百万円）',adjustments:'EVへの加算調整（百万円）',shares:'自己株式控除後の株式数（百万株）',bps:'1株当たり純資産（円）'} as const;
+// Only ship inputs used by the three methods. Preserve the complete records in storage.
+const sets=valuationFactSets(financials).map(s=>({...s,facts:Object.fromEntries(Object.entries(s.facts).filter(([key])=>key in sourceFields))}));
 const bases=observations.filter(o=>o.price!==null).map(o=>({id:o.id,label:`${o.title} ／ ${o.price_on}・${o.price}円`,price:o.price!,note:`${o.source_name}。${o.date_note||o.occurred_on||'時期未確認'}の観察`,url:o.source_url}));
 if(preReportClose)bases.push({id:'pre-report',label:`報道前の終値 ／ ${preReportClose.priceDate}・${preReportClose.price}円`,price:preReportClose.price,note:preReportClose.sourceName??'登録済みの価格',url:''});
 const fields=[['ebitda','EBITDA（百万円）'],['multiple','想定EV/EBITDA（倍）'],['debt','有利子負債（百万円）'],['cash','EVから控除する現金等（百万円）'],['adjustments','EVへの加算調整（百万円）'],['shares','自己株式控除後の株式数（百万株）']];
 ---
 <section id="quick-valuation" class="section quick-valuation" data-quick-valuation data-sets={JSON.stringify(sets)} data-bases={JSON.stringify(bases)}>
-  <div class="watch-section-heading"><div><span class="small muted">前提を変えて考える</span><h2 class="section-title">価格のアテを試算</h2></div><a class="small" href="#valuation">PER・PBRと財務の出典へ →</a></div>
+  <span id="valuation" aria-hidden="true"></span>
+  <div class="watch-section-heading"><div><span class="small muted">前提を変えて考える</span><h2 class="section-title">価格の試算</h2></div></div>
   <p>市場プレミアム、利益、資産の3つの見方で試せます。入力はこの画面内だけで使い、掲載データは変わりません。</p>
   <div class="quick-methods" role="group" aria-label="価格の試算方法">
     <button type="button" class="btn" data-method="premium" aria-pressed="true">市場プレミアム</button><button type="button" class="btn" data-method="ev" aria-pressed="false">EV/EBITDA</button><button type="button" class="btn" data-method="nav" aria-pressed="false">実質NAV</button>
@@ -45,6 +48,10 @@ const fields=[['ebitda','EBITDA（百万円）'],['multiple','想定EV/EBITDA（
     <p class="small muted">（純資産 ＋ 税引後の評価調整）÷ 株式数。土地などの含み損益は、簿価との差額だけを加えます。</p>
   </div>
   <p class="small muted">この前提ならいくらになるかを示す概算です。実際の買付価格や非公開化の可能性を示す数字ではありません。</p>
+  {sets.some(s=>Object.keys(s.facts).length>0)&&<details class="card section" id="valuation-sources"><summary>試算に使う登録値と出典</summary>
+    <p class="small muted">財務情報の確認日：{financials?.checkedOn}。会社予想に前期の償却費を加えたEBITDAは、サイトの参考予想値です。各数値の対象期と算式を確認してください。</p>
+    {sets.map(s=><div><h3>{s.label}</h3><dl class="valuation-facts">{Object.entries(sourceFields).map(([key,label])=>{const f=s.facts[key];return f&&<div><dt>{label}</dt><dd><strong>{(f.value/(key==='bps'?1:1e6)).toLocaleString('ja-JP',{maximumFractionDigits:4})}</strong><p class="small">{f.period} ／ {basisLabel(f.basis)} ／ {f.scope==='consolidated'?'連結':'単体'}</p><a href={f.sourceUrl} target="_blank" rel="noopener noreferrer">{f.sourceName}</a>{f.note&&<p class="small">{f.note}</p>}</dd></div>})}</dl></div>)}
+  </details>}
   <noscript>試算するにはJavaScriptを有効にしてください。</noscript>
 </section>
 <script>

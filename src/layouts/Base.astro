@@ -24,7 +24,6 @@ const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
 const navigation = [
   { href: '/', label: '追跡銘柄', active: currentPath === '/' || /^\/(cases|companies)\//.test(currentPath) },
   { href: '/articles/', label: '調査記事', active: currentPath === '/articles' || currentPath.startsWith('/articles/') },
-  { href: '/tob-comparables/', label: 'TOB事例・倍率', active: currentPath === '/tob-comparables' },
   { href: '/mypage/', label: 'マイページ', active: currentPath === '/mypage' },
 ];
 ---
@@ -70,7 +69,6 @@ const navigation = [
           <a href="/">追跡銘柄</a>
           <a href="/articles/">調査記事</a>
           <a href="/guidelines/">掲載基準・FAQ</a>
-          <a href="/tob-comparables/">過去のTOB事例と倍率</a>
           <a href="/disclaimer/">免責事項</a>
           <a href="/privacy/">プライバシーポリシー</a>
           <a href="/mypage/">マイページ</a>

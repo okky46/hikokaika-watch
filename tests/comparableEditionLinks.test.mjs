@@ -10,7 +10,7 @@ import {JSDOM} from 'jsdom';
 import {parseValuation} from '../src/lib/valuation.ts';
 import {setupTobList} from '../src/lib/tobList.ts';
 
-test('同じ案件の価格版リンクと平均の根拠が各版へ到達し、旧リンクも保持する',async()=>{
+test('保全した非公開コンポーネントで、同じ案件の価格版リンクと平均の根拠が各版へ到達し、旧リンクも保持する',async()=>{
   const sample=JSON.parse(fs.readFileSync('data/sample/valuations.json','utf8')).find(r=>r.kind==='comparable');
   const eps={value:100,period:'2025年12月期',basis:'actual',scope:'consolidated',sourceName:'架空決算',sourceUrl:'https://example.com/results.pdf',note:'テスト専用'};
   const edition=(stage,price)=>parseValuation({...sample,code:'0001',name:'価格版確認用デモ企業',industry:'情報・通信業',offerPrice:price,priceStage:stage,multiples:{per:{value:price/100,basis:'actual',period:eps.period,method:'calculated',sourceUrl:eps.sourceUrl,calculation:'架空の通期EPSによるテスト'}},research:{dealId:'0001-20260101',buyer:'架空買付者',transactionType:'third_party',status:'completed',priceBasis:stage,scope:'consolidated',statisticsEligible:stage==='final',definitions:{per:'TOB価格÷連結通期実績EPS'},denominators:{eps},valuations:[]}});
@@ -33,7 +33,7 @@ test('同じ案件の価格版リンクと平均の根拠が各版へ到達し�
     }
     const url=dataUrl((await stripTypes(code,{loader:'ts',format:'esm'})).code);compiled.set(file,url);return url;
   }
-  const Page=(await import(await component(path.resolve('src/pages/tob-comparables.astro')))).default;
+  const Page=(await import(await component(path.resolve('src/components/ArchivedTobComparables.astro')))).default;
   const container=await AstroContainer.create();
   const doc=new JSDOM(await container.renderToString(Page,{request:new Request('https://hikokaika.com/tob-comparables/')}),{url:'https://hikokaika.com/tob-comparables/'}).window.document;
   const ids=[...doc.querySelectorAll('[id]')].map(x=>x.id);assert.equal(new Set(ids).size,ids.length);

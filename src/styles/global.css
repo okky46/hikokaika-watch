@@ -859,7 +859,7 @@ body:has(.case-section-nav) :is(#watch-history,#quick-valuation,#timeline,#evide
   .case-section-nav { grid-template-columns: repeat(2,minmax(0,1fr)); }
   body:has(.case-section-nav) :is(#watch-history,#quick-valuation,#timeline,#evidence,#related-articles,#valuation,#note-section,[id^="event-"],[id^="observation-"]) { scroll-margin-top: 13.5rem; }
 }
-.tracking-table { table-layout: fixed; width: 100%; }
+.tracking-table { table-layout: fixed; width: 100%; min-width: 0; }
 .tracking-table .clickable-rows tr { cursor: pointer; }
 .tracking-table .clickable-rows tr:focus-within { background: #f6f8fb; }
 .list-checked { display: flex; flex-wrap: wrap; gap: .25rem .8rem; align-items: baseline; }
@@ -881,12 +881,9 @@ body:has(.case-section-nav) :is(#watch-history,#quick-valuation,#timeline,#evide
   .tracking-table td[data-label]::before { content: attr(data-label); display: block; color: var(--color-ink-soft); font-size: .78rem; margin-bottom: .25rem; }
 }
 /* 噂の概要を優先し、根拠は詳細で展開。既存フォント指定は維持。 */
-.tracking-table th:nth-child(1) { width: 20%; }
-.tracking-table th:nth-child(2) { width: 32%; }
-.tracking-table th:nth-child(3) { width: 23%; }
-.tracking-table th:nth-child(4) { width: 6%; }
-.tracking-table th:nth-child(5), .tracking-table th:nth-child(6) { width: 5.5%; }
-.tracking-table th:nth-child(7) { width: 8%; }
+.tracking-table th:nth-child(1) { width: 26%; }
+.tracking-table th:nth-child(2) { width: 44%; }
+.tracking-table th:nth-child(3) { width: 30%; }
 .tracking-company { display: flex; justify-content: space-between; gap: .5rem; align-items: start; }
 .case-link, .case-head h1 a { color: var(--color-ink); }
 .case-link:hover, .case-head h1 a:hover { text-decoration: underline; }
@@ -965,18 +962,7 @@ body:has(.case-section-nav) :is(#watch-history,#quick-valuation,#timeline,#evide
 .tracking-table .media-chip:hover { border-color: var(--color-primary); }
 .tracking-table .first-report { margin: .35rem 0 0; }
 .tracking-table .first-report span { display: block; }
-.tracking-table th.metric, .tracking-table td.metric { padding-inline: .35rem; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.tracking-table th.metric span { display: block; font-weight: normal; }
-.tracking-table td.metric { vertical-align: middle; }
-.metrics-pending { margin: .5rem 0; }
-.metrics-toggle { display:flex; align-items:center; flex-wrap:wrap; gap:.4rem; min-height:44px; cursor:pointer; }
-.tracking-results:not(:has(#show-market-metrics:checked)) .metric,
-.tracking-results:not(:has(#show-market-metrics:checked)) .metrics-pending { display:none; }
-.tracking-results:not(:has(#show-market-metrics:checked)) .tracking-table { min-width:0; }
-.tracking-results:not(:has(#show-market-metrics:checked)) .tracking-table th:nth-child(1) { width:26%; }
-.tracking-results:not(:has(#show-market-metrics:checked)) .tracking-table th:nth-child(2) { width:44%; }
-.tracking-results:not(:has(#show-market-metrics:checked)) .tracking-table th:nth-child(3) { width:30%; }
-@media (min-width: 761px) and (max-width: 1000px) { .tracking-table { min-width: 0; }.tracking-table th.metric { white-space: normal; overflow-wrap: anywhere; }.tracking-legend { grid-template-columns: auto minmax(0,1fr); }.legend-help { grid-column: 1 / -1; } }
+@media (min-width: 761px) and (max-width: 1000px) { .tracking-table { min-width: 0; }.tracking-legend { grid-template-columns: auto minmax(0,1fr); }.legend-help { grid-column: 1 / -1; } }
 @media (max-width: 760px) {
   .tracking-intro h1 { font-size: 1.5rem; }
   .tracking-filters { padding: .85rem; }
@@ -991,12 +977,10 @@ body:has(.case-section-nav) :is(#watch-history,#quick-valuation,#timeline,#evide
   .stage-legend li:not(:last-child)::after { right: -.5rem; }
   .legend-help, .legend-help[open] { grid-column: 1; grid-row: auto; }
   .tracking-legend .legend-intensity { font-size: .72rem; }
-  .case-table.tracking-table tbody tr { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: .2rem .5rem; }
+  .case-table.tracking-table tbody tr { display: grid; grid-template-columns: minmax(0,1fr); gap: .2rem .5rem; }
   .tracking-table td { min-width: 0; width: auto; }
-  .tracking-table td:not(.metric) { grid-column: 1 / -1; }
-  .tracking-table td[data-label]:not(.metric)::before { display: none; }
-  .tracking-table td.metric { grid-row: auto; padding: .5rem 0 0; border-top: 1px solid var(--color-line); text-align: left; }
-  .tracking-table td.metric::before { font-size: .7rem; white-space: normal; min-height: 2.5em; }
+  .tracking-table td { grid-column: 1 / -1; }
+  .tracking-table td[data-label]::before { display: none; }
   .tracking-table .tracking-company { align-items: center; }
   .tracking-table .tracking-summary { padding-top: .35rem; }
 }

@@ -1,7 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
 import ArticleList from '../../components/ArticleList.astro';
-import ValuationCalculator from '../../components/ValuationCalculator.astro';
 import QuickValuation from '../../components/QuickValuation.astro';
 import {loadValuations} from '../../lib/valuationData';
 import StockLinks from '../../components/StockLinks.astro';
@@ -10,7 +9,6 @@ import { loadPublicData } from '../../lib/publicData';
 import { formatDate } from '../../lib/format';
 import type { PublicCompany } from '../../lib/types';
 import {valuationCompanies} from '../../lib/valuationCompanies';
-import {comparableAnchor} from '../../lib/comparableAnchor';
 
 export async function getStaticPaths() {
   const data = await loadPublicData();
@@ -21,7 +19,6 @@ export async function getStaticPaths() {
 interface Props { articles: import('../../lib/articles').PublicArticle[]; company: PublicCompany; isSampleData: boolean }
 const { company, isSampleData } = Astro.props;
 const valuations=await loadValuations();
-const tobRecords=valuations.comparables.filter(c=>c.code===company.securityCode);
 const title = `${company.nameJa}(${company.securityCode})の非公開化・MBO・TOB案件一覧`;
 const description = `${company.nameJa}（証券コード${company.securityCode}）の非公開化・MBO・TOBに関する経過をまとめています。過去の案件や、再び動きがあった案件を確認できます。`;
 ---
@@ -35,7 +32,7 @@ const description = `${company.nameJa}（証券コード${company.securityCode}�
   </header>
   <section class="section">
     <h2 class="section-title">この企業の案件</h2>
-    {company.cases.length === 0 ? <p class="empty-state">追跡銘柄としての経過はまだ掲載していません。公表済みTOB事例や関連記事は下の欄で確認できます。</p> : (
+    {company.cases.length === 0 ? <p class="empty-state">この企業の追跡記録はまだ掲載していません。</p> : (
       <div class="company-cases">
         {company.cases.map((c) => <article class="card company-case">
           <h3><a class="research-title" href={`/cases/${c.slug}/`}><span>{c.companyName}の状況・経過を見る{company.cases.length>1 && `：${c.title}`}</span><span aria-hidden="true">→</span></a></h3>
@@ -46,8 +43,6 @@ const description = `${company.nameJa}（証券コード${company.securityCode}�
       </div>
     )}
   </section>
-  {tobRecords.length>0&&<section class="section"><h2 class="section-title">公表済みのTOB事例</h2><ul>{tobRecords.map(c=><li><a href={`/tob-comparables/#${comparableAnchor(c)}`}>{c.announcedOn}公表 ／ {c.priceStage} {c.offerPrice.toLocaleString('ja-JP')}{c.priceUnit??'円/株'}：算定資料と価格の経緯を見る</a></li>)}</ul></section>}
 <StockLinks code={company.securityCode}/><section class="section"><h2 class="section-title">関連記事</h2><ArticleList articles={Astro.props.articles}/></section>
 <QuickValuation financials={valuations.financials.find(f=>f.code===company.securityCode)} industry={company.industry}/>
-<ValuationCalculator financials={valuations.financials.find(f=>f.code===company.securityCode)} comparables={valuations.comparables} industry={company.industry} sample={isSampleData}/>
 </Base>

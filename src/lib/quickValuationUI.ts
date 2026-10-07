@@ -31,7 +31,7 @@ export function setupQuickValuation(root:HTMLElement){
     const error=prerequisites(s.facts,'evEbitda');
     if(error){text('[data-ev-origin]',`${error} 入力欄は変更していません。手入力でも試算できます。`);return;}
     for(const k of ['ebitda','debt','cash','adjustments','shares'] as const)q(k).value=String(s.facts[k]!.value/1e6);
-    text('[data-ev-origin]',`登録値を反映：${s.label}・EBITDA ${s.facts.ebitda!.period} ／ 残高 ${s.facts.cash!.period}。出典・参考予想の算式は財務の出典欄に記載。倍率は自分の仮定を入力してください。`);update();
+    text('[data-ev-origin]',`登録値を反映：${s.label}・EBITDA ${s.facts.ebitda!.period} ／ 残高 ${s.facts.cash!.period}。出典・参考予想の算式は「試算に使う登録値と出典」に記載。倍率は自分の仮定を入力してください。`);update();
   });
   root.querySelector('[data-load-nav]')?.addEventListener('click',()=>{
     const f=sets.find(s=>s.key==='registered')?.facts;
@@ -39,7 +39,7 @@ export function setupQuickValuation(root:HTMLElement){
       text('[data-nav-origin]','同じ基準日・範囲の実績BPSと株式数がそろっていません。純資産と株式数を手入力してください。');return;
     }
     q('equity').value=String(f.bps.value*f.shares.value/1e6);q('nav-shares').value=String(f.shares.value/1e6);
-    text('[data-nav-origin]',`登録BPS × 株式数による概算：${f.bps.period}・${basisLabel(f.bps.basis)}。資産の時価はこの操作では評価していません。BPSと株数は財務の出典欄で確認できます。`);update();
+    text('[data-nav-origin]',`登録BPS × 株式数による概算：${f.bps.period}・${basisLabel(f.bps.basis)}。資産の時価はこの操作では評価していません。BPSと株数は「試算に使う登録値と出典」で確認できます。`);update();
   });
   root.addEventListener('input',event=>{
     const target=event.target as HTMLInputElement;

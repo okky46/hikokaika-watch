@@ -22,7 +22,18 @@ async function bundle(contents){return (await build({stdin:{contents,loader:'ts'
 const quickClient=await bundle("import {setupQuickValuation} from './quickValuationUI.ts';setupQuickValuation(document.querySelector('[data-quick-valuation]'));");
 test('価格画面：登録値を読み込み、手入力・方式切替を保持し、時点不一致を反映しない',async()=>{
  const financials=JSON.parse(fs.readFileSync('data/sample/valuations.json','utf8'))[0];
- const dom=new JSDOM(await render('QuickValuation',{financials}),{runScripts:'outside-only'});dom.window.eval(quickClient);
+ const original=JSON.stringify(financials);
+ const html=await render('QuickValuation',{financials});
+ assert.equal(JSON.stringify(financials),original,'公開用の絞り込みは保存値を変更しない');
+ const sourceDoc=new JSDOM(html).window.document;
+ const publicSets=JSON.parse(sourceDoc.querySelector('[data-quick-valuation]').dataset.sets);
+ assert(publicSets.every(s=>!('eps' in s.facts)),'旧PER用のEPSをHTMLへ含めない');
+ assert.equal(sourceDoc.querySelector('h2').textContent,'価格の試算');
+ assert.equal(sourceDoc.querySelectorAll('[data-valuation],a[href*=tob-comparables]').length,0);
+ assert(sourceDoc.querySelector('#valuation-sources').textContent.includes(financials.facts.ebitda.period));
+ assert([...sourceDoc.querySelectorAll('#valuation-sources a')].some(a=>a.href===financials.facts.ebitda.sourceUrl));
+ sourceDoc.defaultView.close();
+ const dom=new JSDOM(html,{runScripts:'outside-only'});dom.window.eval(quickClient);
  const d=dom.window.document,q=k=>d.querySelector(`[data-q="${k}"]`),edit=(k,v)=>{q(k).value=v;q(k).dispatchEvent(new dom.window.Event('input',{bubbles:true}));};
  edit('base','1000');assert.match(d.querySelector('[data-output=premium]').textContent,/1,300/);
  d.querySelector('[data-method=ev]').click();d.querySelector('[data-load-ev]').click();

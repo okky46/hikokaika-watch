@@ -6,7 +6,6 @@ import TrackingStatus from '../../components/TrackingStatus.astro';
 import { REPORT_METHOD, REPORT_ACCESS } from '../../lib/trackingProfile';
 import StockLinks from '../../components/StockLinks.astro';
 import ArticleList from '../../components/ArticleList.astro';
-import ValuationCalculator from '../../components/ValuationCalculator.astro';
 import { loadValuations } from '../../lib/valuationData';
 import EventTypeBadge from '../../components/EventTypeBadge.astro';
 import AdSlot from '../../components/AdSlot.astro';
@@ -190,7 +189,6 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
   <section class="section" id="related-articles"><h2 class="section-title">関連記事</h2><ArticleList articles={Astro.props.articles}/></section>
 
   <QuickValuation financials={valuations.financials.find(f=>f.code===c.securityCode)} observations={c.tracking?.observations??[]} preReportClose={c.preReportClose} industry={c.industry}/>
-  <ValuationCalculator financials={valuations.financials.find(f=>f.code===c.securityCode)} comparables={valuations.comparables} industry={c.industry} sample={isSampleData}/>
 
   <section class="section" aria-label="自分のメモ" id="note-section" hidden>
     <h2 class="section-title">自分のメモ</h2>
