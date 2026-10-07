@@ -99,6 +99,37 @@ test('画面：不足するBPS・EVの株価は捏造せず、参考倍率と欠
  const dom=new JSDOM(html);for(const metric of ['pbr','evEbitda']){
   const card=dom.window.document.querySelector(`[data-reference-metric="${metric}"]`);
   assert.equal(card.querySelector('[data-reference-center]').textContent,'試算できません');assert.match(card.textContent,/未登録/);
+  assert.equal(card.querySelector('[data-use-reference]').disabled,true);
  }
+ dom.window.close();
+});
+
+test('画面：1件の参考倍率を明示操作で全精度のまま取り込み、株価を保持する',async()=>{
+ const peers=structuredClone(comparables.slice(0,1));peers[0].multiples.per.value=15.123456789;
+ const html=await (await AstroContainer.create()).renderToString(Calculator,{props:{financials,comparables:peers}});
+ const dom=new JSDOM(html,{runScripts:'outside-only'});dom.window.eval(client);const d=dom.window.document;
+ const card=d.querySelector('[data-reference-metric="per"]'),input=d.querySelector('[data-multiple]'),price=d.querySelector('[data-price]');
+ assert.match(card.textContent,/参考事例1件の倍率：15.1倍/);assert.doesNotMatch(card.textContent,/中央値/);
+ assert.equal(card.querySelector('.reference-sensitivity').open,false);assert.equal(input.value,'');
+ price.value='1400';price.dispatchEvent(new dom.window.Event('input'));
+ card.querySelector('[data-use-reference]').click();
+ assert.equal(input.value,'15.123456789');assert.equal(d.querySelector('[data-metric]').value,'per');assert.equal(price.value,'1400');
+ assert.match(d.querySelector('[data-scenario]').textContent,/1,512.35円/);assert.equal(d.activeElement,input);
+ assert.equal(d.querySelector('[data-applied-reference]').hidden,false);
+ input.value='12';input.dispatchEvent(new dom.window.Event('input'));assert.equal(d.querySelector('[data-applied-reference]').hidden,true);
+ card.querySelector('[data-use-reference]').click();d.querySelector('[data-reset]').click();assert.equal(input.value,'');assert.equal(price.value,'');assert.equal(d.querySelector('[data-applied-reference]').hidden,true);
+ dom.window.close();
+});
+
+test('画面：会社予想の参考を取り込んでも実績の数値に混ぜず、切替後も入力を保持する',async()=>{
+ const f=structuredClone(financials);f.forecastFacts=structuredClone(f.facts);f.forecastFacts.eps={...f.facts.eps,value:200,basis:'company_forecast',period:'2027年3月期'};
+ const peers=structuredClone(comparables);for(const p of peers)p.multiples.per.basis='company_forecast';
+ const html=await (await AstroContainer.create()).renderToString(Calculator,{props:{financials:f,comparables:peers}});
+ const dom=new JSDOM(html,{runScripts:'outside-only'});dom.window.eval(client);const d=dom.window.document;
+ d.querySelector('[data-financial-view="forecast"] [data-use-metric="per"]').click();
+ assert.equal(d.querySelector('[data-financial-basis]').value,'forecast');assert.match(d.querySelector('[data-scenario-basis]').textContent,/会社予想・2027年3月期/);
+ const value=d.querySelector('[data-multiple]').valueAsNumber;assert.match(d.querySelector('[data-scenario]').textContent,new RegExp((value*200).toLocaleString('ja-JP',{maximumFractionDigits:2})+'円'));
+ const selector=d.querySelector('[data-financial-basis]');selector.value='registered';selector.dispatchEvent(new dom.window.Event('change'));
+ assert.equal(d.querySelector('[data-multiple]').valueAsNumber,value);assert.match(d.querySelector('[data-scenario-basis]').textContent,/実績/);assert.equal(d.querySelector('[data-applied-reference]').hidden,true);
  dom.window.close();
 });

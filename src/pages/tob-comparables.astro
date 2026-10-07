@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import {loadValuations} from '../lib/valuationData';
 import {loadPublicData} from '../lib/publicData';
-import {METRICS,basisLabel} from '../lib/valuation';
+import {METRICS,basisLabel,outcomeLabel,transactionLabel,valuationMethodLabel} from '../lib/valuation';
 import type {Metric} from '../lib/valuation';
 import ComparableEvidence from '../components/ComparableEvidence.astro';
 import ComparableStatistics from '../components/ComparableStatistics.astro';
@@ -20,46 +20,52 @@ const legacyAnchors=comparables.map(c=>{
 ---
 <Base title="過去のTOB事例と倍率" description="公表資料に基づく過去のTOBの倍率と価格の経緯。対象期・算定根拠・出典を確認できます。" path="/tob-comparables/">
   <h1>過去のTOB事例と倍率</h1>
-  <p>過去の案件について、公表資料に記載された倍率と当サイトで計算した倍率を区別して掲載しています。比較する際は、業種に加えて成長率・財務構成・取引条件もご確認ください。</p>
+  <p>公表資料の倍率と当サイトで計算した倍率を区別して掲載しています。業種・成長率・財務構成・取引条件を確認して比較してください。</p>
   {isSampleData&&<p class="notice">ここに掲載する案件・数値は、動作確認用の架空のサンプルです。</p>}
   <p><a href="/">銘柄を選んで株価・倍率を試算する</a></p>
-  <div class="card tob-controls" id="tob-list">
+  <form class="card tob-controls" id="tob-filters" role="search" aria-label="TOB事例の検索">
+    <label class="tob-query" id="tob-list">会社名・証券コード<input type="search" id="tob-query" placeholder="会社名・コードを入力" maxlength="150"/></label>
     <label>比較業種<select id="tob-industry"><option value="">すべて</option>{industries.map(i=><option value={i}>{i}</option>)}</select></label>
     <label id="tob-metric-control" hidden>比較する指標<select id="tob-metric" aria-controls="tob-comparison"><option value="all">すべての指標</option>{Object.entries(METRICS).map(([key,label])=><option value={key}>{label}</option>)}</select></label>
-  </div>
-  <p id="tob-count" aria-live="polite">{comparables.length}案件</p>
+    <details class="tob-more"><summary>期間・成立状況で絞り込む<span id="tob-advanced-count" class="small muted"></span></summary><div class="tob-controls">
+      <label>成立状況<select id="tob-outcome"><option value="">すべて</option>{Object.entries(outcomeLabel).map(([key,label])=><option value={key}>{label}</option>)}</select></label>
+      <label>公表日の開始<input type="date" id="tob-from"/></label><label>終了<input type="date" id="tob-to"/></label>
+      <label class="tob-check"><input type="checkbox" id="tob-available"/>選択中の指標の倍率がある事例のみ</label>
+    </div></details>
+    <button class="btn small" type="button" data-tob-reset>条件を解除</button>
+    <p class="notice" id="tob-date-error" hidden>終了日は開始日以降にしてください。</p>
+  </form>
+  <noscript><p class="notice">検索・絞り込みにはJavaScriptが必要です。すべての事例と出典は下の一覧から閲覧できます。</p></noscript>
+  <p id="tob-count" aria-live="polite">{comparables.length}件（価格の段階別）</p>
+  <p class="empty-state" id="tob-empty" hidden>条件に一致する事例はありません。「条件を解除」で検索し直せます。</p>
   <p class="small muted tob-scroll-hint" id="tob-scroll-hint">表は横にスクロールできます。銘柄名は左に固定されます。</p>
-  <div class="tob-table" id="tob-comparison" data-metric-mode="all" role="region" aria-label="過去案件の価格と取引倍率" aria-describedby="tob-scroll-hint" tabindex="0"><table><caption>過去案件の価格と取引倍率</caption><thead><tr><th scope="col">銘柄・公表日</th><th scope="col" class="tob-context">業種</th><th scope="col" class="tob-context">価格の段階・金額</th>{Object.entries(METRICS).map(([key,label])=><th scope="col" data-metric-column={key}>{label}</th>)}</tr></thead><tbody>{comparables.map((c,index)=><tr data-tob-industry={c.industry} data-tob-row><th scope="row"><a href={`#${comparableAnchor(c,index)}`}>{c.name}（{c.code}）</a><span class="tob-date">{c.announcedOn}</span><span class="tob-mobile-context small">{c.industry}<br/>{c.priceStage} {fmt(c.offerPrice)}{c.priceUnit??'円'}</span></th><td class="tob-context">{c.industry}</td><td class="tob-context">{c.priceStage}<br/>{fmt(c.offerPrice)}{c.priceUnit??'円'}</td>{(['per','pbr','evEbitda'] as Metric[]).map(k=><td data-metric-column={k}>{c.multiples[k]?<><strong>{fmt(c.multiples[k]!.value)}倍</strong><br/><span class="small">{basisLabel(c.multiples[k]!.basis)}</span></>:'未登録'}</td>)}</tr>)}</tbody></table></div>
-  {industries.map(i=><section data-tob-industry={i}><ComparableStatistics records={comparables} industry={i}/></section>)}
+  <div class="tob-table" id="tob-comparison" data-metric-mode="all" role="region" aria-label="過去案件の価格と取引倍率" aria-describedby="tob-scroll-hint" tabindex="0"><table><caption>過去案件の価格と取引倍率</caption><thead><tr><th scope="col">銘柄・公表日</th><th scope="col" class="tob-context">業種</th><th scope="col" class="tob-context">価格の段階・金額</th>{Object.entries(METRICS).map(([key,label])=><th scope="col" data-metric-column={key}>{label}</th>)}</tr></thead><tbody>{comparables.map((c,index)=><tr data-tob-industry={c.industry} data-tob-row data-tob-target={comparableAnchor(c,index)} data-tob-search={`${c.name} ${c.code}`} data-tob-date={c.announcedOn} data-tob-outcome={c.research?.status??"unverified"} data-tob-metrics={Object.keys(c.multiples).join(",")}><th scope="row"><a href={`#${comparableAnchor(c,index)}`}>{c.name}（{c.code}）</a><span class="tob-date">{c.announcedOn}</span><span class="tob-mobile-context small">{c.industry}<br/>{c.priceStage} {fmt(c.offerPrice)}{c.priceUnit??'円'}</span></th><td class="tob-context">{c.industry}</td><td class="tob-context">{c.priceStage}<br/>{fmt(c.offerPrice)}{c.priceUnit??'円'}</td>{(['per','pbr','evEbitda'] as Metric[]).map(k=><td data-metric-column={k}>{c.multiples[k]?<><strong>{fmt(c.multiples[k]!.value)}倍</strong><br/><span class="small">{basisLabel(c.multiples[k]!.basis)}</span></>:'未登録'}</td>)}</tr>)}</tbody></table></div>
+  <details class="section"><summary>業種別の参考倍率を見る</summary><p class="small muted">以下は各業種の全事例から集計した値です。会社名・期間・成立状況の検索条件は集計に適用しません。</p>{industries.map(i=><section data-tob-industry={i}><ComparableStatistics records={comparables} industry={i}/></section>)}</details>
   {comparables.length===0&&<p class="empty-state">出典を確認した事例を順次掲載します。</p>}
-  {comparables.map((c,index)=><article class="card section" data-tob-industry={c.industry} id={comparableAnchor(c,index)}>
+  {comparables.map((c,index)=><article class="card section tob-detail" data-tob-target={comparableAnchor(c,index)} data-tob-industry={c.industry} id={comparableAnchor(c,index)}>
     {legacyAnchors[index]&&<span id={legacyAnchors[index]} aria-hidden="true"/>}
     <h2>{c.name}（{c.code}）</h2>
     {financials.some(f=>f.code===c.code)&&<p><a href={`/companies/${c.code}/#valuation`}>この銘柄の会社予想・実績で株価と倍率を試算する</a></p>}
     <p>{c.industry} ／ {c.announcedOn}公表 ／ 確認日 {c.checkedOn}</p>
     <p><strong>{c.priceStage}：{fmt(c.offerPrice)}{c.priceUnit??'円'}</strong> ／ <a href={c.sourceUrl} target="_blank" rel="noopener noreferrer">公表資料</a></p>
+    {c.research&&<p class="small">{outcomeLabel[c.research.status]} ／ {transactionLabel[c.research.transactionType]} ／ 買付者 {c.research.buyer}</p>}
+    <div class="tob-key-multiples">{Object.entries(c.multiples).map(([key,m])=><p><strong>{METRICS[key as Metric]} {fmt(m.value)}倍</strong><br/><span class="small muted">{basisLabel(m.basis)}・{m.period}</span></p>)}</div>
+    {c.research?.valuations.length? <div class="tob-ranges"><h3>第三者機関の評価レンジ</h3><ul>{c.research.valuations.map(v=><li>{v.advisor} ／ {v.methodName??valuationMethodLabel[v.method]}：<strong>{fmt(v.low)}{v.low!==v.high&&`〜${fmt(v.high)}`}{v.unit??'円/株'}</strong></li>)}</ul><p class="small muted">買付価格とは異なる算定結果です。採用した数値や条件は「算定根拠・出典」で確認できます。</p></div>:null}
+    {c.notes&&<details class="tob-notes"><summary>取引条件・確認事項（試算前に確認）</summary><p>{c.notes}</p></details>}
+    <details class="tob-evidence"><summary>算定根拠・出典</summary>
     <dl>{Object.entries(c.multiples).map(([key,m])=><div><dt><strong>{METRICS[key as Metric]} {fmt(m.value)}倍</strong></dt><dd><p>{basisLabel(m.basis)}・{m.period} ／ {m.method==='disclosed'?'資料に記載された倍率':'当サイトで計算'}</p><p>{m.calculation}</p><a href={m.sourceUrl} target="_blank" rel="noopener noreferrer">倍率の出典</a></dd></div>)}</dl>
     <ComparableEvidence record={c}/>
+    </details>
+    <details class="tob-history"><summary>価格・算定の経緯</summary>
     <h3>価格・算定の経緯</h3>
     {c.history.length?<ol>{[...c.history].sort((a,b)=>a.date.localeCompare(b.date)).map(h=><li><strong>{h.date}：{fmt(h.price)}{c.priceUnit??'円'}</strong><p>{h.note}</p><a href={h.sourceUrl} target="_blank" rel="noopener noreferrer">出典</a></li>)}</ol>:<p>価格の経緯はまだ掲載していません。確認できた買付価格と条件は、この事例の説明と出典をご覧ください。</p>}
-    {c.notes&&<p>{c.notes}</p>}{c.articleUrl&&<p><a href={c.articleUrl}>詳しい調査記事</a></p>}
+    </details>{c.articleUrl&&<p><a href={c.articleUrl}>詳しい調査記事</a></p>}
     <a class="navigation-link small" href="#tob-list">比較一覧に戻る</a>
   </article>)}
 </Base>
 <script>
-const filter=document.querySelector<HTMLSelectElement>('#tob-industry')!;
-const metric=document.querySelector<HTMLSelectElement>('#tob-metric')!;
-const table=document.querySelector<HTMLElement>('#tob-comparison')!;
-const hint=document.querySelector<HTMLElement>('#tob-scroll-hint')!;
-document.querySelector<HTMLElement>('#tob-metric-control')!.hidden=false;
-const initialIndustry=new URLSearchParams(location.search).get('industry');
-if(initialIndustry && [...filter.options].some(option=>option.value===initialIndustry))filter.value=initialIndustry;
-metric.value=matchMedia('(max-width: 760px)').matches?'per':'all';
-const applyMetric=()=>{table.dataset.metricMode=metric.value;hint.hidden=metric.value!=='all';table.scrollLeft=0;};
-const apply=()=>{let n=0;document.querySelectorAll<HTMLElement>('[data-tob-industry]').forEach(e=>{e.hidden=!!filter.value&&e.dataset.tobIndustry!==filter.value;if(e.hasAttribute('data-tob-row')&&!e.hidden)n++;});document.querySelector('#tob-count')!.textContent=`${n}案件`;};
-filter.addEventListener('change',()=>{apply();const url=new URL(location.href);if(filter.value)url.searchParams.set('industry',filter.value);else url.searchParams.delete('industry');history.replaceState(null,'',url);});
-metric.addEventListener('change',applyMetric);
-apply();applyMetric();
+import {setupTobList} from '../lib/tobList';
+setupTobList();
 </script>
 <style>
 dd{margin:.4rem 0 1rem}li{margin:1rem 0}p,dd{overflow-wrap:anywhere}
@@ -85,4 +91,7 @@ dd{margin:.4rem 0 1rem}li{margin:1rem 0}p,dd{overflow-wrap:anywhere}
  .tob-table:not([data-metric-mode="all"]) th:first-child{width:62%;max-width:none;min-width:0}
  .tob-table td,.tob-table th{padding:.7rem .6rem;overflow-wrap:anywhere}
 }
+</style>
+<style>
+.tob-controls .tob-query{flex:2;min-width:14rem}#tob-list{scroll-margin-top:7rem}.tob-controls input{width:100%;margin:0}.tob-more{flex-basis:100%}.tob-more>.tob-controls{padding:0}.tob-controls .tob-check{display:flex;align-items:center;gap:.5rem;flex-basis:100%}.tob-check input{width:auto}.tob-detail{scroll-margin-top:7rem}.tob-detail summary{padding:.65rem 0;min-height:44px;font-weight:600}.tob-detail details{margin:.5rem 0}.tob-key-multiples{display:flex;gap:1rem;flex-wrap:wrap;border-block:1px solid var(--color-line);padding:.5rem 0}.tob-key-multiples p{flex:1;min-width:9rem;margin:.4rem 0}.tob-ranges li{margin:.5rem 0}.tob-evidence[open],.tob-history[open],.tob-notes[open]{border-bottom:1px solid var(--color-line);padding-bottom:1rem}.tob-controls select,.tob-controls input:not([type=checkbox]){min-height:44px;font-size:1rem}@media(max-width:760px){.tob-controls .tob-query{flex-basis:100%;min-width:0}.tob-controls label:not(.tob-query){flex-basis:calc(50% - .75rem)}.tob-more .tob-controls label{flex-basis:100%}.tob-key-multiples{gap:.5rem}.tob-key-multiples p{min-width:7rem}.tob-detail{padding:1rem}.tob-more summary{padding:.6rem 0;min-height:44px}}
 </style>

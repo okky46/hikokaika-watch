@@ -30,8 +30,9 @@ const factSets=valuationFactSets(financials);
         <p class="small" data-ev-inputs></p>
         <p class="small" data-ev-result aria-live="polite"></p>
       </div>
-      <div class="card">
+      <div class="card" data-scenario-panel>
         <h3>倍率から株価を試算</h3>
+        <p class="small" data-applied-reference hidden></p>
         <label>計算方法<select data-metric>{Object.entries(METRICS).map(([key,label])=><option value={key}>{label}</option>)}</select></label>
         <label>試算に使う倍率（倍）<input data-multiple type="number" min="0.0001" max="10000" step="any" inputmode="decimal" autocomplete="off" placeholder="倍率を入力" /></label>
         <p data-scenario-basis class="small"></p>
@@ -66,3 +67,4 @@ document.querySelectorAll<HTMLElement>('[data-valuation]').forEach(setupValuatio
 <style>
 .valuation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.valuation label{display:block;margin:.7rem 0}.valuation input,.valuation select{display:block;width:100%;max-width:22rem;margin-top:.3rem}.valuation dl>div{padding:.7rem 0;border-bottom:1px solid var(--color-line)}.valuation dd{margin:.3rem 0;overflow-wrap:anywhere}.valuation .peer-multiple{margin:.7rem 0}.valuation p{overflow-wrap:anywhere}@media(max-width:640px){.valuation-grid{grid-template-columns:1fr}}
 </style>
+<style>[data-scenario-panel]{scroll-margin-top:7rem}[data-applied-reference]{padding:.6rem;background:var(--color-bg);border-left:3px solid var(--color-accent)}</style>

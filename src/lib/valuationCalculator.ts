@@ -24,7 +24,22 @@ export function setupValuationCalculator(root:HTMLElement){
   const evRatio=multipleFromPrice(f,'evEbitda',price.valueAsNumber);
   root.querySelector<HTMLElement>('[data-ev-result]')!.textContent=price.validity.valid&&evRatio!==null?`入力株価でのEV：${number((price.valueAsNumber*f.shares!.value+f.debt!.value-f.cash!.value+f.adjustments!.value)/1000000)}百万円`:'';
  };
- price.addEventListener('input',update);multiple.addEventListener('input',update);metric.addEventListener('change',update);selector?.addEventListener('change',update);
- root.querySelector('[data-reset]')!.addEventListener('click',()=>{price.value='';multiple.value='';update();});
+ const applied=root.querySelector<HTMLElement>('[data-applied-reference]');
+ const clearReference=()=>{if(applied){applied.hidden=true;applied.textContent='';}};
+ const edit=()=>{clearReference();update();};
+ price.addEventListener('input',update);multiple.addEventListener('input',edit);metric.addEventListener('change',edit);selector?.addEventListener('change',edit);
+ root.querySelectorAll<HTMLButtonElement>('[data-use-reference]').forEach(button=>button.addEventListener('click',()=>{
+  if(button.disabled)return;
+  const key=button.dataset.useMetric as Metric,value=Number(button.dataset.referenceMultiple);
+  const view=button.closest<HTMLElement>('[data-financial-view]');
+  const selected=sets.find(s=>s.key===(view?.dataset.financialView??sets[0].key));
+  if(!selected||!(key in METRICS)||!Number.isFinite(value)||value<=0||value>10000||prerequisites(selected.facts,key)||priceFromMultiple(selected.facts,key,value)===null)return;
+  if(selector)selector.value=selected.key;
+  metric.value=key;multiple.value=String(value);update();
+  if(applied){applied.hidden=false;applied.textContent=`反映した参考倍率：${button.dataset.referenceLabel}。試算欄で倍率を変更できます。`;}
+  multiple.focus({preventScroll:true});
+  root.querySelector<HTMLElement>('[data-scenario-panel]')?.scrollIntoView?.({block:'start',behavior:'auto'});
+ }));
+ root.querySelector('[data-reset]')!.addEventListener('click',()=>{price.value='';multiple.value='';clearReference();update();});
  update();
 }

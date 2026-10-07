@@ -13,7 +13,7 @@ const price=(n:number|null)=>n===null?'試算できません':`${n.toLocaleStrin
 ---
 <section class="reference-section" aria-label="同業事例の参考倍率と試算株価">
   <h3>同業事例の参考倍率と試算株価</h3>
-  <p class="small">{industry}の成立・完了したTOBの最終価格から集計しています。参考倍率は自由入力欄へ自動入力されないため、試算に使う倍率はご自身で指定してください。</p>
+  <p class="small">{industry}の成立・完了したTOBの最終価格から集計しています。{financials?'「この倍率で試算する」を押すと、表示中の財務数値を使って試算できます。':'この銘柄の財務数値が登録されると、参考倍率を使って試算できます。'}</p>
   <p class="small">EV/EBITDAは事業価値の比較に使います。PER・PBRは利益・純資産との補助比較です。倍率を当てはめた株価は、第三者機関の評価額とは区別して参照してください。</p>
   <div class="reference-grid">
     {(['evEbitda','per','pbr'] as Metric[]).map(metric=>{
@@ -26,14 +26,18 @@ const price=(n:number|null)=>n===null?'試算できません':`${n.toLocaleStrin
           return <div class="reference-group">
             <p class="small reference-context">{basisLabel(g.basis)}・{g.scope==='consolidated'?'連結':'単体'} ／ 対象{g.count}件<br/>TOB公表年月：{referencePeriod(g)}</p>
             <p class="small muted">{g.definition}</p>
-            <dl class="reference-multiples"><div><dt>平均</dt><dd>{multiple(g.mean)}倍</dd></div><div><dt>中央値</dt><dd>{multiple(g.median)}倍</dd></div></dl>
-            <p class="small muted">{metric==='evEbitda'?'平均倍率での試算株価':'平均倍率を当てはめた参考株価'}</p>
+            {g.count===1?<p><strong>参考事例1件の倍率：{multiple(g.mean)}倍</strong></p>:<dl class="reference-multiples"><div><dt>平均</dt><dd>{multiple(g.mean)}倍</dd></div><div><dt>中央値</dt><dd>{multiple(g.median)}倍</dd></div></dl>}
+            <p class="small muted">{g.count===1?'この事例の倍率での試算株価':'平均倍率での試算株価'}</p>
             <p class="reference-price" data-reference-center>{price(scenarios[1].price)}</p>
-            <div class="reference-range" aria-label="平均倍率の前後10パーセントによる試算">
+            {financials&&<button type="button" class="btn" data-use-reference data-use-metric={metric} data-reference-multiple={String(g.mean)} data-reference-label={`${METRICS[metric]}・${g.count===1?'参考事例1件':'平均（'+g.count+'件）'}・${basisLabel(g.basis)}・${g.scope==='consolidated'?'連結':'単体'} ／ ${g.definition}`} disabled={!!reason||scenarios[1].price===null}>この倍率で試算する</button>}
+            <details class="reference-sensitivity"><summary>倍率を±10%変えて試算する</summary>
+            <p class="small muted">倍率を変えた場合の計算例です。過去事例の分布や将来の予測幅を示すものではありません。</p>
+            <div class="reference-range" aria-label="参考倍率の前後10パーセントによる試算">
               <div><span>−10%</span><strong>{multiple(scenarios[0].multiple)}倍</strong><span>{price(scenarios[0].price)}</span></div>
               <div class="reference-range-center"><span>中心</span><strong>{multiple(scenarios[1].multiple)}倍</strong><span>{price(scenarios[1].price)}</span></div>
               <div><span>＋10%</span><strong>{multiple(scenarios[2].multiple)}倍</strong><span>{price(scenarios[2].price)}</span></div>
             </div>
+            </details>
             {reason&&<p class="small">{reason}</p>}
             {!reason&&scenarios.some(s=>s.price===null)&&<p class="small">正の株価にならない条件は試算できません。</p>}
             <details class="reference-sources"><summary>集計した{g.count}案件</summary><ul>{g.samples.map(c=><li><a href={`/tob-comparables/#${comparableAnchor(c)}`}>{c.name}（{c.code}）</a> ／ {c.announcedOn} ／ {multiple(c.multiples[metric]!.value)}倍</li>)}</ul></details>
@@ -42,8 +46,9 @@ const price=(n:number|null)=>n===null?'試算できません':`${n.toLocaleStrin
       </article>;
     })}
   </div>
-  <p class="small muted">中央は平均倍率での試算株価、左右はその倍率を±10%変えた場合の試算株価です。過去事例の分布や将来の予測幅を示す表示とは異なります。表示倍率は小数1桁に丸めていますが、株価は丸める前の倍率で計算しています。対象年月には各TOBの公表月を使います。</p>
+  <p class="small muted">表示倍率は小数1桁に丸めていますが、株価の計算と試算欄への反映には丸める前の倍率を使います。対象年月には各TOBの公表月を使います。</p>
 </section>
 <style>
 .reference-section{margin:1.5rem 0}.reference-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.reference-card{min-width:0;padding:1.1rem}.reference-primary{grid-column:1/-1}.reference-card h4{font-size:1.15rem;margin:0 0 .8rem}.reference-group+.reference-group{border-top:1px solid var(--color-line);margin-top:1rem;padding-top:1rem}.reference-context{min-height:3em}.reference-multiples{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}.reference-multiples>div{padding:.5rem 0}.reference-multiples dt{font-size:.8rem;color:var(--color-ink-soft)}.reference-multiples dd{margin:.2rem 0;font-weight:600;font-size:1.1rem}.reference-price{font-size:1.5rem;font-weight:700;line-height:1.3;margin:.4rem 0 1rem}.reference-primary .reference-price{font-size:1.7rem}.reference-range{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--color-line);border-radius:.5rem;overflow:hidden}.reference-range>div{display:flex;flex-direction:column;gap:.25rem;align-items:center;text-align:center;padding:.7rem .25rem;font-size:.8rem}.reference-range>div+div{border-left:1px solid var(--color-line)}.reference-range-center{background:var(--color-bg)}.reference-range strong{font-size:.95rem}.reference-sources{margin-top:1rem}.reference-sources ul{padding-left:1.1rem}.reference-card p,.reference-card li{overflow-wrap:anywhere}@media(max-width:900px){.reference-grid{grid-template-columns:1fr}.reference-context{min-height:0}.reference-price,.reference-primary .reference-price{font-size:1.5rem}}
 </style>
+<style>.reference-price,.reference-primary .reference-price{font-size:1.15rem}.reference-sensitivity{margin-top:1rem}.reference-sensitivity summary{min-height:44px;display:list-item;padding:.6rem 0}.reference-card .btn{min-height:44px;max-width:100%;white-space:normal}.reference-card .btn:disabled{opacity:.65;cursor:not-allowed}</style>
