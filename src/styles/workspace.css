@@ -107,3 +107,5 @@ body:has(.case-section-nav) :is(#watch-review,#note-section) { scroll-margin-top
 .tracking-table .tracking-links a{color:var(--color-ink-soft);padding:.2rem 0;text-decoration:none}
 .tracking-table .tracking-links a:hover{text-decoration:underline;text-underline-offset:.2em}
 .tracking-table .tracking-missing{color:var(--color-ink-soft);font-size:.9rem;font-weight:400}
+
+@media(min-width:761px){.tracking-table tbody td:nth-child(-n+3){vertical-align:middle}}
