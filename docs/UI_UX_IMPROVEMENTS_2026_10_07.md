@@ -30,3 +30,5 @@
 [PR #92](https://github.com/okky46/hikokaika-watch/pull/92)へ集約。機能head `6b08920` のGitHub CI（push・pull_request）とCloudflare Pagesの全3チェック成功を確認した。Cloudflare Preview `feb4900b` は公開成功し、閲覧には既存のCloudflare Access認証が必要なため、公開Preview内の手動操作は未確認。
 
 PRのマージと本番反映は未実施。本番での実データ123価格版の表示確認はマージ後の確認事項。Cloudflare Previewは既存設定どおりサンプルを使う。
+
+見た目の追加改修は同じPR #92へ反映。機能head ac3f12dの全3チェック成功とPreview c1e85928の公開成功を確認した。Preview閲覧は既存Access認証が必要。本番へのマージ・公開は未実施。
