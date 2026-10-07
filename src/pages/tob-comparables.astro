@@ -41,7 +41,7 @@ const legacyAnchors=comparables.map(c=>{
     <dl>{Object.entries(c.multiples).map(([key,m])=><div><dt><strong>{METRICS[key as Metric]} {fmt(m.value)}倍</strong></dt><dd><p>{basisLabel(m.basis)}・{m.period} ／ {m.method==='disclosed'?'資料に記載された倍率':'当サイトで計算'}</p><p>{m.calculation}</p><a href={m.sourceUrl} target="_blank" rel="noopener noreferrer">倍率の出典</a></dd></div>)}</dl>
     <ComparableEvidence record={c}/>
     <h3>価格・算定の経緯</h3>
-    {c.history.length?<ol>{[...c.history].sort((a,b)=>a.date.localeCompare(b.date)).map(h=><li><strong>{h.date}：{fmt(h.price)}{c.priceUnit??'円'}</strong><p>{h.note}</p><a href={h.sourceUrl} target="_blank" rel="noopener noreferrer">出典</a></li>)}</ol>:<p>価格の変更・算定の経緯は未登録です。</p>}
+    {c.history.length?<ol>{[...c.history].sort((a,b)=>a.date.localeCompare(b.date)).map(h=><li><strong>{h.date}：{fmt(h.price)}{c.priceUnit??'円'}</strong><p>{h.note}</p><a href={h.sourceUrl} target="_blank" rel="noopener noreferrer">出典</a></li>)}</ol>:<p>価格の経緯はまだ掲載していません。確認できた買付価格と条件は、この事例の説明と出典をご覧ください。</p>}
     {c.notes&&<p>{c.notes}</p>}{c.articleUrl&&<p><a href={c.articleUrl}>詳しい調査記事</a></p>}
     <a class="navigation-link small" href="#tob-list">比較一覧に戻る</a>
   </article>)}
