@@ -10,14 +10,14 @@ const range=(low:number,high:number)=>low===high?fmt(low):`${fmt(low)}〜${fmt(h
 {r&&<>
   <p class="small">買付者 {r.buyer} ／ {transactionLabel[r.transactionType]} ／ {outcomeLabel[r.status]} ／ {r.scope==='consolidated'?'連結':r.scope==='standalone'?'単体':'連結・単体は未確認'}</p>
   {Object.keys(r.denominators).length>0&&<details><summary>取引倍率に使った財務数値</summary><dl>{Object.entries(r.denominators).map(([key,f])=>f&&<div><dt>{FIELDS[key as keyof typeof FIELDS]}：{fmt(f.value)}</dt><dd>{basisLabel(f.basis)}・{f.period}<p>{f.note}</p><a href={f.sourceUrl} target="_blank" rel="noopener noreferrer">{f.sourceName}</a></dd></div>)}</dl></details>}
-  <h3>第三者機関による価格算定</h3>
+  <h3>価格の算定と前提</h3>
   {r.valuations.length?r.valuations.map(v=><details class="card section"><summary>{v.advisor} ／ {v.methodName??valuationMethodLabel[v.method]} ／ {range(v.low,v.high)}{v.unit??'円/株'}</summary>
     <p>{v.role} ／ 算定日 {v.date||'未確認'}</p>
     <p>評価額：{range(v.low,v.high)}{v.unit??'円/株'}</p>
-    {v.inputs.length>0?<div class="evidence-table"><table><caption>算定に使われた数値と前提</caption><thead><tr><th>項目</th><th>数値・単位</th><th>対象期・基準</th><th>定義・根拠</th></tr></thead><tbody>{v.inputs.map(i=><tr><td>{i.name}</td><td>{range(i.low,i.high)} {i.unit}</td><td>{i.period} ／ {i.basis==='actual'?'実績':i.basis==='company_forecast'?'会社予想':i.basis==='valuation_assumption'?'算定の前提':'基準未確認'}</td><td>{i.definition}</td></tr>)}</tbody></table></div>:<p>採用した倍率・割引率等の数値は未登録です。</p>}
+    {v.inputs.length>0?<div class="evidence-table"><table><caption>算定に使われた数値と前提</caption><thead><tr><th>項目</th><th>数値・単位</th><th>対象期・基準</th><th>定義・根拠</th></tr></thead><tbody>{v.inputs.map(i=><tr><td>{i.name}</td><td>{range(i.low,i.high)} {i.unit}</td><td>{i.period} ／ {i.basis==='actual'?'実績':i.basis==='company_forecast'?'会社予想':i.basis==='valuation_assumption'?'算定の前提':'基準未確認'}</td><td>{i.definition}</td></tr>)}</tbody></table></div>:<p>採用した倍率や割引率などは、まだ掲載していません。詳しい算定条件は、原資料をご覧ください。</p>}
     {v.peers.length>0&&<p>比較会社：{v.peers.join('、')}</p>}
     {v.notes&&<p>{v.notes}</p>}
     <a href={v.sourceUrl} target="_blank" rel="noopener noreferrer">算定の原資料・{v.page}</a>
-  </details>):<p>第三者機関の算定は未登録です。</p>}
+  </details>):<p>算定結果はまだ掲載していません。買付価格や条件は、この事例の説明と出典をご覧ください。</p>}
 </>}
 <style>.evidence-table{overflow-x:auto}.evidence-table table{min-width:36rem;width:100%;border-collapse:collapse}.evidence-table th,.evidence-table td{padding:.6rem;border-bottom:1px solid var(--color-line);text-align:left;vertical-align:top}p,dd,td{overflow-wrap:anywhere}dd{margin:.4rem 0 1rem}</style>
