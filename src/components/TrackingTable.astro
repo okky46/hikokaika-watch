@@ -1,6 +1,5 @@
 ---
 import {marketMetrics,marketDateLabel} from '../lib/marketMetrics';
-import MarketQuote from './MarketQuote.astro';
 import {loadValuations} from '../lib/valuationData';
 const {financials}=await loadValuations();
 import TrackingStatus from './TrackingStatus.astro';
@@ -8,17 +7,20 @@ import { externalStockLinks } from '../lib/tracking';
 import type { CaseListItem } from '../lib/types';
 interface Props { cases: CaseListItem[] }
 const { cases } = Astro.props;
+const number=(v:number)=>v.toLocaleString('ja-JP',{maximumFractionDigits:2});
 const lastPriceDate=cases.map(c=>marketMetrics(c).close?.priceDate).filter((d):d is string=>Boolean(d)).sort().at(-1);
 ---
 <p class="market-update-date small muted">株価の最終更新日：{lastPriceDate?<time datetime={lastPriceDate}>{marketDateLabel(lastPriceDate)}</time>:'未登録'}<span>（銘柄ごとの日付は各株価に表示）</span></p>
 <div class="table-wrap">
   <table class="case-table tracking-table" id="tracking-table">
     <caption class="sr-only">追跡銘柄、気になったきっかけと現在の状況。</caption>
-    <thead><tr><th scope="col">銘柄</th><th scope="col">媒体・噂の概要</th><th scope="col">今の状況</th></tr></thead>
-    <tbody>{cases.map(c => {const first=c.firstReport;return <tr data-case-id={c.id} data-watch-case={c.id} data-watch-manifest={JSON.stringify(c.watch)}>
-      <td data-label="銘柄"><div class="tracking-company"><div><span class="mono small muted">{c.securityCode}</span><br/><a class="case-link" href={`/cases/${c.slug}/`}>{c.companyName}</a></div><button type="button" class="fav-toggle" data-fav-toggle={c.id} aria-pressed="false" aria-label={`${c.companyName}をお気に入りに登録`} title="ログインしてお気に入りに登録">☆</button></div><a class="small muted" href={externalStockLinks(c.securityCode)[0]?.url} target="_blank" rel="noopener noreferrer nofollow">株探 ↗</a><MarketQuote caseData={c} financials={financials.find(f=>f.code===c.securityCode)}/></td>
+    <thead><tr><th scope="col">銘柄</th><th scope="col">株価（終値）</th><th scope="col">EV/EBITDA<br/>（実績）</th><th scope="col">媒体・噂の概要</th><th scope="col">今の状況</th></tr></thead>
+    <tbody>{cases.map(c => {const first=c.firstReport,f=financials.find(f=>f.code===c.securityCode),m=marketMetrics(c,f);return <tr data-case-id={c.id} data-watch-case={c.id} data-watch-manifest={JSON.stringify(c.watch)}>
+      <td data-label="銘柄"><div class="tracking-company"><div><span class="mono small muted">{c.securityCode}</span><br/><a class="case-link" href={`/cases/${c.slug}/`}>{c.companyName}</a></div><button type="button" class="fav-toggle" data-fav-toggle={c.id} aria-pressed="false" aria-label={`${c.companyName}をお気に入りに登録`} title="ログインしてお気に入りに登録">☆</button></div><a class="small muted" href={externalStockLinks(c.securityCode)[0]?.url} target="_blank" rel="noopener noreferrer nofollow">株探 ↗</a></td>
+      <td data-label="株価（終値）" class="tracking-price"><strong>{m.close?number(m.close.price)+'円':'未登録'}</strong>{m.close&&<small><time datetime={m.close.priceDate}>{marketDateLabel(m.close.priceDate)}</time></small>}</td>
+      <td data-label="EV/EBITDA（実績）" class="tracking-multiple"><strong>{m.multiple!==null?number(m.multiple)+'倍':'算出待ち'}</strong><small>{m.multiple!==null?f?.facts.ebitda?.period:m.issue}</small></td>
       <td data-label="媒体・噂の概要" class="tracking-summary"><div class="media-chips">{c.media.slice(0,2).map(m=><a class="media-chip" href={`/cases/${c.slug}/#evidence`}>{m.name}</a>)}{c.media.length>2 && <a class="media-chip" href={`/cases/${c.slug}/#evidence`}>ほか{c.media.length-2}媒体</a>}</div><p>{c.tracking?.short_reason || c.trackingReason}</p><p class="first-report small muted">{first.label}{first.date && <>：<time datetime={first.date}>{first.date.replaceAll('-','/')}</time></>}{first.date && first.uncertain && <span>（日付未確認の報道あり）</span>}</p></td>
-      <td data-label="今の状況" class="tracking-situation"><span class="watch-badge" data-watch-badge hidden></span><TrackingStatus profile={c.tracking} activity={c.activity}/><p class="small muted">運営の確認：{c.lastCheckedOn||'日付未登録'}{c.tracking?.observations?.length?` ／ 観察${c.tracking.observations.length}件`:''}</p><p class="period-match small" hidden></p></td>
+      <td data-label="今の状況" class="tracking-situation"><TrackingStatus profile={c.tracking} activity={c.activity}/><p class="small muted">運営の確認：{c.lastCheckedOn||'日付未登録'}{c.tracking?.observations?.length?` ／ 観察${c.tracking.observations.length}件`:''}</p><p class="period-match small" hidden></p></td>
     </tr>})}</tbody>
   </table>
   <p class="empty-state" id="empty-state" hidden>条件に一致する銘柄はありません。<button type="button" class="btn" data-clear-search>条件をすべて解除</button></p>
