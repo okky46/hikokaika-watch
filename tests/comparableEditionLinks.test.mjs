@@ -8,6 +8,7 @@ import {transform as stripTypes} from 'esbuild';
 import {experimental_AstroContainer as AstroContainer} from 'astro/container';
 import {JSDOM} from 'jsdom';
 import {parseValuation} from '../src/lib/valuation.ts';
+import {setupTobList} from '../src/lib/tobList.ts';
 
 test('同じ案件の価格版リンクと平均の根拠が各版へ到達し、旧リンクも保持する',async()=>{
   const sample=JSON.parse(fs.readFileSync('data/sample/valuations.json','utf8')).find(r=>r.kind==='comparable');
@@ -34,7 +35,7 @@ test('同じ案件の価格版リンクと平均の根拠が各版へ到達し�
   }
   const Page=(await import(await component(path.resolve('src/pages/tob-comparables.astro')))).default;
   const container=await AstroContainer.create();
-  const doc=new JSDOM(await container.renderToString(Page,{request:new Request('https://hikokaika.com/tob-comparables/')})).window.document;
+  const doc=new JSDOM(await container.renderToString(Page,{request:new Request('https://hikokaika.com/tob-comparables/')}),{url:'https://hikokaika.com/tob-comparables/'}).window.document;
   const ids=[...doc.querySelectorAll('[id]')].map(x=>x.id);assert.equal(new Set(ids).size,ids.length);
   const links=[...doc.querySelectorAll('[data-tob-row] th a')];
   assert.deepEqual(links.map(a=>a.getAttribute('href')),['#deal-0001-20260101-initial','#deal-0001-20260101-revised','#deal-0001-20260101-final','#legacy-3']);
@@ -50,4 +51,15 @@ test('同じ案件の価格版リンクと平均の根拠が各版へ到達し�
   const calculator=new JSDOM(await container.renderToString(Calculator,{props:{financials:{kind:'financials',code:'0009',industry:'情報・通信業',facts:{eps}},comparables:records,industry:'情報・通信業'}})).window.document;
   assert.deepEqual([...calculator.querySelectorAll('.peer-details article>a')].map(a=>a.getAttribute('href')).filter(h=>h.includes('0001-')),['/tob-comparables/#deal-0001-20260101-initial','/tob-comparables/#deal-0001-20260101-revised','/tob-comparables/#deal-0001-20260101-final']);
   assert.equal(JSON.stringify((await import(fixtures)).comparables),original);
+  doc.defaultView.matchMedia=()=>({matches:true});setupTobList(doc);
+  const visible=()=>[...doc.querySelectorAll('[data-tob-row]')].filter(r=>!r.hidden);
+  const query=doc.getElementById('tob-query');query.value='０００２';query.dispatchEvent(new doc.defaultView.Event('input',{bubbles:true}));
+  assert.equal(visible().length,1);assert.equal(visible()[0].dataset.tobTarget,'legacy-3');assert.equal(doc.getElementById('deal-0001-20260101-final').hidden,true);
+  doc.querySelector('[data-tob-reset]').click();assert.equal(visible().length,4);
+  const outcome=doc.getElementById('tob-outcome');outcome.value='completed';outcome.dispatchEvent(new doc.defaultView.Event('change',{bubbles:true}));assert.equal(visible().length,3);
+  const from=doc.getElementById('tob-from');from.value='2099-01-01';from.dispatchEvent(new doc.defaultView.Event('input',{bubbles:true}));assert.equal(visible().length,0);assert.equal(doc.getElementById('tob-empty').hidden,false);
+  const to=doc.getElementById('tob-to');to.value='2000-01-01';to.dispatchEvent(new doc.defaultView.Event('input',{bubbles:true}));assert.equal(to.validity.valid,false);assert.equal(doc.getElementById('tob-date-error').hidden,false);
+  doc.querySelector('[data-tob-reset]').click();doc.getElementById('tob-metric').value='pbr';doc.getElementById('tob-available').checked=true;doc.getElementById('tob-available').dispatchEvent(new doc.defaultView.Event('input',{bubbles:true}));assert.equal(visible().length,1);
+  doc.defaultView.location.hash='#deal-0001-20260101-final';doc.defaultView.dispatchEvent(new doc.defaultView.Event('hashchange'));
+  assert.equal(doc.getElementById('deal-0001-20260101-final').hidden,false);assert.equal(visible().length,4);
 });

@@ -58,6 +58,13 @@
   box-sizing: border-box;
 }
 
+/* 指標の色は種類の識別に使う。割安・割高や成立状況は示さない。 */
+[data-metric-kind="evEbitda"] { --metric-bg:#edf5fc; --metric-line:#bfd7ed; --metric-accent:#24577d; }
+[data-metric-kind="per"] { --metric-bg:#f3effa; --metric-line:#d7caeb; --metric-accent:#614287; }
+[data-metric-kind="pbr"] { --metric-bg:#fff7e5; --metric-line:#ead7a3; --metric-accent:#755419; }
+.metric-badge { display:inline-block; padding:.2rem .55rem; border:1px solid var(--metric-line); border-radius:var(--radius); background:var(--metric-bg); color:var(--metric-accent); font-weight:700; }
+.metric-panel { background:var(--metric-bg); border:1px solid var(--metric-line); border-radius:var(--radius); padding:.8rem; }
+
 /* display 指定を持つ要素でも hidden 属性を必ず優先する */
 [hidden] {
   display: none !important;
@@ -945,6 +952,13 @@ body:has(.case-section-nav) :is(#timeline,#evidence,#related-articles,#valuation
 .tracking-table th.metric span { display: block; font-weight: normal; }
 .tracking-table td.metric { vertical-align: middle; }
 .metrics-pending { margin: .5rem 0; }
+.metrics-toggle { display:flex; align-items:center; flex-wrap:wrap; gap:.4rem; min-height:44px; cursor:pointer; }
+.tracking-results:not(:has(#show-market-metrics:checked)) .metric,
+.tracking-results:not(:has(#show-market-metrics:checked)) .metrics-pending { display:none; }
+.tracking-results:not(:has(#show-market-metrics:checked)) .tracking-table { min-width:0; }
+.tracking-results:not(:has(#show-market-metrics:checked)) .tracking-table th:nth-child(1) { width:26%; }
+.tracking-results:not(:has(#show-market-metrics:checked)) .tracking-table th:nth-child(2) { width:44%; }
+.tracking-results:not(:has(#show-market-metrics:checked)) .tracking-table th:nth-child(3) { width:30%; }
 @media (min-width: 761px) and (max-width: 1000px) { .tracking-table { min-width: 0; }.tracking-table th.metric { white-space: normal; overflow-wrap: anywhere; }.tracking-legend { grid-template-columns: auto minmax(0,1fr); }.legend-help { grid-column: 1 / -1; } }
 @media (max-width: 760px) {
   .tracking-intro h1 { font-size: 1.5rem; }
@@ -1062,6 +1076,10 @@ details > summary:focus-visible { outline: 2px solid var(--color-focus); outline
   .primary-filters .filter-field:not(.filter-field--wide) label { flex: none; margin: 0; }
   .primary-filters .filter-field:not(.filter-field--wide) select { min-width: 0; flex: 1; }
   .stage-option > span, .favorite-filter > span, .media-choice { min-height: 44px; }
+  .stage-options { display:flex; flex-wrap:nowrap; overflow-x:auto; padding:3px 3px .35rem; scroll-padding-inline:3px; }
+  .stage-option { flex:none; }
+  .stage-option > span { white-space:nowrap; }
+  .filter-topline { min-width:0; }
   .search-more summary { min-height: 44px; align-content: center; }
   .search-more .filter-bar { display: grid; grid-template-columns: minmax(0,1fr); }
   .search-more .filter-field { min-width: 0; }
