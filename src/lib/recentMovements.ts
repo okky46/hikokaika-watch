@@ -36,5 +36,5 @@ export function recentMovements(cases: MovementCase[], now = new Date()): { asOf
     if (seen.has(item.caseId)) return false;
     seen.add(item.caseId);
     return true;
-  }).slice(0, 3) };
+  }).slice(0, 5) };
 }

@@ -24,6 +24,7 @@ const stages=[{id:'',label:'すべて'},{id:'pre',label:'正式発表前'},{id:'
     <h1>噂の、その後を追う。</h1>
     <p class="muted">非公開化をめぐる噂や報道から、会社の説明、その後の動きまでを時系列で追えます。<a class="small" href="/guidelines/">掲載基準</a></p>
   </section>
+  <RecentMovements cases={details} generatedAt={generatedAt}/>
   <section class="section" aria-label="銘柄の検索・絞り込み">
     <form class="card tracking-filters" id="filter-form" role="search">
       <div class="filter-topline">
@@ -52,7 +53,6 @@ const stages=[{id:'',label:'すべて'},{id:'pre',label:'正式発表前'},{id:'
       <p id="search-warning" class="notice" hidden>URLの検索条件に使えない指定があるため、その指定を除いて表示しています。検索欄で条件を選び直してください。</p>
       <noscript><p class="notice">検索にはJavaScriptが必要です。すべての銘柄は下の一覧から閲覧できます。</p></noscript>
     </form>
-    <RecentMovements cases={details} generatedAt={generatedAt}/>
     <div class="list-toolbar"><div><h2 class="section-title">追跡銘柄 <span class="small muted" id="filter-count" aria-live="polite">全{cases.length}件</span></h2><div class="list-checked small"><strong>最終確認日: {latestCheckedOn ? <time datetime={latestCheckedOn}>{formatDate(latestCheckedOn)}</time> : '未確認'}</strong><details class="list-help"><summary aria-label="確認日と並び順について">ⓘ</summary><p>掲載銘柄の確認日のうち、最も新しい日を表示しています。確認日は銘柄ごとに異なるため、個別の日付は詳細ページをご覧ください。</p><p>通常は、公表日が分かる出来事の新しい順に並びます。日付を確認できた出来事がない銘柄は、その後にサイト登録順で表示します。</p></details></div></div><div class="filter-field"><label class="sr-only" for="f-sort">並び順</label><select id="f-sort" name="sort" form="filter-form"><option value="event">出来事が新しい順</option><option value="registered">サイト登録が新しい順</option><option value="updated">編集が新しい順</option><option value="code">証券コード順</option></select></div></div>
     <TrackingLegend/>
     <div class="tracking-results">

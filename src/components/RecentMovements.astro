@@ -4,40 +4,68 @@ import { recentMovements } from '../lib/recentMovements';
 import { eventTypeDef } from '../lib/status';
 interface Props { cases: CaseDetail[]; generatedAt: string }
 const { asOf, items } = recentMovements(Astro.props.cases, new Date(Astro.props.generatedAt));
+const href = (slug:string,id:string)=>`/cases/${encodeURIComponent(slug)}/#event-${encodeURIComponent(id)}`;
 ---
-<details class="recent-movements">
-  <summary class="recent-movements__head">
-    <h2 id="recent-movements-title">最近動いた案件</h2>
-    <span class="small muted"><time datetime={asOf}>{asOf.replaceAll('-', '/')}</time>時点 · 直近30日の公表</span>
-  </summary>
-  {items.length ? <ul class="recent-movements__list">{items.map(({ slug, companyName, securityCode, event }) =>
-    <li><a class="recent-movement" href={`/cases/${encodeURIComponent(slug)}/#event-${encodeURIComponent(event.id)}`}>
-      <span class="recent-movement__meta"><time datetime={event.date.start!}>{event.date.start!.replaceAll('-', '/')}</time><span>{eventTypeDef(event.eventType).label}{event.corrected && '・訂正あり'}</span></span>
-      <span class="recent-movement__company"><strong>{companyName}</strong><span class="small muted">{securityCode}</span><span class="recent-movement__arrow" aria-hidden="true">→</span></span>
-      <span class="recent-movement__title">{event.title}</span>
-    </a></li>
-  )}</ul> : <p class="small muted recent-movements__empty">直近30日に公表された出来事は、まだ掲載されていません。</p>}
-</details>
+<section class="recent-movements" data-recent-movements aria-labelledby="recent-movements-title">
+  <header class="recent-movements__head">
+    <div><h2 id="recent-movements-title">最近動いた案件</h2><p class="small muted"><time datetime={asOf}>{asOf.replaceAll('-', '/')}</time>時点 · 直近30日の公表</p></div>
+    <button type="button" class="recent-movements__pause" data-recent-pause aria-pressed="false" hidden>動きを止める</button>
+  </header>
+  {items.length ? <>
+    <div class="recent-ticker" aria-live="off">
+      {items.map(({slug,companyName,securityCode,event},i)=><a class="recent-ticker__item" data-recent-item hidden={i!==0} href={href(slug,event.id)}>
+        <time datetime={event.date.start!}>{event.date.start!.replaceAll('-', '/')}</time>
+        <span class="recent-ticker__body"><span class="recent-ticker__company"><strong>{companyName}</strong><span class="small muted">{securityCode}</span><span class="recent-ticker__kind">{eventTypeDef(event.eventType).label}{event.corrected&&'・訂正あり'}</span></span><span class="recent-ticker__title">{event.title}</span></span>
+        <span aria-hidden="true">→</span>
+      </a>)}
+    </div>
+    <div class="recent-movements__position small muted" data-recent-position aria-hidden="true">1 / {items.length}</div>
+    <details class="recent-movements__details">
+      <summary><span class="recent-movements__expand">＋ 直近{items.length}件を表示</span><span class="recent-movements__collapse">− 閉じる</span></summary>
+      <ol class="recent-movements__list">{items.map(({slug,companyName,securityCode,event})=><li><a class="recent-movement" href={href(slug,event.id)}>
+        <span class="recent-movement__meta"><time datetime={event.date.start!}>{event.date.start!.replaceAll('-', '/')}</time><span>{eventTypeDef(event.eventType).label}{event.corrected&&'・訂正あり'}</span></span>
+        <span><span class="recent-movement__company"><strong>{companyName}</strong><span class="small muted">{securityCode}</span><span aria-hidden="true">→</span></span><span class="recent-movement__title">{event.title}</span></span>
+      </a></li>)}</ol>
+    </details>
+  </> : <p class="small muted recent-movements__empty">直近30日に公表された出来事は、まだ掲載されていません。</p>}
+</section>
+<script>
+import {setupRecentTicker} from '../lib/recentTicker';
+document.querySelectorAll<HTMLElement>('[data-recent-movements]').forEach(setupRecentTicker);
+</script>
 <style>
-  .recent-movements { margin: .75rem 0; border: 1px solid var(--color-line); border-radius: var(--radius); background: var(--color-surface); padding: .6rem .8rem; }
-  .recent-movements__head { cursor: pointer; }
-  .recent-movements__head h2 { display: inline; margin-right: .6rem; }
-  .recent-movements[open] .recent-movements__head { margin-bottom: .65rem; }
-  h2 { font-size: 1rem; margin: 0; }
-  .recent-movements__list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); list-style: none; padding: 0; margin: 0; gap: .65rem; }
-  .recent-movement { display: flex; flex-direction: column; height: 100%; padding: .7rem .8rem; border: 1px solid var(--color-line); border-radius: var(--radius); background: var(--color-surface); color: var(--color-ink); text-decoration: none; overflow-wrap: anywhere; }
-  .recent-movement:visited { color: var(--color-ink); }
-  .recent-movement:hover { border-color: var(--color-primary); background: #f8fafc; }
-  .recent-movement:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
-  .recent-movement__meta { display: flex; flex-wrap: wrap; gap: .2rem .65rem; color: var(--color-ink-soft); font-size: .75rem; }
-  .recent-movement__company { display: flex; align-items: baseline; flex-wrap: wrap; gap: .3rem .5rem; margin: .25rem 0; }
-  .recent-movement__arrow { margin-left: auto; }
-  .recent-movement__title { font-size: .85rem; }
-  .recent-movements__empty { margin: 0; }
-  @media (max-width: 760px) {
-    .recent-movements__head > span { display: block; margin-top: .2rem; }
-    .recent-movements__list { grid-template-columns: 1fr; gap: 0; }
-    .recent-movement { padding: .65rem 0; border: 0; border-radius: 0; border-top: 1px solid var(--color-line); }
-    .recent-movement__meta { font-size: .8rem; }
-  }
+.recent-movements{position:relative;margin:1rem 0;border:1px solid var(--color-line);border-radius:var(--radius);background:var(--color-surface);padding:.85rem 1rem}
+.recent-movements__head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.5rem}
+h2{font-size:1rem;margin:0}.recent-movements__head p{margin:.2rem 0 0;font-size:.75rem}
+.recent-movements__pause{flex:none;background:transparent;border:1px solid var(--color-line);border-radius:4px;padding:.3rem .55rem;color:var(--color-ink-soft);font-size:.75rem;cursor:pointer}
+.recent-movements__pause[hidden],.recent-ticker__item[hidden]{display:none!important}
+.recent-ticker{overflow:hidden;min-height:4.6rem}
+.recent-ticker__item{display:grid;grid-template-columns:6.2rem minmax(0,1fr) auto;align-items:center;gap:.8rem;min-height:4.6rem;color:var(--color-ink);text-decoration:none;padding:.55rem .4rem}
+.recent-ticker__item:visited,.recent-movement:visited{color:var(--color-ink)}
+.recent-ticker__item>time{font-size:.8rem;color:var(--color-ink-soft)}
+.recent-ticker__body{position:relative;border-left:2px solid #b9cbdc;padding-left:1rem;min-width:0}
+.recent-ticker__body::before{content:'';position:absolute;width:.5rem;height:.5rem;border-radius:50%;background:var(--color-primary);left:-.32rem;top:.4rem}
+.recent-ticker__company,.recent-movement__company{display:flex;align-items:baseline;flex-wrap:wrap;gap:.3rem .6rem}
+.recent-ticker__kind{font-size:.75rem;color:var(--color-ink-soft)}
+.recent-ticker__title{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:.88rem;margin-top:.25rem}
+.recent-ticker__item--enter{animation:recent-arrive .45s ease-out}
+@keyframes recent-arrive{from{opacity:0;transform:translateY(1rem)}to{opacity:1;transform:translateY(0)}}
+.recent-movements__position{position:absolute;right:1rem;bottom:.85rem;font-size:.75rem}
+.recent-movements:has(details[open]) .recent-movements__position,.recent-movements:has(details[open]) .recent-ticker{display:none}
+.recent-movements__details>summary{width:fit-content;cursor:pointer;list-style:none;color:var(--color-ink-soft);font-size:.8rem;padding:.3rem .15rem;margin-top:.3rem}
+.recent-movements__details>summary::-webkit-details-marker{display:none}
+.recent-movements__collapse,.recent-movements__details[open] .recent-movements__expand{display:none}
+.recent-movements__details[open] .recent-movements__collapse{display:inline}
+.recent-movements__list{list-style:none;margin:.6rem 0 0;padding:0 0 0 .5rem}
+.recent-movements__list li{position:relative;border-left:2px solid #dce5ed;padding:0 0 .7rem 1rem}
+.recent-movements__list li:last-child{padding-bottom:0}
+.recent-movements__list li::before{content:'';position:absolute;width:.4rem;height:.4rem;border-radius:50%;background:var(--color-primary);left:-.27rem;top:1rem}
+.recent-movement{display:grid;grid-template-columns:10rem minmax(0,1fr);gap:.8rem;color:var(--color-ink);text-decoration:none;overflow-wrap:anywhere;padding:.65rem .5rem;border-radius:4px}
+.recent-movement:hover,.recent-ticker__item:hover{background:#f6f8fb}
+.recent-movement:focus-visible,.recent-ticker__item:focus-visible,summary:focus-visible,button:focus-visible{outline:2px solid var(--color-focus);outline-offset:-2px}
+.recent-movement__meta{display:flex;flex-direction:column;gap:.2rem;color:var(--color-ink-soft);font-size:.75rem}
+.recent-movement__title{display:block;margin-top:.25rem;font-size:.85rem}
+.recent-movements__empty{margin:.65rem 0 .1rem}
+@media(max-width:760px){.recent-movements{padding:.75rem}.recent-ticker__item{grid-template-columns:minmax(0,1fr) auto;gap:.35rem;min-height:7.5rem}.recent-ticker{min-height:7.5rem}.recent-ticker__item>time{grid-column:1/-1}.recent-ticker__body{padding-left:.7rem}.recent-ticker__company{gap:.2rem .4rem}.recent-movement{grid-template-columns:1fr;gap:.35rem}.recent-movement__meta{flex-direction:row;flex-wrap:wrap;gap:.3rem .6rem}}
+@media(prefers-reduced-motion:reduce){.recent-ticker__item--enter{animation:none}}
 </style>

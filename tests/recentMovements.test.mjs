@@ -19,10 +19,10 @@ test('未来・月だけ・号数・日付不明・出典なしを最近の出�
   events.push(event('future', '2026-10-01'), event('no-source', '2026-09-30', {sourceUrl:''}));
   assert.deepEqual(recentMovements([company('a', events)], now).items, []);
 });
-test('最大3案件で同一案件の続報が枠を独占しない。入力順・編集日には依存しない', () => {
-  const cases = [company('a', [event('a1','2026-09-28'),event('a2','2026-09-29')]), company('b',[event('b','2026-09-27')]),company('c',[event('c','2026-09-26')]),company('d',[event('d','2026-09-25')])];
+test('最大5案件で同一案件の続報が枠を独占しない。入力順・編集日には依存しない', () => {
+  const cases = [company('a', [event('a1','2026-09-28'),event('a2','2026-09-29')]), company('b',[event('b','2026-09-27')]),company('c',[event('c','2026-09-26')]),company('d',[event('d','2026-09-25')]),company('e',[event('e','2026-09-24')]),company('f',[event('f','2026-09-23')])];
   const before = JSON.stringify(cases);
-  assert.deepEqual(recentMovements(cases,now).items.map(x=>x.event.id), ['a2','b','c']);
+  assert.deepEqual(recentMovements(cases,now).items.map(x=>x.event.id), ['a2','b','c','d','e']);
   assert.equal(JSON.stringify(cases),before);
   assert.deepEqual(recentMovements(cases.toReversed(),now),recentMovements(cases,now));
 });
