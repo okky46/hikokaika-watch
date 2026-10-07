@@ -77,7 +77,7 @@ export function setupTrackingList(personalMatch:(id:string)=>boolean, clearPerso
     try {sessionStorage.setItem('tracking-public-search',searchParams(filters));}catch{}
   }
   function commit(replace=false) {
-    readForm();const query=searchParams(filters);const url=query?`/stocks/?${query}`:'/stocks/';
+    readForm();const query=searchParams(filters);const url=query?`/?${query}`:'/';
     if(url!==location.pathname+location.search)history[replace?'replaceState':'pushState'](null,'',url);
     document.getElementById('search-warning')!.hidden=true;apply();
   }

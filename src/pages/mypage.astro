@@ -1,5 +1,8 @@
 ---
 import Base from '../layouts/Base.astro';
+import WatchDesk from '../components/WatchDesk.astro';
+import { loadPublicData } from '../lib/publicData';
+const { details, isSampleData } = await loadPublicData();
 
 
 import { CASE_STATUS, STATUS_ORDER } from '../lib/status';
@@ -11,19 +14,20 @@ const statusMap = Object.fromEntries(
 ---
 
 <Base
-  title="記録・アカウント"
-  description="お気に入りの銘柄と、自分専用のメモを管理するページ。"
+  title="マイページ"
+  description="監視中の銘柄の変化と、自分の気づき・次の確認日を確認するページ。"
   noindex
 >
-  <h1>記録・アカウント</h1>
+  <h1>マイページ</h1>
   <p class="small muted">
-    アカウントの保存データを確認できます。日々の監視はホームにまとめています。
+    気になる銘柄の変化と、自分が次に確かめたいことを確認できます。
   </p>
 
   <div id="mp-unavailable" class="notice" hidden>
     現在ログインできません。銘柄や記事は引き続き閲覧できます。
   </div>
-  <p><a class="btn btn--primary" href="/#my-watch">監視ホームで確認・記録を続ける</a></p>
+  {isSampleData && <p class="notice">開発・デモ用の<strong>架空のサンプルデータ</strong>です。</p>}
+  <WatchDesk cases={details}/>
 
   <section class="section card" id="mp-auth">
     <div id="mp-logged-out" hidden>
@@ -55,7 +59,7 @@ const statusMap = Object.fromEntries(
       </div>
       <div id="mp-favorites"></div>
       <p class="empty-state" id="mp-fav-empty" hidden>
-        お気に入りはまだありません。<a href="/stocks/">銘柄の一覧</a>の☆から登録できます。
+        お気に入りはまだありません。<a href="/">銘柄の一覧</a>の☆から登録できます。
       </p>
     </section>
 
@@ -63,7 +67,7 @@ const statusMap = Object.fromEntries(
       <h2 class="section-title">銘柄ごとのメモ</h2>
       <p class="small muted">メモは銘柄の詳細ページで編集できます。次のチェック日が早い順に並びます。</p>
       <div id="mp-notes"></div>
-      <p class="empty-state" id="mp-notes-empty" hidden>銘柄ごとのメモはまだありません。気になる銘柄の詳細ページで「自分のメモ」を保存すると、ここに表示されます。</p>
+      <p class="empty-state" id="mp-notes-empty" hidden>銘柄ごとのメモはまだありません。気になる銘柄の詳細ページで「次に確かめたいこと」を保存すると、ここに表示されます。</p>
     </section>
 
     <section class="section" aria-label="全体メモ">

@@ -11,10 +11,13 @@ for(const file of files.filter(f=>/\.(html|json|xml|js)$/.test(f))){
   if(file.endsWith('.html')&&!file.includes(`${path.sep}admin${path.sep}`))assert.doesNotMatch(text,/第0報|aria-label="株価推移/);
 }
 const read=file=>fs.readFileSync(`dist/${file}`,'utf8');
-assert.match(read('index.html'),/data-watch-desk/);
-assert.doesNotMatch(read('index.html'),/id="filter-form"/);
-assert.match(read('stocks/index.html'),/銘柄を探す/);
-assert.match(read('sitemap.xml'),/\/stocks\//);
+assert.doesNotMatch(read('index.html'),/data-watch-desk/);
+assert.match(read('mypage/index.html'),/data-watch-desk/);
+assert.match(read('mypage/index.html'),/id="mp-auth"/);
+assert.match(read('mypage/index.html'),/id="mp-global-note"/);
+assert.match(read('index.html'),/id="filter-form"/);
+assert.match(read('stocks/index.html'),/追跡銘柄一覧はトップページに移りました/);
+assert.doesNotMatch(read('sitemap.xml'),/\/stocks\//);
 assert.match(read('cases/0001-toyo-demo-seiki/index.html'),/data-notebook=/);
 assert.match(read('cases/0001-toyo-demo-seiki/index.html'),/観察と報道の経過/);
 assert.match(read('cases/0001-toyo-demo-seiki/index.html'),/data-valuation-tool/);

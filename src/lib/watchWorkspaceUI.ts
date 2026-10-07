@@ -68,13 +68,13 @@ export async function setupWatchWorkspace(){
   notebook?.querySelector('[data-follow]')?.addEventListener('click',()=>void task(async()=>{
     const id=notebook.dataset.notebook!,watching=!repo.rows[id]?.watching;await repo.follow(id,watching);
     let baselineFailed=false;try{if(watching)baseline(id);}catch{baselineFailed=true;}
-    status(baselineFailed?'監視に追加しました。確認状態を保存できないため、ブラウザーの保存設定を確認してください。':watching?'監視に追加しました。次回はホームから続けられます。':'監視から外しました。保存済みのメモは残しています。');
+    status(baselineFailed?'監視に追加しました。確認状態を保存できないため、ブラウザーの保存設定を確認してください。':watching?'監視に追加しました。次回はマイページから続けられます。':'監視から外しました。保存済みのメモは残しています。');
   }));
   form?.addEventListener('input',()=>{dirty=true;});
   form?.addEventListener('submit',event=>{event.preventDefault();void task(async()=>{
     const id=notebook!.dataset.notebook!,note={v:1,...Object.fromEntries(fields.map(k=>[k,field(k).value]))} as StructuredNotePayload;
     await repo.save(id,note);dirty=false;let baselineFailed=false;try{baseline(id);}catch{baselineFailed=true;}
-    status(baselineFailed?'記録は保存しました。確認状態は保存できませんでした。ブラウザーの保存設定を確認してください。':'記録を保存しました。監視ホームに次の確認日と気づきが表示されます。');
+    status(baselineFailed?'記録は保存しました。確認状態は保存できませんでした。ブラウザーの保存設定を確認してください。':'記録を保存しました。マイページに次の確認日と気づきが表示されます。');
   });});
   desk?.querySelectorAll<HTMLButtonElement>('[data-desk-filter]').forEach(button=>button.addEventListener('click',()=>{filter=button.dataset.deskFilter!;desk.querySelectorAll('[data-desk-filter]').forEach(el=>el.setAttribute('aria-pressed',String(el===button)));render();}));
   document.addEventListener('watch-state-updated',()=>{if(repo.ready)render();});

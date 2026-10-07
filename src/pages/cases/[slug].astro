@@ -51,7 +51,7 @@ const workspace=watchWorkspaceCase(c);
   )}
 
   <nav class="case-breadcrumb small" aria-label="パンくず">
-    <a href="/stocks/" id="return-to-results"><span aria-hidden="true">←</span> 銘柄を探す</a><a href="/#my-watch">監視ホーム</a><span class="muted">銘柄の経過</span>
+    <a href="/" id="return-to-results"><span aria-hidden="true">←</span> 銘柄を探す</a><a href="/mypage/#my-watch">マイページ</a><span class="muted">銘柄の経過</span>
   </nav>
 
   <div data-watch-case={c.id} data-watch-manifest={JSON.stringify(c.watch)}>
@@ -148,7 +148,7 @@ const workspace=watchWorkspaceCase(c);
     });
   }
   const back=document.getElementById('return-to-results') as HTMLAnchorElement;
-  try {const query=sessionStorage.getItem('tracking-public-search');if(query)back.href='/stocks/?'+query;}catch{}
+  try {const query=sessionStorage.getItem('tracking-public-search');if(query)back.href='/?'+query;}catch{}
   const evidenceSection=document.getElementById('evidence')!;
   const evidenceDetails=evidenceSection.querySelector<HTMLDetailsElement>('details')!;
   // Expand before the browser positions the anchor, including repeat clicks on the same hash.
