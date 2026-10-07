@@ -76,9 +76,7 @@ const statusMap = Object.fromEntries(
   </div>
 </Base>
 
-<script is:inline define:vars={{ statusMap }}>
-  window.__STATUS_MAP__ = statusMap;
-</script>
+<script is:inline type="application/json" id="mypage-status-map" set:html={JSON.stringify(statusMap).replaceAll('<', '\\u003c')} />
 
 <script>
   import { getSupabase, isSupabaseConfigured } from '../lib/supabaseBrowser';
@@ -93,7 +91,7 @@ const statusMap = Object.fromEntries(
     status: string;
   };
 
-  const statusMap = (window as any).__STATUS_MAP__ as Record<
+  const statusMap = JSON.parse(document.getElementById('mypage-status-map')!.textContent!) as Record<
     string,
     { label: string; mark: string; tone: string }
   >;
