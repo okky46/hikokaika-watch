@@ -23,4 +23,6 @@
 
 起点はmain `49338f6`（PR #91）。元の作業ディレクトリの未コミット変更を保持し、専用worktree・ブランチ `codex-ui-ux-improvements` で作業した。今回の変更はUI・クライアント操作・検証・記録で、SQL追加や本番DB書き込みはない。フォントファミリー・継承、認証、個人メモ、RLS、お気に入り、URLを維持。ニュース候補収集ActionとDiscord停止も維持する。
 
+[PR #92](https://github.com/okky46/hikokaika-watch/pull/92)へ集約。機能head `6b08920` のGitHub CI（push・pull_request）とCloudflare Pagesの全3チェック成功を確認した。Cloudflare Preview `feb4900b` は公開成功し、閲覧には既存のCloudflare Access認証が必要なため、公開Preview内の手動操作は未確認。
+
 PRのマージと本番反映は未実施。本番での実データ123価格版の表示確認はマージ後の確認事項。Cloudflare Previewは既存設定どおりサンプルを使う。
