@@ -16,7 +16,7 @@ test('同じ案件の価格版リンクと平均の根拠が各版へ到達し�
   const records=[edition('initial',1000),edition('revised',1200),edition('final',1500),parseValuation({...sample,code:'0002',name:'旧形式デモ企業',research:undefined})];
   const original=JSON.stringify(records),compiled=new Map();
   const dataUrl=code=>'data:text/javascript;base64,'+Buffer.from(code).toString('base64');
-  const fixtures=dataUrl('export const comparables='+JSON.stringify(records)+';export function loadValuations(){return {comparables};}');
+  const fixtures=dataUrl('export const comparables='+JSON.stringify(records)+';export function loadValuations(){return {comparables,financials:[{code:"0001"}]};}');
   async function component(file){
     if(compiled.has(file))return compiled.get(file);
     let code=(await transform(fs.readFileSync(file,'utf8'),{filename:pathToFileURL(file).href,internalURL:'astro/compiler-runtime',resultScopedSlot:true,renderScript:true,resolvePath:async s=>s})).code;
@@ -39,6 +39,8 @@ test('同じ案件の価格版リンクと平均の根拠が各版へ到達し�
   const links=[...doc.querySelectorAll('[data-tob-row] th a')];
   assert.deepEqual(links.map(a=>a.getAttribute('href')),['#deal-0001-20260101-initial','#deal-0001-20260101-revised','#deal-0001-20260101-final','#legacy-3']);
   for(const [index,a] of links.entries())assert.equal(doc.getElementById(a.hash.slice(1)).querySelector('h2').textContent,`${records[index].name}（${records[index].code}）`);
+  assert.equal(doc.querySelectorAll('article a[href="/companies/0002/#valuation"]').length,0);
+  assert.equal(doc.querySelectorAll('article a[href="/companies/0001/#valuation"]').length,3);
   assert.equal(doc.getElementById('deal-0001-20260101').closest('article').id,'deal-0001-20260101-initial');
   const statistics=doc.querySelector('a[href="/tob-comparables/#deal-0001-20260101-final"]');assert(statistics);assert(statistics.parentElement.textContent.includes('15.0倍'));
   const References=(await import(await component(path.resolve('src/components/ValuationReferences.astro')))).default;

@@ -21,7 +21,7 @@ const factSets=valuationFactSets(financials);
   {!financials?<p class="empty-state">この銘柄の財務数値はまだ登録されていません。出典を確認した数値の公開後に試算できます。</p>:<>
     <p class="small muted">財務情報の確認日 {financials.checkedOn} ／ 比較業種 {financials.industry}</p>
     {factSets.length>1?<label>利益の基準<select data-financial-basis>{factSets.map(s=><option value={s.key}>{s.label}</option>)}</select></label>:<p class="small">会社予想の計算一式は未登録です。登録済みの財務数値で試算します。</p>}
-    <p class="small">予想倍率は会社の通期予想を使います。予想EBITDAの作り方、利益の対象期、EVの残高基準日は下の出典欄で確認できます。コンセンサス予想とは前提が異なります。</p>
+    <p class="small">予想倍率は会社の通期予想を使います。会社予想営業利益に前期の償却費を加えたEBITDAは、当サイトの参考予想値です。利益の対象期、EVの残高基準日、計算根拠は下の出典欄で確認できます。コンセンサス予想とは前提が異なります。</p>
     <div class="valuation-grid">
       <div class="card">
         <h3>株価から倍率を計算</h3>

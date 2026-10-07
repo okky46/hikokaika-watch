@@ -18,12 +18,20 @@ test('財務DB：管理者限定・下書き隔離・競合拒否・公開撤回
  await db.exec(fs.readFileSync('supabase/migrations/0015_long_valuation_forecasts.sql','utf8'));
  await db.exec(fs.readFileSync('supabase/migrations/0016_review_research_preservation.sql','utf8'));
  await db.exec(fs.readFileSync('supabase/migrations/0017_market_forecast_inputs.sql','utf8'));
+ await db.exec(fs.readFileSync('supabase/migrations/0018_public_comparable_financials.sql','utf8'));
  assert.deepEqual((await db.query("select * from pg_policies where tablename like 'user_%' order by tablename,policyname")).rows,policies);
  const session=async(role,id='')=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec(`set role ${role}`);};
  const save=async(p,revision=null,id='financials:0001')=>(await db.query('select to_jsonb(save_valuation_draft($1,$2,$3)) as r',[id,p,revision])).rows[0].r;
  const publish=async(revision,visible=true,id='financials:0001')=>(await db.query('select to_jsonb(publish_valuation($1,$2,$3)) as r',[id,revision,visible])).rows[0].r;
  const read=async()=>(await db.query('select read_published_valuations() as r')).rows[0].r;
  const [data,peer]=JSON.parse(fs.readFileSync('data/sample/valuations.json','utf8'));
+ // A published financial record for an unregistered issuer requires a published TOB.
+ await session('authenticated',admin);const untracked={...data,code:'0002'};const untrackedRow=await save(untracked,null,'financials:0002');await publish(untrackedRow.revision,true,'financials:0002');
+ await session('service_role');assert.deepEqual(await read(),[]);
+ await session('authenticated',admin);const untrackedPeer=await save({...peer,code:'0002',research:{...peer.research,dealId:'0002-20260601'}},null,'tob:untracked');await publish(untrackedPeer.revision,true,'tob:untracked');
+ await session('service_role');assert.equal((await read()).find(r=>r.id==='financials:0002').content.code,'0002');
+ await session('postgres');await db.exec("insert into companies(security_code,name_ja,is_active) values('0002','非公開会社',false)");await session('service_role');assert.equal((await read()).some(r=>r.id==='financials:0002'),false);
+ await session('authenticated',admin);await publish(2,false,'tob:untracked');await publish(2,false,'financials:0002');
  await session('anon');await assert.rejects(save(data));await assert.rejects(db.query('select * from valuation_editions'));await assert.rejects(read());
  await session('authenticated',other);await assert.rejects(save(data),/管理者/);assert.equal((await db.query('select * from valuation_editions')).rows.length,0);
  await session('authenticated',admin);let row=await save(data);await assert.rejects(db.query('update valuation_editions set published=draft'));
