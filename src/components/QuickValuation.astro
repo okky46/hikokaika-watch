@@ -1,0 +1,64 @@
+---
+import type { Financials } from '../lib/valuation';
+import { valuationFactSets, basisLabel } from '../lib/valuation';
+import type { WatchObservation } from '../lib/watchHistory';
+import type { PricePoint } from '../lib/types';
+interface Props { financials?:Financials; observations?:WatchObservation[]; preRumorClose?:PricePoint|null; preReportClose?:PricePoint|null; industry?:string|null }
+const {financials,observations=[],preReportClose,preRumorClose,industry}=Astro.props;
+const sourceFields={ebitda:'EBITDA（百万円）',debt:'有利子負債（百万円）',cash:'EVから控除する現金等（百万円）',adjustments:'EVへの加算調整（百万円）',shares:'自己株式控除後の株式数（百万株）',bps:'1株当たり純資産（円）'} as const;
+// Only ship inputs used by the three methods. Preserve the complete records in storage.
+const sets=valuationFactSets(financials).map(s=>({...s,facts:Object.fromEntries(Object.entries(s.facts).filter(([key])=>key in sourceFields))}));
+const bases=observations.filter(o=>o.price!==null).map(o=>({id:o.id,label:`${o.title} ／ ${o.price_on}・${o.price}円`,price:o.price!,note:`${o.source_name}。${o.date_note||o.occurred_on||'時期未確認'}の観察`,url:o.source_url}));
+if(preRumorClose)bases.unshift({id:'pre-rumor',label:'最初の噂の直前 ／ '+preRumorClose.priceDate+'・'+preRumorClose.price+'円',price:preRumorClose.price,note:preRumorClose.note??'登録済みの基準株価',url:''});
+if(preReportClose)bases.push({id:'pre-report',label:`報道前の終値 ／ ${preReportClose.priceDate}・${preReportClose.price}円`,price:preReportClose.price,note:preReportClose.sourceName??'登録済みの価格',url:''});
+const fields=[['ebitda','EBITDA（百万円）'],['multiple','想定EV/EBITDA（倍）'],['debt','有利子負債（百万円）'],['cash','EVから控除する現金等（百万円）'],['adjustments','EVへの加算調整（百万円）'],['shares','自己株式控除後の株式数（百万株）']];
+---
+<section id="quick-valuation" class="section quick-valuation" data-quick-valuation data-sets={JSON.stringify(sets)} data-bases={JSON.stringify(bases)}>
+  <span id="valuation" aria-hidden="true"></span>
+  <div class="watch-section-heading"><div><span class="small muted">前提を変えて考える</span><h2 class="section-title">価格の試算</h2></div></div>
+  <p>市場プレミアム、利益、資産の3つの見方で試せます。入力はこの画面内だけで使い、掲載データは変わりません。</p>
+  <div class="quick-methods" role="group" aria-label="価格の試算方法">
+    <button type="button" class="btn" data-method="premium" aria-pressed="true">市場プレミアム</button><button type="button" class="btn" data-method="ev" aria-pressed="false">EV/EBITDA</button><button type="button" class="btn" data-method="nav" aria-pressed="false">実質NAV</button>
+  </div>
+  <div class="card quick-panel" data-panel="premium">
+    <h3>起点の株価に、プレミアムを加える</h3>
+    <label>基準にする起点<select data-base><option value="">自分で株価を入力</option>{bases.map(b=><option value={b.id}>{b.label}</option>)}</select></label>
+    <p class="small muted" data-base-note>{bases.length?'登録済みの起点を選ぶか、自分で基準株価を入力できます。':'基準株価は未登録です。気になった時点や報道前の株価を入力できます。'}</p>
+    <div class="quick-grid"><label>基準株価（円）<input type="number" step="any" min="0.01" data-q="base" inputmode="decimal"/></label><label>想定プレミアム（%）<input type="number" step="any" min="-99.99" value="30" data-q="premium" inputmode="decimal"/></label></div>
+    <p class="small muted">30%は試すための仮定です。過去事例の平均ではありません。株式分割前後の価格を比較するときは、同じ基準にそろえてください。</p>
+    <p class="quick-result" data-output="premium" aria-live="polite">基準株価を入力してください</p><p class="small" data-formula="premium"></p>
+  </div>
+  <div class="card quick-panel" data-panel="ev" hidden>
+    <h3>事業の価値から、1株の価値を考える</h3>
+    {industry&&/銀行|保険|証券|金融/.test(industry)&&<p class="notice">金融業では負債や利息が事業と密接なため、EV/EBITDAによる比較には向きません。資産面の試算も確認してください。</p>}
+    <p class="small">金額は百万円、株式数は百万株で入力します。残高は同じ基準日・連結範囲にそろえます。</p>
+    {sets.length>0&&<div class="quick-load"><label>使う財務情報<select data-load-set>{sets.map(s=><option value={s.key}>{s.label}</option>)}</select></label><button type="button" class="btn" data-load-ev>登録値を入力欄へ反映</button></div>}
+    <p class="small muted" data-ev-origin>未登録の項目も自由に入力できます。調整額0は追加調整を置かない仮定です。</p>
+    <div class="quick-grid">{fields.map(([key,label])=><label>{label}<input type="number" step="any" min={key==='adjustments'?undefined:'0'} value={key==='adjustments'?'0':undefined} data-q={key} inputmode="decimal"/></label>)}</div>
+    <p class="quick-result" data-output="ev" aria-live="polite">財務数値と想定倍率を入力してください</p><p class="small" data-formula="ev"></p>
+    <p class="small muted">（EBITDA × 倍率 − 有利子負債 ＋ 現金等 − EVへの加算調整）÷ 株式数。EBITDAが0以下のときは、この方式では試算しません。</p>
+  </div>
+  <div class="card quick-panel" data-panel="nav" hidden>
+    <h3>株主に帰属する純資産を、時価の差額で調整する</h3>
+    <p class="small">親会社の株主に帰属する純資産を使います。負債はすでに差し引かれているため、ここで二度引きません。</p>
+    {financials?.facts.bps&&<button type="button" class="btn" data-load-nav>登録BPSから純資産を概算</button>}
+    <p class="small muted" data-nav-origin>時価未調査の資産は調整に含めません。含み益が0と確認できたという意味ではありません。</p>
+    <div class="quick-grid"><label>株主に帰属する純資産（百万円）<input type="number" step="any" data-q="equity" inputmode="decimal"/></label><label>税引後の資産評価調整（百万円）<input type="number" step="any" value="0" data-q="nav-adjustment" inputmode="decimal"/></label><label>自己株式控除後の株式数（百万株）<input type="number" step="any" min="0" data-q="nav-shares" inputmode="decimal"/></label></div>
+    <label>資産評価の確認範囲<select data-nav-scope><option value="unreviewed">時価を調べていない・調整なし</option><option value="partial">一部の資産を調査して調整</option><option value="assumption">自分の仮定で調整</option></select></label>
+    <p class="quick-result" data-output="nav" aria-live="polite">純資産と株式数を入力してください</p><p class="small" data-formula="nav"></p>
+    <p class="small muted">（純資産 ＋ 税引後の評価調整）÷ 株式数。土地などの含み損益は、簿価との差額だけを加えます。</p>
+  </div>
+  <p class="small muted">この前提ならいくらになるかを示す概算です。実際の買付価格や非公開化の可能性を示す数字ではありません。</p>
+  {sets.some(s=>Object.keys(s.facts).length>0)&&<details class="card section" id="valuation-sources"><summary>試算に使う登録値と出典</summary>
+    <p class="small muted">財務情報の確認日：{financials?.checkedOn}。会社予想に前期の償却費を加えたEBITDAは、サイトの参考予想値です。各数値の対象期と算式を確認してください。</p>
+    {sets.map(s=><div><h3>{s.label}</h3><dl class="valuation-facts">{Object.entries(sourceFields).map(([key,label])=>{const f=s.facts[key];return f&&<div><dt>{label}</dt><dd><strong>{(f.value/(key==='bps'?1:1e6)).toLocaleString('ja-JP',{maximumFractionDigits:4})}</strong><p class="small">{f.period} ／ {basisLabel(f.basis)} ／ {f.scope==='consolidated'?'連結':'単体'}</p><a href={f.sourceUrl} target="_blank" rel="noopener noreferrer">{f.sourceName}</a>{f.note&&<p class="small">{f.note}</p>}</dd></div>})}</dl></div>)}
+  </details>}
+  <noscript>試算するにはJavaScriptを有効にしてください。</noscript>
+</section>
+<script>
+import { setupQuickValuation } from '../lib/quickValuationUI';
+document.querySelectorAll<HTMLElement>('[data-quick-valuation]').forEach(setupQuickValuation);
+</script>
+<style>
+.quick-methods{display:flex;gap:.4rem;flex-wrap:wrap;margin:1rem 0}.quick-methods [aria-pressed=true]{background:var(--color-primary);color:white;border-color:var(--color-primary)}.quick-panel{border-top:3px solid var(--color-primary)}.quick-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.7rem 1rem}.quick-valuation label{display:block;font-size:.9rem;margin:.5rem 0}.quick-valuation input,.quick-valuation select{display:block;width:100%;margin-top:.3rem}.quick-load{display:flex;align-items:end;gap:.7rem;flex-wrap:wrap}.quick-result{font-size:1.5rem;font-weight:700;padding-top:1rem;border-top:1px solid var(--color-line);margin:1rem 0 .3rem}.quick-panel p{overflow-wrap:anywhere}@media(max-width:640px){.quick-grid{grid-template-columns:1fr}.quick-result{font-size:1.3rem}}
+</style>

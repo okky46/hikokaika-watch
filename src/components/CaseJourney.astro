@@ -1,0 +1,39 @@
+---
+import JourneyEvent from './JourneyEvent.astro';
+import JourneyObservation from './JourneyObservation.astro';
+import AdSlot from './AdSlot.astro';
+import type {CaseDetail,CaseEventView} from '../lib/types';
+import type {WatchObservation} from '../lib/watchHistory';
+import {OBSERVATION_OUTCOME,latestCheck} from '../lib/watchHistory';
+import {timelineDateKey} from '../lib/trackingDates';
+interface Props {c:CaseDetail;adSlots:string[]}
+const {c,adSlots}=Astro.props;
+const observations=c.tracking?.observations??[];
+type Row={key:string;date:string;group:string;o?:WatchObservation;event?:CaseEventView};
+const rows:Row[]=[...observations.map(o=>({key:'observation-'+o.id,date:o.occurred_on?`${o.occurred_on}|`:'',group:o.occurred_on.slice(0,7)||'時期が未確定の観察',o})),...c.events.map(event=>({key:'event-'+event.id,date:event.date.start||event.date.referenceMonth?timelineDateKey(event.date):'',group:event.date.start?.slice(0,7)||event.date.referenceMonth||'公表日未確認',event}))].sort((a,b)=>b.date.localeCompare(a.date)||a.key.localeCompare(b.key));
+const check=latestCheck(observations);
+let eventCount=0;
+---
+<section class="section case-journey" id="watch-history" aria-label="観察と報道の経過">
+  <span id="timeline"></span>
+  <div class="workspace-heading"><div><span class="eyebrow">公開されている経過</span><h2>気になった起点から、その後まで</h2></div><a class="btn small" data-public-record href={`/admin/?case=${c.id}&record=observation`} hidden>公開する観察を追加</a></div>
+  <p class="watch-check small">運営の確認：{c.lastCheckedOn||'日付未登録'} ／ {check?<a href={`#observation-${check.id}`}>{check.occurred_on||check.date_note}：{OBSERVATION_OUTCOME[check.outcome]}</a>:'確認範囲・結果は未記録'}</p>
+  <div class="journey-controls"><label>表示する記録<select data-journey-filter><option value="all">観察と報道・開示</option><option value="observation">観察・確認結果</option><option value="event">報道・開示</option></select></label><label class="timeline-sort">並び順<select id="timeline-order" aria-controls="case-timeline"><option value="newest">新しい順</option><option value="oldest">古い順</option></select></label></div>
+  <p class="small muted">出来事の時期で並べ、後から発見した記録には記録日を併記します。月・号数だけの情報は参考位置、時期が不明な観察は末尾です。</p>
+  {c.events.length===0&&<p class="small muted">この銘柄の出来事はまだ掲載していません。報道がなくても、値動きや気づきを起点に追跡できます。</p>}
+  {rows.length===0?<div class="empty-state"><p>まだ公開の観察はありません。上の追跡理由をもとに、気になった点を自分の記録へ残せます。</p><a href="#note-section">気づきを記録する →</a></div>:<ol class="timeline" id="case-timeline">{rows.map((r,index)=>{if(r.event)eventCount++;const slot=r.event&&eventCount%3===0?adSlots[eventCount/3-1]:null;return <>
+    <li id={r.key} class:list={['timeline__item',{'journey-observation':!!r.o}]} data-watch-item={r.key} data-timeline-event data-journey-kind={r.o?'observation':'event'} data-newest-rank={index} data-oldest-rank={r.date?rows.filter(x=>x.date).length-1-index:rows.length+index} data-timeline-group={r.group}>
+      <article class:list={['card journey-record',{'watch-observation':!!r.o}]}>{r.o?<JourneyObservation o={r.o} observations={observations}/>:<JourneyEvent event={r.event!}/>}<a class="small journey-record-note" href="#note-section">この動きを踏まえて記録する →</a></article>
+    </li>{slot&&<li class="timeline__item timeline__item--ad"><AdSlot placement={`case-timeline-${eventCount/3}`} slotId={slot}/></li>}
+  </>})}</ol>}
+  <p class="empty-state" data-journey-empty hidden>この種類の記録はまだありません。表示する記録を切り替えると、ほかの経過を確認できます。</p>
+</section>
+<script>
+const filter=document.querySelector<HTMLSelectElement>('[data-journey-filter]');
+function applyFilter(){if(!filter)return;const rows=[...document.querySelectorAll<HTMLElement>('[data-journey-kind]')];rows.forEach(row=>row.hidden=filter.value!=='all'&&row.dataset.journeyKind!==filter.value);document.querySelectorAll<HTMLElement>('.timeline-group,.timeline__item--ad').forEach(row=>row.hidden=filter.value!=='all');document.querySelector<HTMLElement>('[data-journey-empty]')!.hidden=rows.some(row=>!row.hidden);}
+filter?.addEventListener('change',applyFilter);
+document.addEventListener('journey-order-changed',applyFilter);
+// Direct links always reveal their record, even after filtering.
+window.addEventListener('hashchange',()=>{const target=document.getElementById(location.hash.slice(1));if(target?.matches('[data-journey-kind]')&&target.hidden&&filter){filter.value='all';filter.dispatchEvent(new Event('change'));target.scrollIntoView();}});
+document.addEventListener('click',event=>{const link=(event.target as Element).closest<HTMLAnchorElement>('a[href^="#"]');const target=link&&document.getElementById(link.hash.slice(1));if(target?.matches('[data-journey-kind]')&&target.hidden&&filter){filter.value='all';applyFilter();}});
+</script>

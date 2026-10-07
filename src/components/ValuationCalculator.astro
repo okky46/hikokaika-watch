@@ -18,7 +18,7 @@ const factSets=valuationFactSets(financials);
   <p class="small"><a class="navigation-link" href={hasIndustryComparables ? `/tob-comparables/?industry=${encodeURIComponent(comparisonIndustry!)}` : '/tob-comparables/'}>{hasIndustryComparables ? `${comparisonIndustry}の過去TOB事例を比較する` : '過去のTOB事例を比較する'}</a></p>
   <p>株価から倍率を計算するか、倍率から1株当たりの価格を試算できます。入力値はこの画面内だけで使います。</p>
   {sample&&<p class="notice">試算用の財務数値・TOB事例は架空のサンプルです。</p>}
-  {!financials?<p class="empty-state">この銘柄の財務数値はまだ登録されていません。出典を確認した数値の公開後に試算できます。</p>:<>
+  {!financials?<p class="empty-state">この銘柄の財務数値はまだ登録されていません。<a href="#quick-valuation">価格の試算</a>では、自分で数値を入力して計算できます。</p>:<>
     <p class="small muted">財務情報の確認日 {financials.checkedOn} ／ 比較業種 {financials.industry}</p>
     {factSets.length>1?<label>利益の基準<select data-financial-basis>{factSets.map(s=><option value={s.key}>{s.label}</option>)}</select></label>:<p class="small">会社予想の計算一式は未登録です。登録済みの財務数値で試算します。</p>}
     <p class="small">予想倍率は会社の通期予想を使います。会社予想営業利益に前期の償却費を加えたEBITDAは、当サイトの参考予想値です。利益の対象期、EVの残高基準日、計算根拠は下の出典欄で確認できます。コンセンサス予想とは前提が異なります。</p>

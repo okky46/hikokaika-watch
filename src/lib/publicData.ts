@@ -9,6 +9,7 @@
 // このモジュールはビルド時(Node)専用。ブラウザからは import しない。
 // ============================================================
 import { applyPublishedProfile, parseTrackingProfile, validateProfileReferences, TRACKING_STATUS, publicTrackingStatus } from './trackingProfile.ts';
+import { watchManifest } from './watchManifest.ts';
 import type { TrackingEdition, MediaOutlet } from './trackingProfile.ts';
 import { publicEventDate, timelineDateKey } from './trackingDates.ts';
 import { trackingActivity, firstReportLabel } from './trackingVisual.ts';
@@ -26,7 +27,7 @@ import { deriveCaseFields } from './derive.ts';
 import { safeHttpUrl } from './tracking.ts';
 import { sanitizeLargeShareholdingMetadata } from './noteMetadataHelpers.ts';
 import { buildPublicCompanies, isPublishableCompany } from './publicCompanyHelpers.ts';
-import { normalizeDailyCloses } from './priceHelpers.ts';
+import { normalizeDailyCloses,pricePoint } from './priceHelpers.ts';
 import type {
   CaseDetail,
   CaseEventView,
@@ -177,6 +178,7 @@ export function assemble(raw: RawData): PublicData {
 
     const prices = pricesByCase.get(c.id) ?? [];
     const preReportClose = latestPrice(prices, 'pre_report_close');
+    const preRumorClose = latestPrice(prices, 'pre_rumor_close');
     // 現在株価は、その案件に daily_close が1件以上あれば最新の daily_close を使い、
     // 無ければ従来どおり手動登録の current_close を使う。
     const dailyCloses = normalizeDailyCloses(prices);
@@ -257,6 +259,7 @@ export function assemble(raw: RawData): PublicData {
       }),
     );
     details.push({
+      watch:watchManifest(profile,eventViews,c.tracking_reason||c.summary,c.status),
       firstReport:firstReportLabel(profile,firstReportedAt,eventViews.filter(e=>['observation_report','follow_up_report'].includes(e.eventType))),
       activity:trackingActivity([...eventViews.map(e=>e.date), ...unlinkedReportDates]),
       tracking:profile, publicationVersion:edition?.publication_version ?? null, media, search,
@@ -282,6 +285,7 @@ export function assemble(raw: RawData): PublicData {
       hasFormalAnnouncement: caseHasFormalAnnouncement,
       hasAcknowledgedCompanyComment,
       sourceNames,
+      preRumorClose,
       preReportClose,
       currentClose,
       formalOfferPrice,
@@ -331,11 +335,7 @@ function latestPrice(prices: RawPrice[], type: RawPrice['price_type']): PricePoi
     .sort((a, b) => (a.price_date < b.price_date ? 1 : -1));
   const latest = filtered[0];
   if (!latest) return null;
-  return {
-    price: Number(latest.price),
-    priceDate: latest.price_date,
-    sourceName: latest.source_name,
-  };
+  return pricePoint(latest);
 }
 
 function maxIso(isos: (string | null)[]): string {

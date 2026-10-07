@@ -41,7 +41,7 @@ export type CommentTag =
   | 'comment_declined'
   | 'other';
 
-export type PriceType = 'pre_report_close' | 'current_close' | 'formal_offer_price' | 'daily_close';
+export type PriceType = 'pre_report_close' | 'current_close' | 'formal_offer_price' | 'daily_close' | 'pre_rumor_close';
 
 export type InboxSourceKind = 'tdnet' | 'edinet' | 'news';
 export type InboxStatus = 'pending' | 'approved' | 'rejected';
@@ -114,6 +114,9 @@ export interface RawEvent {
 }
 
 export interface RawPrice {
+  share_basis_on?: string | null;
+  rumor_on?: string | null;
+  note?: string | null;
   id: string;
   case_id: string;
   price_type: PriceType;
@@ -126,6 +129,9 @@ export interface RawPrice {
 
 /** 表示用の価格情報 */
 export interface PricePoint {
+  shareBasisOn?: string;
+  rumorOn?: string;
+  note?: string;
   price: number;
   priceDate: string;
   sourceName: string | null;
@@ -133,6 +139,7 @@ export interface PricePoint {
 
 /** 一覧・検索用のビューモデル(トップページに JSON 埋め込みされる) */
 export interface CaseListItem {
+  watch: import('./watchReadState').WatchManifest;
   activity: import('./trackingVisual').TrackingActivity;
   firstReport: ReturnType<typeof import('./trackingVisual').firstReportLabel>;
   tracking: import('./trackingProfile').TrackingProfile | null;
@@ -160,6 +167,7 @@ export interface CaseListItem {
   hasAcknowledgedCompanyComment: boolean;
   /** この案件の可視イベントに登場する媒体名(絞り込み用) */
   sourceNames: string[];
+  preRumorClose?: PricePoint | null;
   preReportClose: PricePoint | null;
   currentClose: PricePoint | null;
   formalOfferPrice: PricePoint | null;

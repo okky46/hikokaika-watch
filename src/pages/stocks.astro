@@ -1,0 +1,13 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base title="追跡銘柄一覧へ移動" description="追跡銘柄の検索・絞り込みはトップページで利用できます。" path="/" noindex>
+  <h1>追跡銘柄一覧はトップページに移りました</h1>
+  <p><a href="/" id="stocks-return">追跡銘柄一覧へ</a></p>
+</Base>
+<script>
+const destination='/'+location.search+location.hash;
+const link=document.getElementById('stocks-return') as HTMLAnchorElement|null;
+if(link)link.href=destination;
+location.replace(destination);
+</script>

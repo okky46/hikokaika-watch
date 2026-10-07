@@ -96,7 +96,7 @@ describe('static data and safety rails', () => {
     assert.match(migration, /not valid/i);
     assert.match(migration, /validate constraint user_case_notes_body_length_check/i);
     assert.match(migration, /validate constraint user_global_notes_body_length_check/i);
-    assert.match(fs.readFileSync('src/pages/cases/[slug].astro', 'utf8'), /maxlength="1000"/);
+    assert.match(fs.readFileSync('src/components/WatchNotebook.astro', 'utf8'), /maxlength="1000"/);
     assert.match(fs.readFileSync('src/pages/mypage.astro', 'utf8'), /maxlength="1000"/);
   });
 });

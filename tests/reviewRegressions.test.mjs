@@ -493,8 +493,10 @@ describe('phase 3 analytics and advertising regressions', () => {
     assert.match(slot, /data-ad-slot=\{slotId\}/);
     assert.doesNotMatch(slot, /pagead2\.googlesyndication\.com/);
     assert.match(base, /pagead2\.googlesyndication\.com/);
-    assert.match(casePage, /timelineAdSlots\[slotNumber - 1\]/);
-    assert.match(casePage, /&& timelineAdSlots\[slotNumber - 1\]/);
+    assert.match(casePage, /adSlots=\{timelineAdSlots\}/);
+    const journey=fs.readFileSync('src/components/CaseJourney.astro','utf8');
+    assert.match(journey, /adSlots\[eventCount\/3-1\]/);
+    assert.match(journey, /slot&&/);
   });
 
   it('emits the timeline loader only when generated HTML contains an ad row', () => {

@@ -1,0 +1,22 @@
+---
+import {marketMetrics,signedPercent,marketDateLabel} from '../lib/marketMetrics';
+import type {CaseListItem} from '../lib/types';
+import type {Financials} from '../lib/valuation';
+interface Props {caseData:Pick<CaseListItem,'dailyCloses'|'preRumorClose'>; financials?:Financials; detail?:boolean}
+const {caseData,financials,detail=false}=Astro.props;
+const m=marketMetrics(caseData,financials);
+const number=(v:number)=>v.toLocaleString('ja-JP',{maximumFractionDigits:2});
+---
+{detail&&<p class="market-update-date small muted">株価の最終更新日：{m.close?<time datetime={m.close.priceDate}>{marketDateLabel(m.close.priceDate)}</time>:'未登録'}</p>}
+<div class:list={['market-quote',{'market-quote--detail':detail}]}>
+ <div class="market-quote__item"><span class="small muted">株価（終値）</span><strong>{m.close?number(m.close.price)+'円':'未登録'}</strong>{m.close&&<small><time datetime={m.close.priceDate}>{marketDateLabel(m.close.priceDate)}</time> 終値</small>}</div>
+ <div class="market-quote__item market-quote__ev"><span class="small">EV/EBITDA（実績）</span><strong>{m.multiple!==null?number(m.multiple)+'倍':'算出待ち'}</strong><small>{m.multiple!==null?financials?.facts.ebitda?.period:m.issue}</small></div>
+ {detail&&<div class="market-quote__item"><span class="small muted">最初の噂の直前比</span><strong>{m.premium!==null?signedPercent(m.premium):'算出待ち'}</strong><small>{m.premium!==null&&m.base?m.base.priceDate+' 終値 '+number(m.base.price)+'円から':m.premiumIssue}</small></div>}
+</div>
+{detail&&<details class="market-quote-basis"><summary>株価・倍率・プレミアムの計算根拠</summary>
+ <p class="small">株価は手動更新の終値です。表示されている日付の値を使っています。</p>
+ {m.close&&<p class="small">登録終値：{m.close.priceDate} ／ 株式分割の換算基準日：{m.close.shareBasisOn||'未確認'}{m.close.note&&' ／ '+m.close.note}</p>}
+ <p class="small">EV/EBITDA ＝（終値 × 自己株式控除後株式数 ＋ 有利子負債 − 現金等 ＋ その他調整額）÷ 実績EBITDA。登録済みの財務数値を使用します。</p>
+ {financials?.facts.ebitda&&<p class="small">EBITDA：{number(financials.facts.ebitda.value/1e6)}百万円（{financials.facts.ebitda.period}、{financials.facts.ebitda.basis==='actual'?'実績':'予想'}、{financials.facts.ebitda.scope==='consolidated'?'連結':'単体'}）。{financials.facts.ebitda.note} 財務確認日：{financials.checkedOn}。残高の対象期：{financials.facts.debt?.period||'未登録'}。<a href="#quick-valuation">財務の出典・価格の試算へ</a></p>}
+ {m.base&&<p class="small">最初の噂の日：{m.base.rumorOn||'未確認'} ／ 直前の基準株価：{m.base.priceDate}・{number(m.base.price)}円。{m.base.note} プレミアム ＝（表示日の終値 ÷ 基準株価 − 1）× 100。下落の場合はマイナスで表示します。</p>}
+</details>}

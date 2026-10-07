@@ -7,6 +7,7 @@ export function setupTrackingList(personalMatch:(id:string)=>boolean, clearPerso
   const data=JSON.parse(document.getElementById('tracking-search-data')!.textContent!) as (SearchCase & {slug:string})[];
   const cases=new Map(data.map(c=>[c.id,c]));
   const rows=[...document.querySelectorAll<HTMLTableRowElement>('#tracking-table tbody tr')];
+  const updatedOnly=document.getElementById('watch-updated-only') as HTMLInputElement|null;
   const body=document.querySelector<HTMLTableSectionElement>('#tracking-table tbody')!;
   // Keep native links/buttons and text selection usable; keyboard users retain the company link.
   body.classList.add('clickable-rows');
@@ -43,7 +44,7 @@ export function setupTrackingList(personalMatch:(id:string)=>boolean, clearPerso
     let visible=0;
     for(const row of rows.sort((a,b)=>compareCases(cases.get(a.dataset.caseId!)!,cases.get(b.dataset.caseId!)!,filters.sort))) {
       const c=cases.get(row.dataset.caseId!)!;
-      const ok=!invalid && matchesCase(c,filters) && personalMatch(c.id);
+      const ok=!invalid && matchesCase(c,filters) && personalMatch(c.id) && (!updatedOnly?.checked || row.dataset.watchChanged==='true');
       row.hidden=!ok;body.append(row);if(ok)visible++;
       const match=row.querySelector<HTMLElement>('.period-match')!;match.replaceChildren();match.hidden=!(filters.from||filters.to);
       if(!match.hidden) {
@@ -70,6 +71,7 @@ export function setupTrackingList(personalMatch:(id:string)=>boolean, clearPerso
     const fav=document.getElementById('f-fav') as HTMLInputElement;
     const intensity=document.getElementById('f-intensity') as HTMLSelectElement;
     if(fav.checked)add('お気に入り',()=>fav.checked=false);
+    if(updatedOnly?.checked)add('確認後に更新',()=>updatedOnly.checked=false);
     if(intensity.value)add(`関心度: ${intensity.selectedOptions[0].text}`,()=>intensity.value='');
     document.querySelector<HTMLElement>('[data-clear-main]')!.hidden=!chips.childElementCount;
     try {sessionStorage.setItem('tracking-public-search',searchParams(filters));}catch{}
@@ -89,7 +91,9 @@ export function setupTrackingList(personalMatch:(id:string)=>boolean, clearPerso
   });
   // form-associated controls outside <form> do not bubble input events through it.
   input('sort').addEventListener('change',()=>{clearTimeout(timer);commit();});
-  document.querySelectorAll('[data-clear-search]').forEach(b=>b.addEventListener('click',()=>{form.reset();clearPersonal();commit();input('q').focus();}));
+  document.querySelectorAll('[data-clear-search]').forEach(b=>b.addEventListener('click',()=>{form.reset();if(updatedOnly)updatedOnly.checked=false;clearPersonal();commit();input('q').focus();}));
+  updatedOnly?.addEventListener('change',apply);
+  document.addEventListener('watch-state-updated',apply);
   document.getElementById('last-twelve-months')!.addEventListener('click',()=>{const range=lastTwelveMonths();input('from').value=range.from;input('to').value=range.to;commit();});
   document.getElementById('f-year')!.addEventListener('change',e=>{const year=(e.target as HTMLSelectElement).value;if(year){input('from').value=year+'-01-01';input('to').value=year+'-12-31';commit();}(e.target as HTMLSelectElement).value='';});
   window.addEventListener('popstate',()=>{clearTimeout(timer);restore();});
