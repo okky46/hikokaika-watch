@@ -26,7 +26,7 @@ const factSets=valuationFactSets(financials);
       <div class="card">
         <h3>株価から倍率を計算</h3>
         <label>比較したい株価（円）<input data-price type="number" min="0.0001" max="1000000000" step="any" inputmode="decimal" autocomplete="off" placeholder="株価を入力" /></label>
-        <dl aria-live="polite">{(Object.entries(METRICS) as [Metric,string][]).map(([key,label])=><div><dt>{label} <span class="small muted" data-result-basis={key}></span></dt><dd data-result={key}>株価を入力してください</dd></div>)}</dl>
+        <dl class="valuation-results" aria-live="polite">{(Object.entries(METRICS) as [Metric,string][]).map(([key,label])=><div class="metric-panel" data-metric-kind={key}><dt><span class="metric-badge">{label}</span><span class="small muted" data-result-basis={key}></span></dt><dd data-result={key}>株価を入力してください</dd></div>)}</dl>
         <p class="small" data-ev-inputs></p>
         <p class="small" data-ev-result aria-live="polite"></p>
       </div>
@@ -35,8 +35,7 @@ const factSets=valuationFactSets(financials);
         <p class="small" data-applied-reference hidden></p>
         <label>計算方法<select data-metric>{Object.entries(METRICS).map(([key,label])=><option value={key}>{label}</option>)}</select></label>
         <label>試算に使う倍率（倍）<input data-multiple type="number" min="0.0001" max="10000" step="any" inputmode="decimal" autocomplete="off" placeholder="倍率を入力" /></label>
-        <p data-scenario-basis class="small"></p>
-        <p aria-live="polite" data-scenario>倍率を入力してください</p>
+        <div class="metric-panel scenario-output" data-scenario-output data-metric-kind="per"><span class="metric-badge" data-scenario-metric>PER</span><p data-scenario-basis class="small"></p><p aria-live="polite" data-scenario>倍率を入力してください</p></div>
         <button class="btn" type="button" data-reset>入力をクリア</button>
       </div>
     </div>
@@ -67,4 +66,13 @@ document.querySelectorAll<HTMLElement>('[data-valuation]').forEach(setupValuatio
 <style>
 .valuation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.valuation label{display:block;margin:.7rem 0}.valuation input,.valuation select{display:block;width:100%;max-width:22rem;margin-top:.3rem}.valuation dl>div{padding:.7rem 0;border-bottom:1px solid var(--color-line)}.valuation dd{margin:.3rem 0;overflow-wrap:anywhere}.valuation .peer-multiple{margin:.7rem 0}.valuation p{overflow-wrap:anywhere}@media(max-width:640px){.valuation-grid{grid-template-columns:1fr}}
 </style>
-<style>[data-scenario-panel]{scroll-margin-top:7rem}[data-applied-reference]{padding:.6rem;background:var(--color-bg);border-left:3px solid var(--color-accent)}</style>
+<style>
+[data-scenario-panel]{scroll-margin-top:7rem}
+[data-applied-reference]{padding:.6rem;background:var(--color-bg);border-left:3px solid var(--color-primary)}
+.valuation .valuation-results{display:grid;gap:.65rem;margin-top:1rem}
+.valuation .valuation-results>div{padding:.8rem;border:1px solid var(--metric-line)}
+.valuation-results dt{display:flex;align-items:center;flex-wrap:wrap;gap:.4rem .65rem}
+.valuation-results dd{font-size:1.2rem;font-weight:600}
+.scenario-output{margin:1rem 0}
+.scenario-output [data-scenario]{font-size:1.2rem;font-weight:600;margin-bottom:0}
+</style>

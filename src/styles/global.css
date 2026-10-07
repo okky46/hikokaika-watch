@@ -58,6 +58,13 @@
   box-sizing: border-box;
 }
 
+/* 指標の色は種類の識別に使う。割安・割高や成立状況は示さない。 */
+[data-metric-kind="evEbitda"] { --metric-bg:#edf5fc; --metric-line:#bfd7ed; --metric-accent:#24577d; }
+[data-metric-kind="per"] { --metric-bg:#f3effa; --metric-line:#d7caeb; --metric-accent:#614287; }
+[data-metric-kind="pbr"] { --metric-bg:#fff7e5; --metric-line:#ead7a3; --metric-accent:#755419; }
+.metric-badge { display:inline-block; padding:.2rem .55rem; border:1px solid var(--metric-line); border-radius:var(--radius); background:var(--metric-bg); color:var(--metric-accent); font-weight:700; }
+.metric-panel { background:var(--metric-bg); border:1px solid var(--metric-line); border-radius:var(--radius); padding:.8rem; }
+
 /* display 指定を持つ要素でも hidden 属性を必ず優先する */
 [hidden] {
   display: none !important;

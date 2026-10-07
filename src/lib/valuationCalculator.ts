@@ -17,6 +17,10 @@ export function setupValuationCalculator(root:HTMLElement){
    out.textContent=prerequisites(f,key)??(!price.value?'株価を入力してください':!price.validity.valid||value===null?'株価の入力範囲と財務数値を確認してください。計算には0より大きい株価・EVが必要です。':`${number(value)}倍`);
   }
   const key=metric.value as Metric,fact=f[key==='per'?'eps':key==='pbr'?'bps':'ebitda'];
+  const output=root.querySelector<HTMLElement>('[data-scenario-output]');
+  if(output)output.dataset.metricKind=key;
+  const metricLabel=root.querySelector<HTMLElement>('[data-scenario-metric]');
+  if(metricLabel)metricLabel.textContent=METRICS[key];
   basis.textContent=fact?`${basisLabel(fact.basis)}・${fact.period}の数値で計算。`:'';
   const value=priceFromMultiple(f,key,multiple.valueAsNumber);
   result.textContent=prerequisites(f,key)??(!multiple.value?'倍率を入力してください':!multiple.validity.valid||value===null?'試算できません。倍率の入力範囲と財務数値を確認してください。':`入力した条件での試算株価：${number(value)}円`);
