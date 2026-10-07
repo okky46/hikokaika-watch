@@ -14,7 +14,7 @@ const range=(low:number,high:number)=>low===high?fmt(low):`${fmt(low)}〜${fmt(h
   {r.valuations.length?r.valuations.map(v=><details class="card section"><summary>{v.advisor} ／ {v.methodName??valuationMethodLabel[v.method]} ／ {range(v.low,v.high)}{v.unit??'円/株'}</summary>
     <p>{v.role} ／ 算定日 {v.date||'未確認'}</p>
     <p>評価額：{range(v.low,v.high)}{v.unit??'円/株'}</p>
-    {v.inputs.length>0?<div class="evidence-table"><table><caption>算定に使われた数値と前提</caption><thead><tr><th>項目</th><th>数値・単位</th><th>対象期・基準</th><th>定義・根拠</th></tr></thead><tbody>{v.inputs.map(i=><tr><td>{i.name}</td><td>{range(i.low,i.high)} {i.unit}</td><td>{i.period} ／ {i.basis==='actual'?'実績':i.basis==='company_forecast'?'会社予想':i.basis==='valuation_assumption'?'算定の前提':'基準未確認'}</td><td>{i.definition}</td></tr>)}</tbody></table></div>:<p>採用した倍率や割引率などは、まだ掲載していません。確認できた算定条件は以下の説明と原資料をご覧ください。</p>}
+    {v.inputs.length>0?<div class="evidence-table"><table><caption>算定に使われた数値と前提</caption><thead><tr><th>項目</th><th>数値・単位</th><th>対象期・基準</th><th>定義・根拠</th></tr></thead><tbody>{v.inputs.map(i=><tr><td>{i.name}</td><td>{range(i.low,i.high)} {i.unit}</td><td>{i.period} ／ {i.basis==='actual'?'実績':i.basis==='company_forecast'?'会社予想':i.basis==='valuation_assumption'?'算定の前提':'基準未確認'}</td><td>{i.definition}</td></tr>)}</tbody></table></div>:<p>採用した倍率や割引率などは、まだ掲載していません。詳しい算定条件は、原資料をご覧ください。</p>}
     {v.peers.length>0&&<p>比較会社：{v.peers.join('、')}</p>}
     {v.notes&&<p>{v.notes}</p>}
     <a href={v.sourceUrl} target="_blank" rel="noopener noreferrer">算定の原資料・{v.page}</a>
