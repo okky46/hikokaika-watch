@@ -51,6 +51,26 @@ async function component(name){
 const Calculator=(await import(await component('ValuationCalculator'))).default;
 const script=fs.readFileSync('src/components/ValuationCalculator.astro','utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
 const client=(await build({stdin:{contents:script,loader:'ts',resolveDir:path.resolve('src/components')},bundle:true,write:false,format:'iife',platform:'browser'})).outputFiles[0].text;
+test('画面：会社予想を初期表示し、実績切替で倍率・出典・同業参考を一緒に更新する',async()=>{
+ const record=structuredClone(financials);record.forecastFacts=structuredClone(record.facts);
+ record.forecastFacts.eps={...record.facts.eps,value:200,basis:'company_forecast',period:'2027年3月期'};
+ record.forecastFacts.ebitda={...record.facts.ebitda,value:3000000000,basis:'company_forecast',period:'2027年3月期'};
+ record.forecastFacts.cash={...record.facts.cash,value:2000000000};
+ const html=await (await AstroContainer.create()).renderToString(Calculator,{props:{financials:record,comparables}});
+ const dom=new JSDOM(html,{runScripts:'outside-only'});dom.window.eval(client);const d=dom.window.document;
+ const price=d.querySelector('[data-price]'),multiple=d.querySelector('[data-multiple]'),selector=d.querySelector('[data-financial-basis]');
+ assert.equal(selector.value,'forecast');assert.equal(price.value,'');assert.equal(multiple.value,'');
+ price.value='1400';price.dispatchEvent(new dom.window.Event('input'));
+ assert.equal(d.querySelector('[data-result="per"]').textContent,'7倍');assert.match(d.querySelector('[data-result="evEbitda"]').textContent,/4.67倍/);
+ assert.match(d.querySelector('[data-result-basis="per"]').textContent,/会社予想・2027年3月期/);
+ assert.equal(d.querySelector('.reference-section').closest('[data-financial-view]').hidden,false);
+ assert.match(d.querySelector('.reference-section [data-reference-metric="per"]').textContent,/参考値なし/);
+ multiple.value='12.3';multiple.dispatchEvent(new dom.window.Event('input'));selector.value='registered';selector.dispatchEvent(new dom.window.Event('change'));
+ assert.equal(price.value,'1400');assert.equal(multiple.value,'12.3');assert.equal(d.querySelector('[data-result="per"]').textContent,'14倍');
+ for(const view of d.querySelectorAll('[data-financial-view]'))assert.equal(view.hidden,view.dataset.financialView==='forecast');
+ d.querySelector('[data-reset]').click();assert.equal(price.value,'');assert.equal(multiple.value,'');
+ assert.deepEqual(record.facts,financials.facts);dom.window.close();
+});
 
 test('画面：参考3指標の平均・中央値・期間・レンジを表示し、自由入力は変更しない',async()=>{
  const html=await (await AstroContainer.create()).renderToString(Calculator,{props:{financials,comparables}});

@@ -1,10 +1,10 @@
 /** Shared by the calculator, editorial import and public build. Amounts are yen. */
 export const METRICS = {per:'PER', pbr:'PBR', evEbitda:'EV/EBITDA'} as const;
 export type Metric = keyof typeof METRICS;
-export const FIELDS = {eps:'EPS（円）',bps:'BPS（円）',ebitda:'EBITDA（円）',debt:'有利子負債（円）',cash:'現金・現金同等物（円）',adjustments:'EVその他調整額（円）',shares:'自己株式控除後株式数（株）'} as const;
+export const FIELDS = {eps:'EPS（円）',bps:'BPS（円）',ebitda:'EBITDA（円）',debt:'有利子負債（円）',cash:'EV控除用の現金等（円）',adjustments:'EVその他調整額（円）',shares:'自己株式控除後株式数（株）'} as const;
 export type Field = keyof typeof FIELDS;
 export type Fact = {value:number; period:string; basis:'actual'|'company_forecast'; scope:'consolidated'|'standalone'; sourceName:string; sourceUrl:string; note:string};
-export type Financials = {kind:'financials'; code:string; name:string; industry:string; checkedOn:string; notes:string; facts:Partial<Record<Field,Fact>>};
+export type Financials = {kind:'financials'; code:string; name:string; industry:string; checkedOn:string; notes:string; facts:Partial<Record<Field,Fact>>; forecastFacts?:Partial<Record<Field,Fact>>};
 export type ComparableMultiple = {value:number; basis:'actual'|'company_forecast'; period:string; method:'calculated'|'disclosed'; calculation:string; sourceUrl:string};
 export type ValuationInput = {name:string; unit:string; period:string; low:number; high:number; basis:'actual'|'company_forecast'|'valuation_assumption'|'unknown'; definition:string};
 export type AdvisorValuation = {advisor:string; role:string; date:string; method:'market'|'trading_comparables'|'dcf'|'other'; low:number; high:number; sourceUrl:string; page:string; inputs:ValuationInput[]; peers:string[]; notes:string; unit?:'円/株'|'円/口'; methodName?:string};
@@ -32,9 +32,16 @@ export function parseValuation(input:unknown):ValuationRecord {
       facts[key]={value,period,basis:basis(f.basis),scope,sourceName,sourceUrl:source(f.sourceUrl),note:text(f.note)};
     }
     if(!Object.keys(facts).length)throw Error('財務数値を1つ以上登録してください。');
-    return {...common,kind:'financials',facts};
+    let forecastFacts:Financials['forecastFacts'];
+    if(x.forecastFacts!==undefined){
+      forecastFacts=(parseValuation({...common,kind:'financials',facts:x.forecastFacts}) as Financials).facts;
+      if(!forecastFacts.eps&&!forecastFacts.ebitda)throw Error('会社予想EPSまたは予想EBITDAが必要です。');
+      for(const [key,f] of Object.entries(forecastFacts))if(f.basis!==(['eps','ebitda'].includes(key)?'company_forecast':'actual'))throw Error('予想の利益と実績の残高を区別してください。');
+    }
+    return {...common,kind:'financials',facts,...(forecastFacts?{forecastFacts}:{})};
   }
   if(x.kind!=='comparable')throw Error('データ種別が不正です。');
+  if(x.forecastFacts!==undefined)throw Error('予想計算の財務数値は銘柄の財務情報へ登録してください。');
   const research=x.research==null?undefined:parseResearch(x.research,common);
   const priceUnit=x.priceUnit;if(priceUnit!==undefined&&!['円/株','円/口'].includes(priceUnit))throw Error('価格単位を確認してください。');
   const multiples:Comparable['multiples']={};const raw=object(x.multiples);
@@ -107,3 +114,9 @@ export function priceFromMultiple(f:Financials['facts'],metric:Metric,multiple:n
   return Number.isFinite(n)&&n>0?n:null;
 }
 export const basisLabel=(b:Fact['basis'])=>b==='actual'?'実績':'会社予想';
+/** Each set is complete in itself: never borrow missing forecast inputs from old actual balances. */
+export function valuationFactSets(financials?:Financials){
+  if(!financials)return [];
+  const registered={key:'registered',label:Object.values(financials.facts).some(f=>f.basis==='company_forecast')?'登録済みの財務':'実績',facts:financials.facts};
+  return financials.forecastFacts?[{key:'forecast',label:'会社予想',facts:financials.forecastFacts},registered]:[registered];
+}

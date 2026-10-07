@@ -74,6 +74,16 @@ test('管理者EV試算：株価なしで倍率から試算でき、確認用入
  assert.equal(h.rows()[0].published.facts.cash.value,1000000000);
  assert.equal(h.dom.window.document.querySelector('[data-va-ev-share-price]').textContent,'1,500');
 });
+test('予想計算：取込・編集・保存・一括EPS更新後にも独立した予想一式を保持する',async t=>{
+ const h=setup(t),record=structuredClone(financials);record.forecastFacts=structuredClone(record.facts);
+ record.forecastFacts.eps.basis='company_forecast';record.forecastFacts.eps.value=200;record.forecastFacts.ebitda.basis='company_forecast';record.forecastFacts.ebitda.value=3000000000;
+ await h.importRecord(record);h.input('[data-va-ev-price]','1400');assert.equal(h.dom.window.document.querySelector('[data-va-ev-ratio]').textContent,'5倍');
+ h.byId('va-form').requestSubmit();await flush();assert.deepEqual(h.rows()[0].draft.forecastFacts,record.forecastFacts);
+ h.input('[data-forecast-fact="eps"] [data-v="value"]','250');h.byId('va-form').requestSubmit();await flush();assert.equal(h.rows()[0].draft.forecastFacts.eps.value,250);assert.equal(h.rows()[0].draft.facts.eps.value,100);
+ await h.importBatch([{...financials,facts:{eps:{...financials.facts.eps,value:123}}}]);h.byId('va-batch-save').click();await flush();assert.equal(h.rows()[0].draft.forecastFacts.eps.value,250);
+ const selector=h.dom.window.document.querySelector('[data-va-ev-basis]');selector.value='registered';selector.dispatchEvent(new h.dom.window.Event('change'));
+ h.input('[data-va-ev-price]','1400');assert.equal(h.dom.window.document.querySelector('[data-va-ev-ratio]').textContent,'10倍');
+});
 
 test('確認用の無効値は財務保存を妨げず、別のデータへの切替で消える',async t=>{
  const h=setup(t);h.dom.window.confirm=()=>true;await h.importRecord(financials);

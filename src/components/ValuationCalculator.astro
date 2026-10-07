@@ -1,5 +1,5 @@
 ---
-import {METRICS,FIELDS,basisLabel,prerequisites} from '../lib/valuation';
+import {METRICS,FIELDS,basisLabel,prerequisites,valuationFactSets} from '../lib/valuation';
 import type {Financials,Comparable,Metric,Field} from '../lib/valuation';
 import ComparableStatistics from './ComparableStatistics.astro';
 import {comparableAnchor} from '../lib/comparableAnchor';
@@ -11,19 +11,24 @@ const hasIndustryComparables=comparables.some(c=>c.industry===comparisonIndustry
 const peers=comparables.filter(c=>c.industry===(financials?.industry||industry)&&c.code!==financials?.code);
 const fmt=(n:number)=>n.toLocaleString('ja-JP',{maximumFractionDigits:4});
 const entries=(p:Comparable)=>Object.entries(p.multiples) as [Metric,NonNullable<Comparable['multiples'][Metric]>][];
+const factSets=valuationFactSets(financials);
 ---
-<section class="section valuation" id="valuation" data-valuation data-facts={JSON.stringify(financials?.facts??{})}>
+<section class="section valuation" id="valuation" data-valuation data-fact-sets={JSON.stringify(factSets)}>
   <h2 class="section-title">株価と倍率の試算</h2>
   <p class="small"><a class="navigation-link" href={hasIndustryComparables ? `/tob-comparables/?industry=${encodeURIComponent(comparisonIndustry!)}` : '/tob-comparables/'}>{hasIndustryComparables ? `${comparisonIndustry}の過去TOB事例を比較する` : '過去のTOB事例を比較する'}</a></p>
   <p>株価から倍率を計算するか、倍率から1株当たりの価格を試算できます。入力値はこの画面内だけで使います。</p>
   {sample&&<p class="notice">試算用の財務数値・TOB事例は架空のサンプルです。</p>}
   {!financials?<p class="empty-state">この銘柄の財務数値はまだ登録されていません。出典を確認した数値の公開後に試算できます。</p>:<>
     <p class="small muted">財務情報の確認日 {financials.checkedOn} ／ 比較業種 {financials.industry}</p>
+    {factSets.length>1?<label>利益の基準<select data-financial-basis>{factSets.map(s=><option value={s.key}>{s.label}</option>)}</select></label>:<p class="small">会社予想の計算一式は未登録です。登録済みの財務数値で試算します。</p>}
+    <p class="small">予想倍率は会社の通期予想を使います。予想EBITDAの作り方、利益の対象期、EVの残高基準日は下の出典欄で確認できます。コンセンサス予想とは前提が異なります。</p>
     <div class="valuation-grid">
       <div class="card">
         <h3>株価から倍率を計算</h3>
         <label>比較したい株価（円）<input data-price type="number" min="0.0001" max="1000000000" step="any" inputmode="decimal" autocomplete="off" placeholder="株価を入力" /></label>
-        <dl aria-live="polite">{(Object.entries(METRICS) as [Metric,string][]).map(([key,label])=><div><dt>{label} <span class="small muted">{financials.facts[key==='per'?'eps':key==='pbr'?'bps':'ebitda']&&basisLabel(financials.facts[key==='per'?'eps':key==='pbr'?'bps':'ebitda']!.basis)}</span></dt><dd data-result={key}>株価を入力してください</dd></div>)}</dl>
+        <dl aria-live="polite">{(Object.entries(METRICS) as [Metric,string][]).map(([key,label])=><div><dt>{label} <span class="small muted" data-result-basis={key}></span></dt><dd data-result={key}>株価を入力してください</dd></div>)}</dl>
+        <p class="small" data-ev-inputs></p>
+        <p class="small" data-ev-result aria-live="polite"></p>
       </div>
       <div class="card">
         <h3>倍率から株価を試算</h3>
@@ -35,16 +40,16 @@ const entries=(p:Comparable)=>Object.entries(p.multiples) as [Metric,NonNullable
       </div>
     </div>
     <details class="card section"><summary>計算に使う財務数値・出典・算式</summary>
-      <dl class="valuation-facts">{(Object.entries(FIELDS) as [Field,string][]).map(([key,label])=>{const f=financials.facts[key];return <div><dt>{label}</dt><dd>{f?<><strong>{fmt(f.value)}</strong><p class="small">{f.period} ／ {basisLabel(f.basis)} ／ {f.scope==='consolidated'?'連結':'単体'}</p><a href={f.sourceUrl} target="_blank" rel="noopener noreferrer">{f.sourceName}</a>{f.note&&<p class="small">{f.note}</p>}</>:'未登録'}</dd></div>})}</dl>
+      {factSets.map((s,index)=><div data-financial-view={s.key} hidden={index!==0}><h3>{s.label}の計算に使う数値</h3><dl class="valuation-facts">{(Object.entries(FIELDS) as [Field,string][]).map(([key,label])=>{const f=s.facts[key];return <div><dt>{label}</dt><dd>{f?<><strong>{fmt(f.value)}</strong><p class="small">{f.period} ／ {basisLabel(f.basis)} ／ {f.scope==='consolidated'?'連結':'単体'}</p><a href={f.sourceUrl} target="_blank" rel="noopener noreferrer">{f.sourceName}</a>{f.note&&<p class="small">{f.note}</p>}</>:'未登録'}</dd></div>})}</dl></div>)}
       <p>PER＝株価÷EPS。PBR＝株価÷BPS。</p>
-      <p>EV＝株価×自己株式控除後株式数＋有利子負債−現金・現金同等物＋その他調整額。EV/EBITDA＝EV÷EBITDA。</p>
-      <p>EV/EBITDAからの試算株価＝（倍率×EBITDA−有利子負債＋現金・現金同等物−その他調整額）÷自己株式控除後株式数。</p>
-      <p class="small">その他調整額はEVへ加算する額です。リース債務・非支配持分等の扱いは各出典の注記を確認してください。基準日が異なる利益と残高を組み合わせる場合があります。株式分割後はEPS・BPS・株式数の調整を確認してください。</p>
+      <p>EV＝株価×自己株式控除後株式数＋有利子負債−EV控除用の現金等＋その他調整額。EV/EBITDA＝EV÷EBITDA。</p>
+      <p>EV/EBITDAからの試算株価＝（倍率×EBITDA−有利子負債＋EV控除用の現金等−その他調整額）÷自己株式控除後株式数。</p>
+      <p class="small">現金預金と現金同等物のどちらを控除するか、リース債務や非支配持分を含むかは各項目の注記に記載します。会社予想営業利益に前期の償却費を足す場合、そのEBITDAは当サイトの参考計算値です。株式分割後はEPS・BPS・株式数の調整を確認してください。</p>
       {financials.notes&&<p>{financials.notes}</p>}
-      {(Object.keys(METRICS) as Metric[]).map(k=>prerequisites(financials.facts,k)&&<p class="small">{METRICS[k]}：{prerequisites(financials.facts,k)}</p>)}
+      {factSets.map((s,index)=><div data-financial-view={s.key} hidden={index!==0}>{(Object.keys(METRICS) as Metric[]).map(k=>prerequisites(s.facts,k)&&<p class="small">{METRICS[k]}：{prerequisites(s.facts,k)}</p>)}</div>)}
     </details>
   </>}
-  {(financials?.industry||industry)&&<ValuationReferences financials={financials} comparables={comparables} industry={financials?.industry||industry!}/>}
+  {(financials?.industry||industry)&&(financials?factSets.map((s,index)=><div data-financial-view={s.key} hidden={index!==0}><ValuationReferences financials={{...financials,facts:s.facts}} comparables={comparables} industry={financials.industry}/></div>):<ValuationReferences comparables={comparables} industry={industry!}/>)}
   <details class="section peer-details"><summary>他の集計条件・個別事例を見る</summary>
   {(financials?.industry||industry)&&<ComparableStatistics records={comparables} industry={financials?.industry||industry!} excludeCode={financials?.code}/> }
   <p class="small">倍率を選ぶ際は、過去事例との取引条件の違いに加え、実績・会社予想の区分と対象期を確認してください。</p>
@@ -55,25 +60,8 @@ const entries=(p:Comparable)=>Object.entries(p.multiples) as [Metric,NonNullable
   <noscript><p>試算にはJavaScriptを有効にしてください。財務数値と出典はそのまま閲覧できます。</p></noscript>
 </section>
 <script>
-import {METRICS,basisLabel,prerequisites,multipleFromPrice,priceFromMultiple} from '../lib/valuation';
-import type {Financials,Metric} from '../lib/valuation';
-document.querySelectorAll<HTMLElement>('[data-valuation]').forEach(root=>{
- const f=JSON.parse(root.dataset.facts??'{}') as Financials['facts'];
- const price=root.querySelector<HTMLInputElement>('[data-price]'),multiple=root.querySelector<HTMLInputElement>('[data-multiple]'),metric=root.querySelector<HTMLSelectElement>('[data-metric]');
- if(!price||!multiple||!metric)return;
- const result=root.querySelector<HTMLElement>('[data-scenario]')!,basis=root.querySelector<HTMLElement>('[data-scenario-basis]')!;
- const number=(v:number)=>v.toLocaleString('ja-JP',{maximumFractionDigits:2});
- const update=()=>{
-  for(const key of Object.keys(METRICS) as Metric[]){const out=root.querySelector<HTMLElement>(`[data-result="${key}"]`)!;const value=multipleFromPrice(f,key,price.valueAsNumber);out.textContent=prerequisites(f,key)??(!price.value?'株価を入力してください':!price.validity.valid||value===null?'株価の入力範囲と財務数値を確認してください。計算には0より大きい株価・EVが必要です。':`${number(value)}倍`);}
-  const key=metric.value as Metric,fact=f[key==='per'?'eps':key==='pbr'?'bps':'ebitda'];
-  basis.textContent=fact?`${basisLabel(fact.basis)}・${fact.period}の数値で計算。`:'';
-  const value=priceFromMultiple(f,key,multiple.valueAsNumber);
-  result.textContent=prerequisites(f,key)??(!multiple.value?'倍率を入力してください':!multiple.validity.valid||value===null?'試算できません。倍率の入力範囲と財務数値を確認してください。':`入力した条件での試算株価：${number(value)}円`);
- }
- price.addEventListener('input',update);multiple.addEventListener('input',update);metric.addEventListener('change',update);
- root.querySelector('[data-reset]')!.addEventListener('click',()=>{price.value='';multiple.value='';update();});
- update();
-});
+import {setupValuationCalculator} from '../lib/valuationCalculator';
+document.querySelectorAll<HTMLElement>('[data-valuation]').forEach(setupValuationCalculator);
 </script>
 <style>
 .valuation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.valuation label{display:block;margin:.7rem 0}.valuation input,.valuation select{display:block;width:100%;max-width:22rem;margin-top:.3rem}.valuation dl>div{padding:.7rem 0;border-bottom:1px solid var(--color-line)}.valuation dd{margin:.3rem 0;overflow-wrap:anywhere}.valuation .peer-multiple{margin:.7rem 0}.valuation p{overflow-wrap:anywhere}@media(max-width:640px){.valuation-grid{grid-template-columns:1fr}}

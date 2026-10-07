@@ -35,6 +35,16 @@ import {FIELDS,METRICS} from '../lib/valuation';
         <label>範囲<select data-v="scope"><option value="consolidated">連結</option><option value="standalone">単体</option></select></label>
         <label>出典名<input data-v="sourceName" maxlength="200"/></label><label>出典URL<input data-v="sourceUrl" type="url"/></label>
       </div><label>定義・算定根拠・株式分割等の注記<textarea data-v="note" maxlength="2000"></textarea></label></fieldset>)}
+      <details class="section"><summary>会社予想を使う計算一式を登録</summary>
+        <p>実績の計算一式と別に保存します。EPS・EBITDAは通期の会社予想、BPS・負債・現金等・調整額・株式数は確認した実績を登録してください。未登録項目を実績の計算一式から補うことはありません。予想EBITDAを計算した場合は、営業利益予想と償却費の対象期・出典を注記に記載してください。</p>
+        {Object.entries(FIELDS).map(([key,label])=><fieldset data-forecast-fact={key}><legend><label><input type="checkbox" data-enabled/>{label}を登録</label></legend><div class="va-grid">
+          <label>数値<input data-v="value" type="number" step="any" min={['debt','cash','shares'].includes(key)?'0':undefined}/></label>
+          <label>対象期・基準日<input data-v="period" maxlength="100"/></label>
+          <input type="hidden" data-v="basis" value={['eps','ebitda'].includes(key)?'company_forecast':'actual'}/>
+          <label>範囲<select data-v="scope"><option value="consolidated">連結</option><option value="standalone">単体</option></select></label>
+          <label>出典名<input data-v="sourceName" maxlength="200"/></label><label>出典URL<input data-v="sourceUrl" type="url"/></label>
+        </div><label>定義・計算根拠・採用した資料の注記<textarea data-v="note" maxlength="2000"></textarea></label></fieldset>)}
+      </details>
     </div>
     <div data-va-comparable hidden>
       <div class="va-grid"><label>公表日<input name="announcedOn" type="date"/></label><label>価格単位<select name="priceUnit"><option value="円/株">円/株</option><option value="円/口">円/口</option></select></label><label>価格の段階<input name="priceStage" placeholder="当初提案・最終TOB価格など" maxlength="100"/></label><label>公開買付価格（円）<input name="offerPrice" type="number" min="0.0001" step="any"/></label><label>公表資料URL<input name="sourceUrl" type="url"/></label><label>調査記事URL（任意）<input name="articleUrl"/></label></div>
@@ -48,6 +58,7 @@ import {FIELDS,METRICS} from '../lib/valuation';
     <h3>入力した財務数値でEV/EBITDAを試す</h3>
     <p class="small">金額は円、株式数は株です。財務数値の5項目を有効にして入力してください。残高と株式数は同じ基準日、全項目は同じ連結・単体の範囲にそろえます。調整しない場合も、確認して調整額0を入力します。</p>
     <div class="va-grid">
+      <label>確認する計算一式<select data-va-ev-basis><option value="registered">登録済みの財務</option><option value="forecast">会社予想</option></select></label>
       <label>確認用の株価（円）<input data-va-ev-price type="number" min="0.0001" step="any" inputmode="decimal"/></label>
       <label>確認用のEV/EBITDA倍率（倍）<input data-va-ev-multiple type="number" min="0.0001" max="10000" step="any" inputmode="decimal"/></label>
     </div>

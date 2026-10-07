@@ -13,8 +13,9 @@ export function setupValuationAdmin(client:SupabaseClient){
   function updateEvPreview(){
     const facts:Financials['facts']={};
     let issue:string|null=null;
+    const forecast=root.querySelector<HTMLSelectElement>('[data-va-ev-basis]')!.value==='forecast';
     for(const key of ['ebitda','debt','cash','adjustments','shares'] as Field[]){
-      const fieldset=root.querySelector<HTMLElement>(`[data-fact="${key}"]`)!;
+      const fieldset=root.querySelector<HTMLElement>(`[${forecast?'data-forecast-fact':'data-fact'}="${key}"]`)!;
       if(!fieldset.querySelector<HTMLInputElement>('[data-enabled]')!.checked)continue;
       const get=(name:string)=>fieldset.querySelector<HTMLInputElement>(`[data-v="${name}"]`)!.value;
       const value=fieldset.querySelector<HTMLInputElement>('[data-v="value"]')!;
@@ -44,14 +45,15 @@ export function setupValuationAdmin(client:SupabaseClient){
     const preview=root.querySelector<HTMLElement>('[data-va-ev-preview]')!;
     preview.hidden=kind!=='financials';
     preview.querySelectorAll<HTMLInputElement>('input').forEach(input=>input.value='');
+    root.querySelector<HTMLSelectElement>('[data-va-ev-basis]')!.value=record?.kind==='financials'&&record.forecastFacts?'forecast':'registered';
     for(const name of ['code','name','industry','checkedOn','notes','announcedOn','priceStage','offerPrice','sourceUrl','articleUrl'])control(name).value=String(record?.[name as keyof ValuationRecord]??(name==='checkedOn'?today():''));
     root.querySelector<HTMLElement>('[data-va-financials]')!.hidden=kind!=='financials';root.querySelector<HTMLElement>('[data-va-comparable]')!.hidden=kind!=='comparable';
     el<HTMLElement>('va-kind-label').textContent=kind==='financials'?'財務数値':'TOB比較事例';
     control('priceUnit').value=record?.kind==='comparable'?(record.priceUnit??'円/株'):'円/株';
     control('research').value=record?.kind==='comparable'&&record.research?JSON.stringify(record.research,null,2):'';
-    for(const fieldset of root.querySelectorAll<HTMLFieldSetElement>('[data-fact],[data-comparable]')){
-      const key=fieldset.dataset.fact??fieldset.dataset.comparable!;
-      const group=record?.kind==='financials'?record.facts:record?.multiples;
+    for(const fieldset of root.querySelectorAll<HTMLFieldSetElement>('[data-fact],[data-comparable],[data-forecast-fact]')){
+      const key=fieldset.dataset.fact??fieldset.dataset.comparable??fieldset.dataset.forecastFact!;
+      const group=record?.kind==='financials'?(fieldset.dataset.forecastFact?record.forecastFacts:record.facts):record?.multiples;
       const v=(group as Record<string,Record<string,unknown>>|undefined)?.[key];
       fieldset.querySelector<HTMLInputElement>('[data-enabled]')!.checked=!!v;
       for(const input of fieldset.querySelectorAll<HTMLInputElement>('[data-v]')){if(v)input.value=String(v[input.dataset.v!]??'');input.disabled=!v;}
@@ -64,6 +66,15 @@ export function setupValuationAdmin(client:SupabaseClient){
     const p:Record<string,unknown>={kind};for(const name of ['code','name','industry','checkedOn','notes'])p[name]=control(name).value;
     const group:Record<string,unknown>={};for(const f of root.querySelectorAll<HTMLElement>(kind==='financials'?'[data-fact]':'[data-comparable]'))if(f.querySelector<HTMLInputElement>('[data-enabled]')!.checked){const data:Record<string,unknown>={};for(const i of f.querySelectorAll<HTMLInputElement>('[data-v]')){if(i.dataset.v==='value'&&!i.value.trim())throw Error('登録する項目の数値を入力してください。');data[i.dataset.v!]=i.dataset.v==='value'?Number(i.value):i.value;}group[f.dataset.fact??f.dataset.comparable!]=data;}
     p[kind==='financials'?'facts':'multiples']=group;
+    if(kind==='financials'){
+      const forecastFacts:Record<string,unknown>={};
+      for(const fieldset of root.querySelectorAll<HTMLElement>('[data-forecast-fact]'))if(fieldset.querySelector<HTMLInputElement>('[data-enabled]')!.checked){
+        const data:Record<string,unknown>={};
+        for(const input of fieldset.querySelectorAll<HTMLInputElement>('[data-v]')){if(input.dataset.v==='value'&&!input.value.trim())throw Error('予想計算の財務数値を入力してください。');data[input.dataset.v!]=input.dataset.v==='value'?Number(input.value):input.value;}
+        forecastFacts[fieldset.dataset.forecastFact!]=data;
+      }
+      if(Object.keys(forecastFacts).length)p.forecastFacts=forecastFacts;
+    }
     if(kind==='comparable'){p.priceUnit=control('priceUnit').value;for(const name of ['announcedOn','priceStage','sourceUrl','articleUrl'])p[name]=control(name).value;p.offerPrice=Number(control('offerPrice').value);p.history=Array.from(el<HTMLElement>('va-history').children).map(div=>Object.fromEntries(Array.from(div.querySelectorAll<HTMLInputElement>('[data-h]')).map(i=>[i.dataset.h!,i.dataset.h==='price'?Number(i.value):i.value])));}
     if(kind==='comparable'&&control('research').value.trim())p.research=JSON.parse(control('research').value);
     return parseValuation(p);
@@ -72,6 +83,7 @@ export function setupValuationAdmin(client:SupabaseClient){
   async function run(fn:()=>Promise<void>){if(busy)return;busy=true;root.inert=true;buttons();try{await fn();}catch{status.textContent='保存または読み込みができませんでした。入力内容を控え、管理者のログイン状態とDBの更新状況を確認してください。他の編集と競合している場合は、再読み込みして最新の内容を確認してください。';}finally{root.inert=false;busy=false;buttons();}}
   async function reload(){if(!discard())return;await run(async()=>{const {data,error}=await client.from('valuation_editions').select('*').order('updated_at',{ascending:false});if(error)throw error;rows=data??[];current=current?rows.find(r=>r.id===current!.id)??null:null;options();render(current?.draft);status.textContent='一覧を読み込みました。';});}
   root.querySelector<HTMLElement>('[data-va-ev-preview]')!.addEventListener('input',updateEvPreview);
+  root.querySelector<HTMLElement>('[data-va-ev-preview]')!.addEventListener('change',updateEvPreview);
   form.addEventListener('input',()=>{updateEvPreview();dirty=true;buttons();});
   form.addEventListener('change',e=>{const target=e.target as HTMLInputElement;if(target.matches('[data-enabled]'))target.closest('fieldset')!.querySelectorAll<HTMLInputElement>('[data-v]').forEach(i=>i.disabled=!target.checked);updateEvPreview();dirty=true;buttons();});
   for(const type of ['financials','comparable'] as const)el<HTMLButtonElement>(`va-new-${type}`).onclick=()=>{if(busy||!discard())return;current=null;kind=type;render();list.value='';status.textContent='新規データを編集中です。';};
@@ -95,8 +107,9 @@ export function setupValuationAdmin(client:SupabaseClient){
         const line=(text:string)=>{const paragraph=document.createElement('p');paragraph.textContent=text;details.append(paragraph);};
         const source=(url:string,text:string)=>{const a=document.createElement('a');a.href=url;a.textContent=text;a.target='_blank';a.rel='noopener noreferrer';details.append(a);};
         line(p.notes);
-        if(p.kind==='financials')for(const [key,f] of Object.entries(p.facts)){
-          line(`${FIELDS[key as keyof typeof FIELDS]}：${f.value.toLocaleString('ja-JP')} ／ ${f.period} ／ ${basisLabel(f.basis)} ／ ${f.scope==='consolidated'?'連結':'単体'}。${f.note}`);source(f.sourceUrl,f.sourceName);
+        if(p.kind==='financials')for(const [key,f] of Object.entries({...p.facts,...Object.fromEntries(Object.entries(p.forecastFacts??{}).map(([k,v])=>[`予想計算 ${k}`,v]))})){
+          const label=key.startsWith('予想計算 ')?`会社予想の計算：${FIELDS[key.slice(5) as keyof typeof FIELDS]}`:FIELDS[key as keyof typeof FIELDS];
+          line(`${label}：${f.value.toLocaleString('ja-JP')} ／ ${f.period} ／ ${basisLabel(f.basis)} ／ ${f.scope==='consolidated'?'連結':'単体'}。${f.note}`);source(f.sourceUrl,f.sourceName);
         }else{
           line(`${p.announcedOn}公表 ／ ${p.priceStage}：${p.offerPrice.toLocaleString('ja-JP')}円`);source(p.sourceUrl,'価格の出典');
           for(const [key,m] of Object.entries(p.multiples)){line(`${METRICS[key as keyof typeof METRICS]}：${m.value}倍 ／ ${m.period} ／ ${basisLabel(m.basis)}。${m.calculation}`);source(m.sourceUrl,'倍率の出典');}
@@ -110,7 +123,7 @@ export function setupValuationAdmin(client:SupabaseClient){
     }catch(error){status.textContent=error instanceof Error?error.message:'一括JSONの形式を確認してください。';}finally{input.value='';}
   };
   el<HTMLButtonElement>('va-batch-save').onclick=()=>{if(!batch.length||dirty)return;void run(async()=>{
-    const items=batch.map(p=>{const id=recordId(p)!,existing=rows.find(r=>r.id===id);const payload=p.kind==='financials'&&existing?.draft.kind==='financials'?parseValuation({...p,facts:{...existing.draft.facts,...p.facts}}):p;return {id,payload,revision:existing?.revision??null};});
+    const items=batch.map(p=>{const id=recordId(p)!,existing=rows.find(r=>r.id===id);const payload=p.kind==='financials'&&existing?.draft.kind==='financials'?parseValuation({...existing.draft,...p,facts:{...existing.draft.facts,...p.facts}}):p;return {id,payload,revision:existing?.revision??null};});
     const {data,error}=await client.rpc('save_valuation_batch',{items});if(error||!Array.isArray(data))throw error??Error();
     savedBatch=data as Row[];rows=[...savedBatch,...rows.filter(r=>!savedBatch.some(s=>s.id===r.id))];current=current?rows.find(r=>r.id===current!.id)??null:null;batch=[];options();render(current?.draft);status.textContent=`${savedBatch.length}件の下書きを保存しました。公開版はまだ変更していません。`;
   });};
