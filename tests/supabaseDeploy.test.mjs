@@ -38,7 +38,7 @@ test('既存DBを照合して履歴のみ採用。新SQLは1回だけ実行し�
     assert.equal((await db.query('select count(*) from site_deploy.migrations')).rows[0].count,plan.files.length);
     assert.equal((await db.query('select body from user_global_notes')).rows[0].body,'KEEP_ME');
     assert.equal((await db.query("select pg_get_functiondef('is_admin()'::regprocedure) as value")).rows[0].value,authBefore);
-    const next=append('0090_test.sql',"create table public.deploy_test(id integer); insert into public.deploy_test values(1); -- quote ' \\ $site_deploy$\n");
+    const next=append('0090_test.sql',"create table public.deploy_test(id integer); alter table public.deploy_test enable row level security; insert into public.deploy_test values(1); -- quote ' \\ $site_deploy$\n");
     await db.exec(sql(next));await db.exec(sql(next));
     assert.equal((await db.query('select count(*) from deploy_test')).rows[0].count,1);
     for(const role of ['anon','authenticated','service_role']){
@@ -59,6 +59,9 @@ test('更新途中の失敗、RLS解除、認証関数変更、COMMITで全更�
       "create table public.must_rollback(id int); create or replace function public.is_admin() returns boolean language sql as $$select true$$;",
       "create table public.must_rollback(id int); commit;",
       "create policy leak on user_case_notes for select using(true);",
+      "grant truncate on user_case_notes to authenticated;",
+      "grant select on user_global_notes to anon;",
+      "grant execute on function is_admin() to anon;",
     ];
     for(const migration of badSql){
       await assert.rejects(db.exec(sql(append('0090_failure.sql',migration))));
@@ -114,11 +117,11 @@ test('検証→DB更新→ビルドの順。失敗時は公開ビルドへ進ま
     order.push(args.includes('--test')?'test':args.at(-1));
   };
   await cloudflareBuild({env,run,migrate:async()=>{order.push('migrate');return 6;},log:()=>{}});
-  assert.deepEqual(order,['check','test','migrate','build']);
+  assert.deepEqual(order,['check','test','migrate','build','scripts/verify_security_build.mjs']);
   order.length=0;
   await assert.rejects(cloudflareBuild({env,run,migrate:async()=>{throw new Error('stop');},log:()=>{}}));
   assert.deepEqual(order,['check','test']);
   order.length=0;
   await cloudflareBuild({env:{DEPLOY_ENV:'preview',DATA_SOURCE:'sample'},run,migrate:async()=>assert.fail('preview must never migrate'),log:()=>{}});
-  assert.deepEqual(order,['build']);
+  assert.deepEqual(order,['build','scripts/verify_security_build.mjs']);
 });

@@ -12,14 +12,15 @@ export async function cloudflareBuild({ env = process.env, migrate = deployDatab
     const testEnv = { ...buildEnv, DEPLOY_ENV: 'test', DATA_SOURCE: 'sample' };
     for (const key of Object.keys(testEnv)) if (/^(PUBLIC_)?SUPABASE_/.test(key)) delete testEnv[key];
     log('[deploy] 公開前のコード検証');
-    await run(['node_modules/astro/astro.js', 'check'], testEnv);
+    await run(['node_modules/astro/bin/astro.mjs', 'check'], testEnv);
     // Cloudflare Node 22.16 needs explicit type stripping for tests importing .ts.
     await run(['--experimental-strip-types', '--test', ...fs.readdirSync('tests').filter(name => name.endsWith('.test.mjs')).sort().map(name => `tests/${name}`)], testEnv);
     log('[deploy] DBの状態照合・未適用SQLの更新');
     const count = await migrate(config);
     log(`[deploy] DB更新履歴 ${count}件を確認。サイトをビルドします`);
   } else log('[deploy] サンプル環境: 本番DBへの接続・更新なし');
-  await run(['node_modules/astro/astro.js', 'build'], buildEnv);
+  await run(['node_modules/astro/bin/astro.mjs', 'build'], buildEnv);
+  await run(['scripts/verify_security_build.mjs'], buildEnv);
 }
 
 function runNode(args, env) {

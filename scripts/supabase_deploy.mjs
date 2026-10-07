@@ -99,6 +99,7 @@ const failureMessages = {
   HW_BASELINE_MISMATCH: '現在のDBが確認済みの0008構成と一致しません。自動修復せず停止しました',
   HW_PROTECTED_NOTES: 'メモ・お気に入りのアクセス制御が想定と異なるため停止しました',
   HW_PROTECTED_AUTH: '管理者判定関数の変更を検出したため停止しました',
+  HW_PROTECTED_API_PRIVILEGES: 'APIの保護権限が想定と異なるため公開を停止しました。追加SQLの権限設定を確認してください',
   HW_HISTORY_MISMATCH: '適用済みSQLの変更・削除、または古いコードからの更新を検出しました',
   HW_BASELINE_HISTORY_MISSING: 'DB更新履歴が一部欠けています',
   HW_MIGRATION_ORDER: '適用済みの番号より前にSQLが追加されています',
