@@ -3,12 +3,13 @@ import type { Financials } from '../lib/valuation';
 import { valuationFactSets, basisLabel } from '../lib/valuation';
 import type { WatchObservation } from '../lib/watchHistory';
 import type { PricePoint } from '../lib/types';
-interface Props { financials?:Financials; observations?:WatchObservation[]; preReportClose?:PricePoint|null; industry?:string|null }
-const {financials,observations=[],preReportClose,industry}=Astro.props;
+interface Props { financials?:Financials; observations?:WatchObservation[]; preRumorClose?:PricePoint|null; preReportClose?:PricePoint|null; industry?:string|null }
+const {financials,observations=[],preReportClose,preRumorClose,industry}=Astro.props;
 const sourceFields={ebitda:'EBITDA（百万円）',debt:'有利子負債（百万円）',cash:'EVから控除する現金等（百万円）',adjustments:'EVへの加算調整（百万円）',shares:'自己株式控除後の株式数（百万株）',bps:'1株当たり純資産（円）'} as const;
 // Only ship inputs used by the three methods. Preserve the complete records in storage.
 const sets=valuationFactSets(financials).map(s=>({...s,facts:Object.fromEntries(Object.entries(s.facts).filter(([key])=>key in sourceFields))}));
 const bases=observations.filter(o=>o.price!==null).map(o=>({id:o.id,label:`${o.title} ／ ${o.price_on}・${o.price}円`,price:o.price!,note:`${o.source_name}。${o.date_note||o.occurred_on||'時期未確認'}の観察`,url:o.source_url}));
+if(preRumorClose)bases.unshift({id:'pre-rumor',label:'最初の噂の直前 ／ '+preRumorClose.priceDate+'・'+preRumorClose.price+'円',price:preRumorClose.price,note:preRumorClose.note??'登録済みの基準株価',url:''});
 if(preReportClose)bases.push({id:'pre-report',label:`報道前の終値 ／ ${preReportClose.priceDate}・${preReportClose.price}円`,price:preReportClose.price,note:preReportClose.sourceName??'登録済みの価格',url:''});
 const fields=[['ebitda','EBITDA（百万円）'],['multiple','想定EV/EBITDA（倍）'],['debt','有利子負債（百万円）'],['cash','EVから控除する現金等（百万円）'],['adjustments','EVへの加算調整（百万円）'],['shares','自己株式控除後の株式数（百万株）']];
 ---

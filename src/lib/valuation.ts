@@ -4,7 +4,7 @@ export type Metric = keyof typeof METRICS;
 export const FIELDS = {eps:'EPS（円）',bps:'BPS（円）',ebitda:'EBITDA（円）',debt:'有利子負債（円）',cash:'EV控除用の現金等（円）',adjustments:'EVその他調整額（円）',shares:'自己株式控除後株式数（株）'} as const;
 export type Field = keyof typeof FIELDS;
 export type Fact = {value:number; period:string; basis:'actual'|'company_forecast'; scope:'consolidated'|'standalone'; sourceName:string; sourceUrl:string; note:string};
-export type Financials = {kind:'financials'; code:string; name:string; industry:string; checkedOn:string; notes:string; facts:Partial<Record<Field,Fact>>; forecastFacts?:Partial<Record<Field,Fact>>};
+export type Financials = {shareBasisOn?:string; ebitdaPeriodMonths?:number; kind:'financials'; code:string; name:string; industry:string; checkedOn:string; notes:string; facts:Partial<Record<Field,Fact>>; forecastFacts?:Partial<Record<Field,Fact>>};
 export type ComparableMultiple = {value:number; basis:'actual'|'company_forecast'; period:string; method:'calculated'|'disclosed'; calculation:string; sourceUrl:string};
 export type ValuationInput = {name:string; unit:string; period:string; low:number; high:number; basis:'actual'|'company_forecast'|'valuation_assumption'|'unknown'; definition:string};
 export type AdvisorValuation = {advisor:string; role:string; date:string; method:'market'|'trading_comparables'|'dcf'|'other'; low:number; high:number; sourceUrl:string; page:string; inputs:ValuationInput[]; peers:string[]; notes:string; unit?:'円/株'|'円/口'; methodName?:string};
@@ -38,7 +38,11 @@ export function parseValuation(input:unknown):ValuationRecord {
       if(!forecastFacts.eps&&!forecastFacts.ebitda)throw Error('会社予想EPSまたは予想EBITDAが必要です。');
       for(const [key,f] of Object.entries(forecastFacts))if(f.basis!==(['eps','ebitda'].includes(key)?'company_forecast':'actual'))throw Error('予想の利益と実績の残高を区別してください。');
     }
-    return {...common,kind:'financials',facts,...(forecastFacts?{forecastFacts}:{})};
+    const shareBasisOn=x.shareBasisOn===undefined?undefined:text(x.shareBasisOn,10);
+    if(shareBasisOn!==undefined&&!date(shareBasisOn))throw Error('株式数の分割基準日を確認してください。');
+    const ebitdaPeriodMonths=x.ebitdaPeriodMonths;
+    if(ebitdaPeriodMonths!==undefined&&(!Number.isInteger(ebitdaPeriodMonths)||ebitdaPeriodMonths<1||ebitdaPeriodMonths>12))throw Error('EBITDAの対象月数は1〜12で入力してください。');
+    return {...common,...(shareBasisOn?{shareBasisOn}:{}),...(ebitdaPeriodMonths?{ebitdaPeriodMonths}:{}),kind:'financials',facts,...(forecastFacts?{forecastFacts}:{})};
   }
   if(x.kind!=='comparable')throw Error('データ種別が不正です。');
   if(x.forecastFacts!==undefined)throw Error('予想計算の財務数値は銘柄の財務情報へ登録してください。');

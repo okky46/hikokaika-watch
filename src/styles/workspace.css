@@ -80,3 +80,7 @@ body:has(.case-section-nav) :is(#watch-review,#note-section) { scroll-margin-top
   .case-section-nav a { white-space:normal; text-align:center; padding:.45rem .2rem; overflow-wrap:anywhere; }
   body:has(.case-section-nav) :is(#watch-review,#note-section) { scroll-margin-top:8.5rem; }
 }
+
+.market-quote{display:grid;gap:.4rem;margin-top:.65rem}.market-quote__item{display:grid;gap:.15rem;min-width:0;padding:.5rem .65rem;border:1px solid #dce2e9;border-radius:6px;background:#fff}.market-quote__item strong{font-size:1.1rem;line-height:1.4;font-variant-numeric:tabular-nums}.market-quote__item small{font-size:.73rem;line-height:1.5;overflow-wrap:anywhere;color:#586573}.market-quote__ev{background:#eef6fb;border-color:#cbdfea;color:#1b4a69}.market-quote--detail{grid-template-columns:repeat(3,minmax(0,1fr));margin:1rem 0 .5rem}.market-quote--detail strong{font-size:1.5rem}.market-quote-basis{margin-bottom:1rem}.market-quote-basis summary{font-size:.85rem;cursor:pointer}.market-quote-basis p{margin:.6rem 0}.tracking-company+.small+.market-quote{max-width:18rem}@media(max-width:600px){.market-quote{grid-template-columns:repeat(2,minmax(0,1fr))}.market-quote--detail{grid-template-columns:1fr 1fr}.market-quote--detail>.market-quote__item:last-child{grid-column:1/-1}.tracking-company+.small+.market-quote{max-width:none}}
+
+.market-update-date{text-align:right;margin:.65rem 0 .4rem}.market-update-date+ .market-quote--detail{margin-top:.4rem}.market-update-date span{display:inline-block}

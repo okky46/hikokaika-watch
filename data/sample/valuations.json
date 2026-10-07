@@ -70,7 +70,9 @@
         "sourceUrl": "https://example.com/sample",
         "note": "架空の数値。株式分割調整なし。"
       }
-    }
+    },
+    "shareBasisOn": "2026-03-31",
+    "ebitdaPeriodMonths": 12
   },
   {
     "kind": "comparable",

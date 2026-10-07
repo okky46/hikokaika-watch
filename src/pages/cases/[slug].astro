@@ -1,4 +1,5 @@
 ---
+import MarketQuote from '../../components/MarketQuote.astro';
 import Base from '../../layouts/Base.astro';
 import QuickValuation from '../../components/QuickValuation.astro';
 import CaseJourney from '../../components/CaseJourney.astro';
@@ -81,6 +82,7 @@ const workspace=watchWorkspaceCase(c);
     <StockLinks code={c.securityCode}/>
   </header>
 
+  <MarketQuote caseData={c} financials={valuations.financials.find(f=>f.code===c.securityCode)} detail/>
   <nav class="case-section-nav" aria-label="この銘柄のページ内メニュー">
     <div class="case-section-nav__identity">
       <span class="case-section-nav__code">{c.securityCode}</span>
@@ -110,7 +112,7 @@ const workspace=watchWorkspaceCase(c);
   <section class="section" id="related-articles"><h2 class="section-title">関連記事</h2><ArticleList articles={Astro.props.articles}/></section>
 
   <details class="section valuation-tool" data-valuation-tool><summary>価格の試算を開く</summary>
-  <QuickValuation financials={valuations.financials.find(f=>f.code===c.securityCode)} observations={c.tracking?.observations??[]} preReportClose={c.preReportClose} industry={c.industry}/>
+  <QuickValuation financials={valuations.financials.find(f=>f.code===c.securityCode)} observations={c.tracking?.observations??[]} preReportClose={c.preReportClose} preRumorClose={c.preRumorClose} industry={c.industry}/>
   </details>
 
   </div>

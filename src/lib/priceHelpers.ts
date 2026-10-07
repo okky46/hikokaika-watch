@@ -42,9 +42,11 @@ export function normalizeDailyCloses(prices: RawPrice[], warn: DailyCloseWarning
 
   return [...byDate.values()]
     .sort((a, b) => a.price_date.localeCompare(b.price_date) || a.id.localeCompare(b.id))
-    .map((p) => ({ price: Number(p.price), priceDate: p.price_date, sourceName: p.source_name }));
+    .map((p) => pricePoint(p));
 }
 
 export function hasDailyCloseConflict(existingRows: { id: string }[], editingId: string | null | undefined): boolean {
   return existingRows.some((row) => row.id !== editingId);
 }
+
+export function pricePoint(p:Record<string,any>):PricePoint {return {price:Number(p.price),priceDate:p.price_date,sourceName:p.source_name??null,...(p.share_basis_on?{shareBasisOn:p.share_basis_on}:{}),...(p.rumor_on?{rumorOn:p.rumor_on}:{}),...(p.note?{note:p.note}:{})};}

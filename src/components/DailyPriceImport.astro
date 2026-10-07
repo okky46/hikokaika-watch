@@ -1,0 +1,7 @@
+<details class="card section" id="daily-price-import"><summary>複数銘柄の終値をまとめて入力する</summary>
+<p>調べた終値のJSONを貼り付け、内容を確認して保存します。同じ銘柄・日付の登録がある場合は、個別の編集画面で訂正してください。</p>
+<label for="daily-price-json">終値のJSON（最大300件）</label><textarea id="daily-price-json" rows="6" maxlength="500000" spellcheck="false" placeholder='[{"code":"0001","date":"2026-10-07","price":2100,"shareBasisOn":"2026-03-31"}]'></textarea>
+<p class="small">code：証券コード、date：終値の日付、price：円。shareBasisOn（株式分割の換算基準日）・sourceName（出典の控え）・note（注記）は任意です。複数案件のある銘柄はcaseIdも指定してください。</p>
+<button type="button" class="btn" id="daily-price-preview">入力内容を確認</button><pre id="daily-price-summary" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre>
+<button type="button" class="btn btn--primary" id="daily-price-save" disabled>確認した終値をまとめて保存</button><p id="daily-price-status" class="small" aria-live="polite"></p>
+</details>

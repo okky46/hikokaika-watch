@@ -26,6 +26,8 @@ import {FIELDS,METRICS} from '../lib/valuation';
     </div>
     <label>全体の注記<textarea name="notes" maxlength="2000"></textarea></label>
     <div data-va-financials>
+      <label>実績EBITDAの対象月数<input name="ebitdaPeriodMonths" type="number" min="1" max="12" step="1"/><span class="small">公開倍率には12か月分の実績を使います。四半期値を自動で年換算しません。</span></label>
+      <label>株式数の分割換算基準日<input type="date" name="shareBasisOn"/><span class="small">株価の分割基準日とそろえます。変更がなければ同じ日を使い続けます。未確認の間は公開倍率を算出しません。</span></label>
       <p>EBITDA、有利子負債、現金・現金同等物、EVその他調整額、自己株式控除後株式数は、下の欄から手動でも登録できます。EBITDAの定義と残高の基準日を確認し、出典と一緒に保存してください。</p>
       <p>使う項目にチェックを入れてください。金額は円、株式数は株で登録します。空欄は未取得、0は確認済みのゼロです。EPS・BPS・株式数は同じ株式分割基準にそろえてください。</p>
       {Object.entries(FIELDS).map(([key,label])=><fieldset data-fact={key}><legend><label><input type="checkbox" data-enabled/>{label}を登録</label></legend><div class="va-grid">

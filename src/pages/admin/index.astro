@@ -2,6 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import TrackingEditor from '../../components/TrackingEditor.astro';
 import ArticleAdmin from '../../components/ArticleAdmin.astro';
+import DailyPriceImport from '../../components/DailyPriceImport.astro';
 import ValuationAdmin from '../../components/ValuationAdmin.astro';
 import { CASE_STATUS, EVENT_TYPE, STATUS_ORDER } from '../../lib/status';
 import { COMMENT_STANCE_LABELS, COMMENT_TAGS, COMMENT_TAG_ORDER } from '../../lib/commentTags';
@@ -52,7 +53,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       <button class="btn" data-tab="companies">会社</button>
       <button class="btn" data-tab="cases">追跡銘柄</button>
       <button class="btn" data-tab="articles">調査記事</button>
-      <details><summary>保管データの管理</summary><p class="small">過去TOBの詳細データは掲載を終了しています。</p><button class="btn" data-tab="valuations">財務・TOBの保管データ</button></details>
+      <button class="btn" data-tab="valuations">財務情報・保管データ</button>
       <button class="btn" data-tab="events">出来事</button>
       <button class="btn" data-tab="prices">株価</button>
       <button class="btn" data-tab="corrections">訂正履歴</button>
@@ -202,6 +203,8 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
     <!-- ============ 株価 ============ -->
     <section class="section" data-panel="prices" hidden>
       <h2 class="section-title">株価情報の登録・編集</h2>
+      <p>営業日ごとの終値は「日次終値」に登録します。保存後に「公開処理」でサイトを再ビルドしてください。</p>
+      <DailyPriceImport/>
       <div class="form-row" style="max-width:26rem">
         <label for="pr-case-select">対象案件</label>
         <select id="pr-case-select"></select>
@@ -213,15 +216,19 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
             <div class="form-row">
               <label for="pr-type">種類 *</label>
               <select id="pr-type">
+                <option value="pre_rumor_close">最初の噂の直前終値</option>
                 <option value="pre_report_close">観測報道前終値</option>
                 <option value="current_close">現在株価(参考値)</option>
-                <option value="daily_close">日次終値</option>
+                <option value="daily_close" selected>日次終値</option>
                 <option value="formal_offer_price">正式公開買付価格</option>
               </select>
             </div>
-            <div class="form-row"><label for="pr-price">価格(円)*</label><input type="number" id="pr-price" step="0.01" min="0" required /></div>
+            <div class="form-row"><label for="pr-price">価格(円)*</label><input type="number" id="pr-price" step="0.01" min="0.01" required /></div>
             <div class="form-row"><label for="pr-date">基準日 *</label><input type="date" id="pr-date" required /></div>
-            <div class="form-row"><label for="pr-source">出典</label><input type="text" id="pr-source" placeholder="取引所公表値(手動登録)" /></div>
+            <div class="form-row"><label for="pr-share-basis">株式分割の換算基準日</label><input type="date" id="pr-share-basis"/><p class="small">財務の株式数・比較する株価と同じ基準日を指定。分割等がなければ変えません。</p></div>
+            <div class="form-row"><label for="pr-rumor-on">最初の噂の日（直前終値を登録するとき）</label><input type="date" id="pr-rumor-on"/></div>
+            <div class="form-row"><label for="pr-note">株価の注記（公開）</label><input id="pr-note" maxlength="500"/></div>
+            <div class="form-row"><label for="pr-source">出典の控え（任意・画面には表示しません）</label><input type="text" id="pr-source" placeholder="取引所公表値(手動登録)" /></div>
           </div>
           <div style="display:flex; gap:0.6rem; margin-top:0.6rem;">
             <button type="button" class="btn btn--primary" id="pr-save">株価を保存</button>
@@ -313,6 +320,8 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   import { setupArticleAdmin } from '../../lib/articleAdmin';
   import { setupValuationAdmin } from '../../lib/valuationAdmin';
   import { buildLargeShareholdingMetadata } from '../../lib/noteMetadataHelpers';
+  import {setupDailyPriceImport} from '../../lib/dailyPriceImport';
+  import {parseManualPrice} from '../../lib/marketMetrics';
   import { hasDailyCloseConflict } from '../../lib/priceHelpers';
   import { filterInboxItems, inboxEmptyState, normalizeHttpUrl, normalizeSecurityCode, pendingBulkRejectIds, preserveSelectValueIfValid, resolveInboxCaseId, resolveInboxCompanyId, visibleSelectionIds } from '../../lib/inboxAdminHelpers';
 
@@ -1011,6 +1020,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
   // ---------------- 株価 ----------------
   let prices: any[] = [];
+  if(supabase)setupDailyPriceImport(supabase,()=>cases.map(c=>({id:c.id,code:companies.find(co=>co.id===c.company_id)?.security_code??'',name:companies.find(co=>co.id===c.company_id)?.name_ja??c.title})),loadPrices);
 
   async function loadPrices() {
     const caseId = $<HTMLSelectElement>('pr-case-select').value;
@@ -1030,6 +1040,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
   }
 
   const priceTypeLabel: Record<string, string> = {
+    pre_rumor_close: '最初の噂の直前終値',
     pre_report_close: '観測報道前終値',
     current_close: '現在株価(参考値)',
     formal_offer_price: '正式公開買付価格',
@@ -1054,21 +1065,17 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
   $('pr-save')?.addEventListener('click', async () => {
     const id = $<HTMLInputElement>('pr-id').value;
-    const dateOnly = $<HTMLInputElement>('ev-date-only').checked;
-    const dateInput = $<HTMLInputElement>('ev-occurred').value;
-    const occurredAt = dateOnly ? dateOnlyToIso(dateInput) : localToIso(dateInput);
-    if (dateInput && !occurredAt) { $('ev-status').textContent = '有効な日付を入力してください'; return; }
     const row: any = {
       case_id: $<HTMLSelectElement>('pr-case-select').value,
       price_type: $<HTMLSelectElement>('pr-type').value,
-      price: $<HTMLInputElement>('pr-price').value,
+      price: $<HTMLInputElement>('pr-price').valueAsNumber,
+      share_basis_on: $<HTMLInputElement>('pr-share-basis').value,
+      rumor_on: $<HTMLInputElement>('pr-rumor-on').value,
+      note: $<HTMLInputElement>('pr-note').value,
       price_date: $<HTMLInputElement>('pr-date').value,
       source_name: $<HTMLInputElement>('pr-source').value.trim() || null,
     };
-    if (!row.case_id || !row.price || !row.price_date) {
-      $('pr-status').textContent = '案件・価格・基準日は必須です';
-      return;
-    }
+    try {Object.assign(row,parseManualPrice(row));}catch(e){$('pr-status').textContent=(e as Error).message;return;}
     if (row.price_type === 'daily_close') {
       const { data: duplicateRows, error: duplicateError } = await supabase!
         .from('price_snapshots')
@@ -1090,7 +1097,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       : supabase!.from('price_snapshots').insert(row);
     const { error } = await q;
     $('pr-status').textContent = error ? '保存できませんでした。入力内容を控え、通信状況と管理者のログイン状態を確認してから、もう一度保存してください。' : '保存しました';
-    if (!error) await loadPrices();
+    if (!error) { $('pr-status').textContent='保存しました。「公開処理」でサイトを再ビルドすると反映されます。'; await loadPrices(); }
   });
 
   $('pr-clear')?.addEventListener('click', () => {
@@ -1211,6 +1218,9 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
       $<HTMLInputElement>('pr-price').value = String(x.price);
       $<HTMLInputElement>('pr-date').value = x.price_date;
       $<HTMLInputElement>('pr-source').value = x.source_name ?? '';
+      $<HTMLInputElement>('pr-share-basis').value=x.share_basis_on??'';
+      $<HTMLInputElement>('pr-rumor-on').value=x.rumor_on??'';
+      $<HTMLInputElement>('pr-note').value=x.note??'';
     }
   });
 

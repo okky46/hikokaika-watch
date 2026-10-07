@@ -22,8 +22,13 @@ assert.match(read('cases/0001-toyo-demo-seiki/index.html'),/data-notebook=/);
 assert.match(read('cases/0001-toyo-demo-seiki/index.html'),/観察と報道の経過/);
 assert.match(read('cases/0001-toyo-demo-seiki/index.html'),/data-valuation-tool/);
 assert.match(read('cases/0001-toyo-demo-seiki/index.html'),/価格の試算/);
+assert.match(read('index.html'),/EV\/EBITDA（実績）/);
+assert.doesNotMatch(read('index.html'),/最初の噂の直前比/);
+assert.match(read('cases/0001-toyo-demo-seiki/index.html'),/最初の噂の直前比/);
+assert.match(read('admin/index.html'),/daily-price-import/);
+for(const page of ['index.html','cases/0001-toyo-demo-seiki/index.html']) {assert.match(read(page),/株価の最終更新日：/);assert.doesNotMatch(read(page),/前営業日終値/);}
 assert.match(read('companies/0001/index.html'),/試算に使う登録値と出典/);
-assert.match(read('tob-comparables/index.html'),/過去TOBデータの掲載は終了しました/);
+assert.match(read('tob-comparables/index.html'),/過去TOBデータの掲載は保留しています/);
 assert.doesNotMatch(read('sitemap.xml'),/tob-comparables/);
 assert.match(read('tob-comparables/index.html'),/noindex, nofollow/);
 for(const file of ['index.html','cases/0001-toyo-demo-seiki/index.html','companies/0001/index.html','tob-comparables/index.html']) {
