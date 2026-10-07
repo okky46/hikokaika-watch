@@ -58,6 +58,7 @@ const stages=[{id:'',label:'すべて'},{id:'pre',label:'正式発表前'},{id:'
     <div class="tracking-results">
       <label class="metrics-toggle small"><input type="checkbox" id="show-market-metrics"/>株価・指標を表示<span class="muted">（現在は未取得）</span></label>
       <p class="metrics-pending small muted">株価・指標は、取得できていない項目を「—」で表示しています。</p>
+      <div class="watch-list-controls"><label class="filter-check"><input id="watch-updated-only" type="checkbox"/> 前回確認してから更新があった銘柄</label><a class="small" href="/mypage/">確認した銘柄をまとめて見る →</a></div>
       <TrackingTable cases={cases}/>
     </div>
     {hasHomeAd && <AdSlot placement="home-between-sections" slotId={homeAdSlot}/>}

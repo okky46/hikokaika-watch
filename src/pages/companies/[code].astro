@@ -2,6 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import ArticleList from '../../components/ArticleList.astro';
 import ValuationCalculator from '../../components/ValuationCalculator.astro';
+import QuickValuation from '../../components/QuickValuation.astro';
 import {loadValuations} from '../../lib/valuationData';
 import StockLinks from '../../components/StockLinks.astro';
 import TrackingStatus from '../../components/TrackingStatus.astro';
@@ -47,5 +48,6 @@ const description = `${company.nameJa}（証券コード${company.securityCode}�
   </section>
   {tobRecords.length>0&&<section class="section"><h2 class="section-title">公表済みのTOB事例</h2><ul>{tobRecords.map(c=><li><a href={`/tob-comparables/#${comparableAnchor(c)}`}>{c.announcedOn}公表 ／ {c.priceStage} {c.offerPrice.toLocaleString('ja-JP')}{c.priceUnit??'円/株'}：算定資料と価格の経緯を見る</a></li>)}</ul></section>}
 <StockLinks code={company.securityCode}/><section class="section"><h2 class="section-title">関連記事</h2><ArticleList articles={Astro.props.articles}/></section>
+<QuickValuation financials={valuations.financials.find(f=>f.code===company.securityCode)} industry={company.industry}/>
 <ValuationCalculator financials={valuations.financials.find(f=>f.code===company.securityCode)} comparables={valuations.comparables} industry={company.industry} sample={isSampleData}/>
 </Base>

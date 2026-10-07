@@ -1,5 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
+import { loadPublicData } from '../lib/publicData';
+const {cases}=await loadPublicData();
 import { CASE_STATUS, STATUS_ORDER } from '../lib/status';
 
 // ステータスのラベル・トーンをクライアントJSへ渡す(表示用)
@@ -21,6 +23,13 @@ const statusMap = Object.fromEntries(
   <div id="mp-unavailable" class="notice" hidden>
     現在ログインできません。銘柄や記事は引き続き閲覧できます。
   </div>
+  <section class="section" aria-label="このブラウザーで確認した銘柄">
+    <h2 class="section-title">確認した銘柄の、その後</h2>
+    <p class="small muted">詳細ページで「ここまで確認済みにする」を押した銘柄を表示します。このブラウザーだけの記録です。</p>
+    <label class="filter-check"><input type="checkbox" data-watch-updates-only/> 確認後に更新があった銘柄だけ</label>
+    <ul class="revisit-list">{cases.map(c=><li class="card" data-revisit-row data-watch-case={c.id} data-watch-manifest={JSON.stringify(c.watch)} hidden><a href={`/cases/${c.slug}/`}>{c.companyName}（{c.securityCode}）</a><span class="watch-badge" data-watch-badge hidden></span><p>{c.tracking?.status_note||c.summary}</p></li>)}</ul>
+    <p class="empty-state" data-revisit-empty>該当する銘柄はまだありません。<a href="/">銘柄一覧</a>から経過を読み、確認済みにするとここで追えます。</p>
+  </section>
 
   <section class="section card" id="mp-auth">
     <div id="mp-logged-out" hidden>

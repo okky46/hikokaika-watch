@@ -85,5 +85,9 @@ const navigation = [
     {cfAnalyticsToken && (
       <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon={`{\"token\": \"${cfAnalyticsToken}\"}`}></script>
     )}
+<script>
+import {setupWatchReadState} from '../lib/watchReadState';
+setupWatchReadState();
+</script>
   </body>
 </html>

@@ -133,6 +133,7 @@ export interface PricePoint {
 
 /** 一覧・検索用のビューモデル(トップページに JSON 埋め込みされる) */
 export interface CaseListItem {
+  watch: import('./watchReadState').WatchManifest;
   activity: import('./trackingVisual').TrackingActivity;
   firstReport: ReturnType<typeof import('./trackingVisual').firstReportLabel>;
   tracking: import('./trackingProfile').TrackingProfile | null;

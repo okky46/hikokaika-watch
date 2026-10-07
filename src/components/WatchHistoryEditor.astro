@@ -1,0 +1,8 @@
+<section id="observation-editor" class="section">
+ <h3>観察と確認の履歴</h3>
+ <p class="small">報道がなくても記録できます。値動きなどの事実と見立てを分け、再燃したときは新しい起点を追加してください。後から判明した交渉時期は、関連する観察や開示につなげられます。</p>
+ <div data-observation-rows></div>
+ <button type="button" class="btn" data-add-observation>観察・確認結果を追加</button>
+ <details class="section"><summary>AIなどで整理した観察をJSONから取り込む</summary><p class="small">観察の配列を貼り付けます。同じIDは更新し、それ以外は追加します。既存の観察は残ります。保存時に新規記録の日時が付くため、過去の出来事も当時から記録していたようには表示しません。</p><p class="small">見出し（title）、事実（facts）、出来事の日（occurred_on）か時期の補足（date_note）を指定します。ID・記録日時は省略できます。記録者（observer）に発見方法も残せます。</p><label>観察JSON<textarea data-observation-json rows="7" spellcheck="false"></textarea></label><button type="button" class="btn" data-import-observations>入力欄へ取り込む</button></details>
+ <p class="small" data-observation-message role="status"></p>
+</section>

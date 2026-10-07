@@ -9,6 +9,7 @@
 // このモジュールはビルド時(Node)専用。ブラウザからは import しない。
 // ============================================================
 import { applyPublishedProfile, parseTrackingProfile, validateProfileReferences, TRACKING_STATUS, publicTrackingStatus } from './trackingProfile.ts';
+import { watchManifest } from './watchManifest.ts';
 import type { TrackingEdition, MediaOutlet } from './trackingProfile.ts';
 import { publicEventDate, timelineDateKey } from './trackingDates.ts';
 import { trackingActivity, firstReportLabel } from './trackingVisual.ts';
@@ -257,6 +258,7 @@ export function assemble(raw: RawData): PublicData {
       }),
     );
     details.push({
+      watch:watchManifest(profile,eventViews,c.tracking_reason||c.summary,c.status),
       firstReport:firstReportLabel(profile,firstReportedAt,eventViews.filter(e=>['observation_report','follow_up_report'].includes(e.eventType))),
       activity:trackingActivity([...eventViews.map(e=>e.date), ...unlinkedReportDates]),
       tracking:profile, publicationVersion:edition?.publication_version ?? null, media, search,

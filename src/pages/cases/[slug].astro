@@ -1,5 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
+import QuickValuation from '../../components/QuickValuation.astro';
+import WatchHistory from '../../components/WatchHistory.astro';
 import TrackingStatus from '../../components/TrackingStatus.astro';
 import { REPORT_METHOD, REPORT_ACCESS } from '../../lib/trackingProfile';
 import StockLinks from '../../components/StockLinks.astro';
@@ -65,7 +67,8 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
     <a href="/" id="return-to-results"><span aria-hidden="true">←</span> 銘柄一覧</a><span class="muted">銘柄の経過</span>
   </nav>
 
-  <header class="case-head case-overview">
+  <div data-watch-case={c.id} data-watch-manifest={JSON.stringify(c.watch)}>
+  <header id="case-overview" class="case-head case-overview" data-watch-item="summary">
     <div class="case-overview__heading">
       <div>
         <h1>{c.companyName}（{c.securityCode}）の経過</h1>
@@ -114,13 +117,15 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
       <span class="case-section-nav__code">{c.securityCode}</span>
       <span class="case-section-nav__name" title={c.companyName}>{c.companyName}</span>
     </div>
-    <a href="#timeline" aria-current="location">経過<span class="case-section-nav__count">{c.events.length}</span></a>
+    <a href="#watch-history">観察</a>
+    <a href="#timeline" aria-current="location">報道・開示<span class="case-section-nav__count">{c.events.length}</span></a>
     <a href="#evidence">根拠・媒体</a>
     <a href="#related-articles">関連記事<span class="case-section-nav__count">{Astro.props.articles.length}</span></a>
-    <a href="#valuation">株価・倍率の試算</a>
+    <a href="#quick-valuation">価格の試算</a>
     <a href="/mypage/" id="personal-note-link" aria-label="ログインして自分のメモを利用">自分のメモ</a>
   </nav>
-
+  <section class="watch-read-bar" aria-label="前回からの変化"><div><strong>前回の確認から</strong><p data-watch-message class="small" aria-live="polite"></p><div data-watch-change-links class="small watch-links" aria-label="更新箇所へのリンク"></div><p class="small muted">確認状態はこのブラウザーに保存します。ログイン中のお気に入り・メモは従来どおりアカウントに保存します。</p></div><button type="button" class="btn" data-watch-mark>ここまで確認済みにする</button></section>
+  <WatchHistory observations={c.tracking?.observations??[]} lastCheckedOn={c.lastCheckedOn}/>
 
   <section class="section" aria-label="出来事タイムライン" id="timeline">
     <div class="timeline-toolbar"><h2 class="section-title">経過タイムライン</h2>
@@ -136,7 +141,7 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
             <AdSlot placement={`case-timeline-${row.slotNumber}`} slotId={timelineAdSlots[row.slotNumber - 1]} />
           </li>
         ) : (
-          <li class="timeline__item" id={`event-${row.event.id}`} data-timeline-event data-oldest-rank={oldestRanks.get(row.event.id)} data-newest-rank={orderedEvents.indexOf(row.event)} data-timeline-group={timelineGroup(row.event.date)}>
+          <li class="timeline__item" id={`event-${row.event.id}`} data-watch-item={`event-${row.event.id}`} data-timeline-event data-oldest-rank={oldestRanks.get(row.event.id)} data-newest-rank={orderedEvents.indexOf(row.event)} data-timeline-group={timelineGroup(row.event.date)}>
             <article class="event-card">
               <div class="event-card__head">
                 <EventTypeBadge type={row.event.eventType} />
@@ -184,6 +189,8 @@ const hasTimelineAds = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT) && timelin
 
   <section class="section" id="related-articles"><h2 class="section-title">関連記事</h2><ArticleList articles={Astro.props.articles}/></section>
 
+  </div>
+  <QuickValuation financials={valuations.financials.find(f=>f.code===c.securityCode)} observations={c.tracking?.observations??[]} preReportClose={c.preReportClose} industry={c.industry}/>
   <ValuationCalculator financials={valuations.financials.find(f=>f.code===c.securityCode)} comparables={valuations.comparables} industry={c.industry} sample={isSampleData}/>
 
   <section class="section" aria-label="自分のメモ" id="note-section" hidden>

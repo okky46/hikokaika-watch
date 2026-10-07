@@ -1,4 +1,5 @@
 import { articleSourceUrl } from './articleSourceUrl.ts';
+import { parseObservations, type WatchObservation } from './watchHistory.ts';
 import { COMMENT_TAG_ORDER } from './commentTags.ts';
 import type { CaseStatus, RawCase, RawEvent } from './types.ts';
 
@@ -62,6 +63,7 @@ export interface EventDateOverride {
   issue_label: string;
 }
 export interface TrackingProfile {
+  observations?: WatchObservation[];
   title: string;
   summary: string;
   tracking_reason: string;
@@ -121,10 +123,11 @@ function choice<T extends string>(value: unknown, choices: readonly T[]): T {
   return value as T;
 }
 const textKeys = ['title','summary','tracking_reason','tracking_started_on','last_checked_on','verification_note','short_reason','status_note','report_note'] as const;
-const profileKeys = [...textKeys,'public_status','status_event_ids','statements','report_state','reports','event_dates','bidding',...Object.keys(COLOR_STRENGTH_FIELDS)];
+const profileKeys = [...textKeys,'public_status','status_event_ids','statements','report_state','reports','event_dates','bidding','observations',...Object.keys(COLOR_STRENGTH_FIELDS)];
 export function parseTrackingProfile(value: unknown, publish = false): TrackingProfile {
   const s = object(value, profileKeys);
   const out = {} as TrackingProfile;
+  if (s.observations !== undefined) out.observations = parseObservations(s.observations);
   for (const key of Object.keys(COLOR_STRENGTH_FIELDS) as (keyof typeof COLOR_STRENGTH_FIELDS)[]) {
     if (s[key] !== undefined) out[key] = choice(s[key], Object.keys(RUMOR_STRENGTH) as (keyof typeof RUMOR_STRENGTH)[]);
   }
@@ -191,7 +194,7 @@ export function applyPublishedProfile(c: RawCase, p: TrackingProfile): RawCase {
 }
 export function validateProfileReferences(p: TrackingProfile, c: RawCase, events: RawEvent[], outlets: MediaOutlet[]): void {
   const ids = new Set(events.filter(e => e.case_id === c.id && e.is_visible).map(e => e.id));
-  for (const ref of [...p.status_event_ids, ...p.statements.map(x => x.event_id), ...p.reports.map(x => x.event_id).filter(Boolean), ...p.event_dates.map(x => x.event_id), ...(p.bidding ? [p.bidding.event_id] : [])]) {
+  for (const ref of [...p.status_event_ids, ...(p.observations ?? []).map(x=>x.event_id).filter(Boolean), ...p.statements.map(x => x.event_id), ...p.reports.map(x => x.event_id).filter(Boolean), ...p.event_dates.map(x => x.event_id), ...(p.bidding ? [p.bidding.event_id] : [])]) {
     if (!ids.has(ref)) throw new Error(`公開分類が非公開・別案件・削除済みの出来事を参照しています: ${c.slug}`);
   }
   const mediaIds = new Set(outlets.map(o => o.id));
