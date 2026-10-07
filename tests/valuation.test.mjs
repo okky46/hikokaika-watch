@@ -1,8 +1,16 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {parseValuation,multipleFromPrice,priceFromMultiple,prerequisites,safeSource} from '../src/lib/valuation.ts';
+import {parseValuation,multipleFromPrice,priceFromMultiple,prerequisites,safeSource,valuationFactSets} from '../src/lib/valuation.ts';
 const [raw,peer]=JSON.parse(fs.readFileSync('data/sample/valuations.json','utf8'));
+test('予想計算は独立した一式を保存し、古い実績残高で欠落を補わない',()=>{
+ const forecastFacts=structuredClone(raw.facts);forecastFacts.eps={...forecastFacts.eps,value:200,basis:'company_forecast'};forecastFacts.ebitda={...forecastFacts.ebitda,value:3000000000,basis:'company_forecast'};
+ const p=parseValuation({...raw,forecastFacts});assert.deepEqual(p.facts,raw.facts);assert.deepEqual(p.forecastFacts,forecastFacts);
+ const sets=valuationFactSets(p);assert.deepEqual(sets.map(s=>s.key),['forecast','registered']);assert.equal(multipleFromPrice(sets[0].facts,'per',1500),7.5);
+ delete forecastFacts.cash;const partial=parseValuation({...raw,forecastFacts});assert.equal(multipleFromPrice(valuationFactSets(partial)[0].facts,'evEbitda',1400),null);
+ for(const facts of [{}, {cash:raw.facts.cash}, {...forecastFacts,eps:raw.facts.eps}, {...forecastFacts,debt:{...raw.facts.debt,basis:'company_forecast'}}, {...forecastFacts,ebitda:{...forecastFacts.ebitda,sourceUrl:'https://example.com/?api_key=secret'}}])assert.throws(()=>parseValuation({...raw,forecastFacts:facts}));
+ assert.throws(()=>parseValuation({...peer,forecastFacts}));
+});
 test('PER・PBR・EV/EBITDAの往復計算とEVから株主価値への控除',()=>{
  const f=parseValuation(raw).facts;
  assert.equal(multipleFromPrice(f,'per',1500),15);assert.equal(multipleFromPrice(f,'pbr',1500),1.5);
