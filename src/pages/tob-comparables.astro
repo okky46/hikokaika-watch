@@ -7,7 +7,7 @@ import type {Metric} from '../lib/valuation';
 import ComparableEvidence from '../components/ComparableEvidence.astro';
 import ComparableStatistics from '../components/ComparableStatistics.astro';
 import {comparableAnchor} from '../lib/comparableAnchor';
-const {comparables}=await loadValuations();
+const {comparables,financials}=await loadValuations();
 const {isSampleData}=await loadPublicData();
 const fmt=(n:number)=>n.toLocaleString('ja-JP',{maximumFractionDigits:2});
 const industries=[...new Set(comparables.map(c=>c.industry))].sort();
@@ -35,6 +35,7 @@ const legacyAnchors=comparables.map(c=>{
   {comparables.map((c,index)=><article class="card section" data-tob-industry={c.industry} id={comparableAnchor(c,index)}>
     {legacyAnchors[index]&&<span id={legacyAnchors[index]} aria-hidden="true"/>}
     <h2>{c.name}（{c.code}）</h2>
+    {financials.some(f=>f.code===c.code)&&<p><a href={`/companies/${c.code}/#valuation`}>この銘柄の会社予想・実績で株価と倍率を試算する</a></p>}
     <p>{c.industry} ／ {c.announcedOn}公表 ／ 確認日 {c.checkedOn}</p>
     <p><strong>{c.priceStage}：{fmt(c.offerPrice)}{c.priceUnit??'円'}</strong> ／ <a href={c.sourceUrl} target="_blank" rel="noopener noreferrer">公表資料</a></p>
     <dl>{Object.entries(c.multiples).map(([key,m])=><div><dt><strong>{METRICS[key as Metric]} {fmt(m.value)}倍</strong></dt><dd><p>{basisLabel(m.basis)}・{m.period} ／ {m.method==='disclosed'?'資料に記載された倍率':'当サイトで計算'}</p><p>{m.calculation}</p><a href={m.sourceUrl} target="_blank" rel="noopener noreferrer">倍率の出典</a></dd></div>)}</dl>
