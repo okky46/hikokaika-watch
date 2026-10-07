@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {transform} from '@astrojs/compiler';
+import {transform} from '@astrojs/compiler-rs';
 import {experimental_AstroContainer as AstroContainer} from 'astro/container';
 import {build,transform as stripTypes} from 'esbuild';
 import {JSDOM} from 'jsdom';
@@ -37,7 +37,7 @@ const compiled=new Map();
 async function component(name){
  if(compiled.has(name))return compiled.get(name);
  const file=path.resolve('src/components',name+'.astro');
- let code=(await transform(fs.readFileSync(file,'utf8'),{filename:pathToFileURL(file).href,internalURL:'astro/compiler-runtime',resultScopedSlot:true,renderScript:true,resolvePath:async s=>s})).code;
+ let code=(await transform(fs.readFileSync(file,'utf8'),{filename:pathToFileURL(file).href,internalURL:'astro/compiler-runtime',resultScopedSlot:true,renderScript:true,resolvePath:s=>s})).code;
  code=code.replaceAll('astro/compiler-runtime',import.meta.resolve('astro/compiler-runtime')).replace(/^import ".*\?astro&type=style.*";$/gm,'');
  for(const match of [...code.matchAll(/from ['"]([^'"]+)['"]/g)]){
   const spec=match[1];if(!spec.startsWith('.'))continue;

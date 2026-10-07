@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {transform} from '@astrojs/compiler';
+import {transform} from '@astrojs/compiler-rs';
 import {transform as stripTypes} from 'esbuild';
 import {experimental_AstroContainer as AstroContainer} from 'astro/container';
 import {JSDOM} from 'jsdom';
@@ -20,7 +20,7 @@ test('同じ案件の価格版リンクと平均の根拠が各版へ到達し�
   const fixtures=dataUrl('export const comparables='+JSON.stringify(records)+';export function loadValuations(){return {comparables,financials:[{code:"0001"}]};}');
   async function component(file){
     if(compiled.has(file))return compiled.get(file);
-    let code=(await transform(fs.readFileSync(file,'utf8'),{filename:pathToFileURL(file).href,internalURL:'astro/compiler-runtime',resultScopedSlot:true,renderScript:true,resolvePath:async s=>s})).code;
+    let code=(await transform(fs.readFileSync(file,'utf8'),{filename:pathToFileURL(file).href,internalURL:'astro/compiler-runtime',resultScopedSlot:true,renderScript:true,resolvePath:s=>s})).code;
     code=code.replaceAll('astro/compiler-runtime',import.meta.resolve('astro/compiler-runtime')).replace(/^import ["'].*(?:\?astro&type=style|\.css).*?["'];$/gm,'').replaceAll('import.meta.env',"({DEPLOY_ENV:'preview'})");
     for(const match of [...code.matchAll(/from ['"]([^'"]+)['"]/g)]){
       const spec=match[1];if(!spec.startsWith('.'))continue;

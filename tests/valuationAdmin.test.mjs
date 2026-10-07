@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {transform} from '@astrojs/compiler';
+import {transform} from '@astrojs/compiler-rs';
 import {experimental_AstroContainer as AstroContainer} from 'astro/container';
 import {JSDOM} from 'jsdom';
 import {setupValuationAdmin} from '../src/lib/valuationAdmin.ts';

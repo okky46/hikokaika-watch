@@ -10,6 +10,16 @@ export default defineConfig({
   // 公開情報は静的配信を基本とする(要件9・21)。
   // 公開ページの閲覧で Supabase へアクセスしない構成のため、SSR は使わない。
   output: 'static',
+  security: {
+    csp: {
+      directives: ["object-src 'none'", "base-uri 'none'", "form-action 'self'"],
+      scriptDirective: {
+        resources: ["'self'", 'https://static.cloudflareinsights.com', 'https://pagead2.googlesyndication.com', 'https://www.googletagservices.com', 'https://tpc.googlesyndication.com'],
+      },
+      // Preserve existing inline layout styles without permitting inline scripts.
+      styleDirective: { resources: [{ resource: "'self'", kind: 'element' }, { resource: "'unsafe-inline'", kind: 'attribute' }] },
+    },
+  },
   build: {
     format: 'directory',
   },
