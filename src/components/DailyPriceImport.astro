@@ -1,7 +1,27 @@
 <details class="card section" id="daily-price-import"><summary>複数銘柄の終値をまとめて入力する</summary>
-<p>調べた終値のJSONを貼り付け、内容を確認して保存します。同じ銘柄・日付の登録がある場合は、個別の編集画面で訂正してください。</p>
-<label for="daily-price-json">終値のJSON（最大300件）</label><textarea id="daily-price-json" rows="6" maxlength="500000" spellcheck="false" placeholder='[{"code":"0001","date":"2026-10-07","price":2100,"shareBasisOn":"2026-03-31"}]'></textarea>
-<p class="small">code：証券コード、date：終値の日付、price：円。shareBasisOn（株式分割の換算基準日）・sourceName（出典の控え）・note（注記）は任意です。複数案件のある銘柄はcaseIdも指定してください。</p>
-<button type="button" class="btn" id="daily-price-preview">入力内容を確認</button><pre id="daily-price-summary" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre>
+<p>毎営業日の朝に、前営業日の終値をまとめて登録します。Excelなどで「銘柄コード・終値」の2列をコピーして貼り付けてください。</p>
+<label for="daily-price-format">入力形式</label><select id="daily-price-format"><option value="table">表（Excel・CSV）</option><option value="json">JSON</option></select>
+<div id="daily-price-table-options">
+ <label for="daily-price-date">終値の基準日</label><input type="date" id="daily-price-date" />
+ <p class="small">2列の表では、全行にこの日付を使います。見出しを付ける場合は「銘柄コード」「終値」「基準日」などを使えます。英字のある銘柄コードや、桁区切り付きの価格にも対応します。</p>
+ <label><input type="checkbox" id="daily-price-basis-checked" /> 終値と登録済みの株式数が、同じ株式分割の基準であることを確認した</label>
+ <p class="small">確認済みの財務データから分割基準日を引き継ぎます。新しい分割があった銘柄は、先に「財務情報・保管データ」で株式数と基準日を更新してください。</p>
+ <button type="button" class="btn" id="daily-price-refresh">更新対象を確認</button>
+ <details class="section"><summary>更新対象・未更新銘柄・財務の確認状況</summary><div id="daily-price-targets"><p class="small">「更新対象を確認」で一覧を読み込みます。</p></div></details>
+</div>
+<label for="daily-price-json">終値の表・JSON（最大300件）</label><textarea id="daily-price-json" rows="7" maxlength="500000" spellcheck="false" aria-describedby="daily-price-status" placeholder="銘柄コード&#9;終値&#10;0001&#9;2,100"></textarea>
+<p class="small" id="daily-price-json-help" hidden>code：証券コード、date：終値の日付、price：円。shareBasisOn（株式分割の換算基準日）・sourceName（出典の控え）・note（注記）は任意です。複数案件のある銘柄はcaseIdも指定してください。</p>
+<p class="small">同じ銘柄・日付の登録がある場合は、個別の編集画面で訂正してください。上場廃止・非公開化完了の銘柄は、日々の更新対象から外します。</p>
+<button type="button" class="btn" id="daily-price-preview">入力内容を確認</button><div id="daily-price-summary" class="section" style="white-space:pre-wrap;overflow-wrap:anywhere"></div>
 <button type="button" class="btn btn--primary" id="daily-price-save" disabled>確認した終値をまとめて保存</button><p id="daily-price-status" class="small" aria-live="polite"></p>
 </details>
+<style>
+ #daily-price-import > label { display:block; margin-top:1rem; }
+ #daily-price-table-options > label { display:block; margin-top:1rem; }
+ #daily-price-import :global(.table-wrap) { overflow-x:auto; background:var(--color-surface); }
+ #daily-price-import :global(.daily-price-table) { width:100%; min-width:720px; border-collapse:collapse; font-size:.85rem; white-space:normal; }
+ #daily-price-import :global(.daily-price-table th), #daily-price-import :global(.daily-price-table td) { text-align:left; padding:.65rem .75rem; border-bottom:1px solid var(--color-line); vertical-align:top; }
+ #daily-price-import :global(.daily-price-table th) { background:var(--color-bg); }
+ #daily-price-import :global(.daily-price-table td:first-child) { min-width:10rem; }
+ #daily-price-import :global(.daily-price-table td:last-child) { min-width:13rem; }
+</style>

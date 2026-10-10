@@ -1020,7 +1020,10 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
   // ---------------- 株価 ----------------
   let prices: any[] = [];
-  if(supabase)setupDailyPriceImport(supabase,()=>cases.map(c=>({id:c.id,code:companies.find(co=>co.id===c.company_id)?.security_code??'',name:companies.find(co=>co.id===c.company_id)?.name_ja??c.title})),loadPrices);
+  if(supabase)setupDailyPriceImport(supabase,()=>cases.filter(c=>c.is_visible).map(c=>{
+    const profile=trackingEditions.find(e=>e.case_id===c.id)?.published;
+    return {id:c.id,code:companies.find(co=>co.id===c.company_id)?.security_code??'',name:companies.find(co=>co.id===c.company_id)?.name_ja??c.title,archived:!!profile&&['delisted','privatized'].includes(publicTrackingStatus(profile))};
+  }),loadPrices);
 
   async function loadPrices() {
     const caseId = $<HTMLSelectElement>('pr-case-select').value;

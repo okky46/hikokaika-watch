@@ -2,14 +2,22 @@ import {multipleFromPrice,prerequisites} from './valuation.ts';
 import type {Financials} from './valuation.ts';
 import type {CaseListItem} from './types.ts';
 import {japanToday,previousTradingDay,tradingDay,validDay} from './tradingCalendar.ts';
+export function marketFinancialIssue(financials?:Financials):string|null {
+ const f=financials?.facts;
+ if(!f)return '財務数値が未登録です。';
+ const issue=prerequisites(f,'evEbitda');
+ if(issue)return issue;
+ if(['ebitda','debt','cash','adjustments','shares'].some(k=>f[k as keyof typeof f]?.basis!=='actual'))return '実績の財務数値を確認中です。';
+ if(financials?.ebitdaPeriodMonths!==12)return '12か月分の実績EBITDAを確認中です。';
+ if(/銀行|保険|証券|金融/.test(financials?.industry??''))return 'この業種はEV/EBITDAの表示対象外です。';
+ if(!financials?.shareBasisOn)return '株式数の分割基準を確認中です。';
+ return null;
+}
 export function marketMetrics(c:Pick<CaseListItem,'dailyCloses'|'preRumorClose'>,financials?:Financials,today=japanToday()) {
  const cutoff=previousTradingDay(today)??today;
  const close=c.dailyCloses.filter(p=>validDay(p.priceDate)&&p.priceDate<=cutoff&&p.priceDate<today&&tradingDay(p.priceDate)!==false&&Number.isFinite(p.price)&&p.price>0).at(-1)??null;
  const f=financials?.facts;
- let issue=!close?'終値が未登録です。':!f?'財務数値が未登録です。':prerequisites(f,'evEbitda');
- if(!issue&&f&&['ebitda','debt','cash','adjustments','shares'].some(k=>f[k as keyof typeof f]?.basis!=='actual'))issue='実績の財務数値を確認中です。';
- if(!issue&&financials?.ebitdaPeriodMonths!==12)issue='12か月分の実績EBITDAを確認中です。';
- if(!issue&&/銀行|保険|証券|金融/.test(financials?.industry??''))issue='この業種はEV/EBITDAの表示対象外です。';
+ let issue=!close?'終値が未登録です。':marketFinancialIssue(financials);
  if(!issue&&(!close?.shareBasisOn||!financials?.shareBasisOn||close.shareBasisOn!==financials.shareBasisOn))issue='株価と株式数の分割基準を確認中です。';
  const multiple=!issue&&f&&close?multipleFromPrice(f,'evEbitda',close.price):null;
  if(!issue&&multiple===null)issue='EVが0以下のため倍率を表示できません。';
