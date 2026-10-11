@@ -1,0 +1,24 @@
+/* Keep search visible and put optional filters behind one native disclosure. */
+.tracking-filters--compact { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.5rem; padding:.55rem; }
+.tracking-filters--compact .primary-filters { grid-column:1; grid-row:1; display:block; min-width:0; margin:0; }
+.tracking-filters--compact #f-q { min-height:44px; }
+.tracking-filters--compact .search-more { display:contents; }
+.tracking-filters--compact .search-more > summary {
+  grid-column:2; grid-row:1; display:flex; align-items:center; justify-content:center; min-height:44px;
+  margin:0; padding:.4rem .65rem; list-style:none; border:1px solid var(--color-line-strong);
+  border-radius:var(--radius); color:var(--color-ink); background:var(--color-surface); font-size:.85rem;
+}
+.tracking-filters--compact .search-more > summary::-webkit-details-marker { display:none; }
+.tracking-filters--compact .search-more[open] > summary { background:#e7eef7; border-color:var(--color-primary); color:var(--color-primary); }
+.tracking-filters--compact .filter-options { grid-column:1/-1; min-width:0; border-top:1px solid var(--color-line); padding:.65rem .2rem .2rem; }
+.tracking-filters--compact .filter-options > .filter-field { margin-top:.65rem; }
+.tracking-filters--compact .search-more input[type=radio] { width:1px; }
+.tracking-filters--compact > :is(.filter-actions,p,noscript) { grid-column:1/-1; }
+.tracking-filters--compact > p { margin:0; }
+.tracking-filters--compact + .list-toolbar { margin:.75rem 0 .5rem; gap:.5rem .8rem; }
+
+@media(max-width:760px) {
+  .tracking-filters--compact { margin:.5rem 0; padding:.5rem; }
+  .tracking-filters--compact .filter-options .stage-options { padding-bottom:.2rem; }
+  .tracking-filters--compact .search-more .filter-topline { gap:.4rem; }
+}

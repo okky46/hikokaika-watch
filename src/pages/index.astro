@@ -8,6 +8,7 @@ import { loadPublicData } from '../lib/publicData';
 import { PUBLIC_TRACKING_STATUS, validDate } from '../lib/trackingProfile';
 import { formatDate } from '../lib/format';
 import { STATEMENT_FILTERS } from '../lib/trackingSearch';
+import '../styles/trackingHome.css';
 const { cases, details, mediaOutlets, isSampleData, generatedAt } = await loadPublicData();
 const latestCheckedOn=cases.map(c=>c.lastCheckedOn).filter((date):date is string=>!!date && validDate(date)).sort().at(-1);
 const activeMedia = new Set(cases.flatMap(c=>c.search.media));
@@ -25,15 +26,16 @@ const stages=[{id:'',label:'すべて'},{id:'pre',label:'正式発表前'},{id:'
   </section>
   <RecentMovements cases={details} generatedAt={generatedAt}/>
   <section class="section" aria-label="銘柄の検索・絞り込み">
-    <form class="card tracking-filters" id="filter-form" role="search">
-      <div class="filter-topline">
-        <fieldset class="stage-options"><legend class="sr-only">段階</legend>{stages.map(s=><label class:list={['stage-option',{'stage-option--unreviewed':s.id==='unreviewed' && !cases.some(c=>c.search.stage==='unreviewed')}]}><input type="radio" name="stage" value={s.id} checked={s.id===''} data-label={s.label}/><span>{s.label}<small>{s.id ? cases.filter(c=>c.search.stage===s.id).length : cases.length}</small></span></label>)}</fieldset>
-        <label class="favorite-filter" data-login-only hidden><input type="checkbox" id="f-fav"/><span>☆ お気に入り</span></label>
-      </div>
+    <form class="card tracking-filters tracking-filters--compact" id="filter-form" role="search">
       <div class="filter-bar primary-filters">
-        <div class="filter-field filter-field--wide"><label for="f-q">会社名・証券コード・噂</label><input name="q" type="search" id="f-q" maxlength="150" placeholder="会社名・コードなど" autocomplete="off"/></div>
+        <div class="filter-field filter-field--wide"><label class="sr-only" for="f-q">会社名・証券コード・噂</label><input name="q" type="search" id="f-q" maxlength="150" placeholder="会社名・コードなど" autocomplete="off"/></div>
       </div>
-      <details class="search-more"><summary>状況・媒体・期間で絞り込む<span id="advanced-filter-count" class="small muted"></span></summary>
+      <details class="search-more"><summary>絞り込み<span id="advanced-filter-count" class="small"></span></summary>
+        <div class="filter-options">
+        <div class="filter-topline">
+          <fieldset class="stage-options"><legend class="sr-only">段階</legend>{stages.map(s=><label class:list={['stage-option',{'stage-option--unreviewed':s.id==='unreviewed' && !cases.some(c=>c.search.stage==='unreviewed')}]}><input type="radio" name="stage" value={s.id} checked={s.id===''} data-label={s.label}/><span>{s.label}<small>{s.id ? cases.filter(c=>c.search.stage===s.id).length : cases.length}</small></span></label>)}</fieldset>
+          <label class="favorite-filter" data-login-only hidden><input type="checkbox" id="f-fav"/><span>☆ お気に入り</span></label>
+        </div>
         <div class="filter-field"><label for="f-status">今の状況</label><select name="status" id="f-status"><option value="">すべて</option>{Object.entries(PUBLIC_TRACKING_STATUS).map(([id,s])=><option value={id}>{s.label}</option>)}<option value="unreviewed">状況を確認中</option></select></div>
         <fieldset class="media-filter"><legend>媒体 <span class="small muted">複数選択可</span></legend><div class="media-options">{media.map(m=><label><input type="checkbox" name="media" value={m.id} data-label={m.name}/><span class="media-choice"><span class="media-choice-check" aria-hidden="true">✓</span>{m.name}<small data-media-count={m.id}>{cases.filter(c=>c.search.media.includes(m.id)).length}</small></span></label>)}</div></fieldset>
         <div class="filter-bar">
@@ -47,6 +49,7 @@ const stages=[{id:'',label:'すべて'},{id:'pre',label:'正式発表前'},{id:'
         <p class="small muted">号数は検索用の参考年月として使います。実際の公表日は各出来事で確認してください。</p>
         <p class="notice" id="date-error" hidden>終了日は開始日以降にしてください。</p>
         <div class="filter-field" data-login-only hidden><label for="f-intensity">お気に入りの関心度</label><select id="f-intensity"><option value="">すべて</option><option value="3">3: 最重要</option><option value="2">2: 注目</option><option value="1">1: 経過確認</option></select></div>
+        </div>
       </details>
       <div class="filter-actions"><div id="active-filters" class="active-filters" aria-label="適用中の条件"></div><button type="button" class="btn small" data-clear-search data-clear-main hidden>条件をすべて解除</button></div>
       <p id="search-warning" class="notice" hidden>URLの検索条件に使えない指定があるため、その指定を除いて表示しています。検索欄で条件を選び直してください。</p>
