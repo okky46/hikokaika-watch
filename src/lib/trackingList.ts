@@ -39,8 +39,9 @@ export function setupTrackingList(personalMatch:(id:string)=>boolean, clearPerso
     input('to').setCustomValidity(invalid ? '終了日は開始日以降にしてください' : '');
     document.getElementById('date-error')!.hidden=!invalid;
     if(invalid)form.querySelector<HTMLDetailsElement>('.search-more')!.open=true;
-    const advancedCount=Number(!!filters.status)+filters.media.length+Number(!!filters.statement)+Number(!!(filters.from||filters.to))+Number(filters.includeIssues)+Number(!!(document.getElementById('f-intensity') as HTMLSelectElement).value);
-    document.getElementById('advanced-filter-count')!.textContent=advancedCount ? `（${advancedCount}条件を適用中）` : '';
+    const advancedCount=Number(!!filters.stage)+Number((document.getElementById('f-fav') as HTMLInputElement).checked)+Number(!!filters.status)+filters.media.length+Number(!!filters.statement)+Number(!!(filters.from||filters.to))+Number(filters.includeIssues)+Number(!!(document.getElementById('f-intensity') as HTMLSelectElement).value);
+    document.getElementById('advanced-filter-count')!.textContent=advancedCount ? `（${advancedCount}）` : '';
+    form.querySelector('.search-more > summary')!.setAttribute('aria-label',advancedCount ? `絞り込み、${advancedCount}条件を適用中` : '絞り込み');
     let visible=0;
     for(const row of rows.sort((a,b)=>compareCases(cases.get(a.dataset.caseId!)!,cases.get(b.dataset.caseId!)!,filters.sort))) {
       const c=cases.get(row.dataset.caseId!)!;
