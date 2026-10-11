@@ -2,7 +2,8 @@
 .list-display-controls { display:flex; flex-wrap:wrap; align-items:center; gap:.6rem; }
 .tracking-view-switch { display:inline-flex; gap:0; }
 .tracking-view-switch[hidden] { display:none; }
-.tracking-view-switch button { border-radius:0; min-height:36px; padding:.4rem .75rem; }
+.tracking-view-switch button { display:inline-flex; align-items:center; justify-content:center; border-radius:0; width:44px; height:44px; padding:.5rem; }
+.tracking-view-switch svg { display:block; flex:none; }
 .tracking-view-switch button:first-child { border-radius:6px 0 0 6px; }
 .tracking-view-switch button:last-child { border-radius:0 6px 6px 0; margin-left:-1px; }
 .tracking-view-switch button[aria-pressed=true] { position:relative; background:var(--color-primary); border-color:var(--color-primary); color:white; }

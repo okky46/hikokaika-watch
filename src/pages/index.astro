@@ -56,8 +56,12 @@ const stages=[{id:'',label:'すべて'},{id:'pre',label:'正式発表前'},{id:'
       <div><h2 class="section-title">銘柄一覧 <span class="small muted" id="filter-count" aria-live="polite">全{cases.length}件</span></h2><div class="list-checked small"><strong>最終確認日: {latestCheckedOn ? <time datetime={latestCheckedOn}>{formatDate(latestCheckedOn)}</time> : '未確認'}</strong><details class="list-help"><summary aria-label="確認日と並び順について">ⓘ</summary><p>掲載銘柄の確認日のうち、最も新しい日を表示しています。確認日は銘柄ごとに異なるため、個別の日付は詳細ページをご覧ください。</p><p>通常は、公表日が分かる出来事の新しい順に並びます。日付を確認できた出来事がない銘柄は、その後にサイト登録順で表示します。</p></details></div></div>
       <div class="list-display-controls">
         <div class="tracking-view-switch" role="group" aria-label="表示形式" data-tracking-view-controls hidden>
-          <button type="button" class="btn" data-tracking-layout="list" aria-pressed="true" aria-controls="tracking-table">リスト</button>
-          <button type="button" class="btn" data-tracking-layout="cards" aria-pressed="false" aria-controls="tracking-table">カード</button>
+          <button type="button" class="btn" data-tracking-layout="list" aria-label="リスト表示" title="リスト表示" aria-pressed="true" aria-controls="tracking-table">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 5h12M9 12h12M9 19h12M3 5h1M3 12h1M3 19h1"/></svg>
+          </button>
+          <button type="button" class="btn" data-tracking-layout="cards" aria-label="カード表示" title="カード表示" aria-pressed="false" aria-controls="tracking-table">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          </button>
         </div>
         <div class="filter-field"><label class="sr-only" for="f-sort">並び順</label><select id="f-sort" name="sort" form="filter-form"><option value="event">出来事が新しい順</option><option value="registered">サイト登録が新しい順</option><option value="updated">編集が新しい順</option><option value="code">証券コード順</option></select></div>
       </div>
