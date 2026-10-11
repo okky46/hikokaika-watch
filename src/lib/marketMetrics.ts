@@ -2,12 +2,13 @@ import {multipleFromPrice,prerequisites} from './valuation.ts';
 import type {Financials} from './valuation.ts';
 import type {CaseListItem} from './types.ts';
 import {japanToday,previousTradingDay,tradingDay,validDay} from './tradingCalendar.ts';
-export function marketFinancialIssue(financials?:Financials):string|null {
- const f=financials?.facts;
- if(!f)return '財務数値が未登録です。';
+export function marketFinancialIssue(financials?:Financials,basis:'actual'|'company_forecast'='actual'):string|null {
+ const f=basis==='actual'?financials?.facts:financials?.forecastFacts;
+ if(!f)return basis==='actual'?'財務数値が未登録です。':'会社予想の財務数値が未登録です。';
  const issue=prerequisites(f,'evEbitda');
  if(issue)return issue;
- if(['ebitda','debt','cash','adjustments','shares'].some(k=>f[k as keyof typeof f]?.basis!=='actual'))return '実績の財務数値を確認中です。';
+ if(f.ebitda?.basis!==basis)return basis==='actual'?'実績の財務数値を確認中です。':'会社予想のEBITDAを確認中です。';
+ if(['debt','cash','adjustments','shares'].some(k=>f[k as keyof typeof f]?.basis!=='actual'))return '実績の財務数値を確認中です。';
  if(financials?.ebitdaPeriodMonths!==12)return '12か月分の実績EBITDAを確認中です。';
  if(/銀行|保険|証券|金融/.test(financials?.industry??''))return 'この業種はEV/EBITDAの表示対象外です。';
  if(!financials?.shareBasisOn)return '株式数の分割基準を確認中です。';
@@ -17,15 +18,21 @@ export function marketMetrics(c:Pick<CaseListItem,'dailyCloses'|'preRumorClose'>
  const cutoff=previousTradingDay(today)??today;
  const close=c.dailyCloses.filter(p=>validDay(p.priceDate)&&p.priceDate<=cutoff&&p.priceDate<today&&tradingDay(p.priceDate)!==false&&Number.isFinite(p.price)&&p.price>0).at(-1)??null;
  const f=financials?.facts;
- let issue=!close?'終値が未登録です。':marketFinancialIssue(financials);
- if(!issue&&(!close?.shareBasisOn||!financials?.shareBasisOn||close.shareBasisOn!==financials.shareBasisOn))issue='株価と株式数の分割基準を確認中です。';
- const multiple=!issue&&f&&close?multipleFromPrice(f,'evEbitda',close.price):null;
- if(!issue&&multiple===null)issue='EVが0以下のため倍率を表示できません。';
+ const calculate=(basis:'actual'|'company_forecast')=>{
+  const facts=basis==='actual'?f:financials?.forecastFacts;
+  let issue=!close?'終値が未登録です。':marketFinancialIssue(financials,basis);
+  if(!issue&&(!close?.shareBasisOn||!financials?.shareBasisOn||close.shareBasisOn!==financials.shareBasisOn))issue='株価と株式数の分割基準を確認中です。';
+  const multiple=!issue&&facts&&close?multipleFromPrice(facts,'evEbitda',close.price):null;
+  if(!issue&&multiple===null)issue='EVが0以下のため倍率を表示できません。';
+  return {multiple,issue};
+ };
+ const {multiple,issue}=calculate('actual');
+ const forecast=calculate('company_forecast');
  const base=c.preRumorClose??null;
  let premiumIssue=!close?'終値が未登録です。':!base?'噂直前の基準株価を確認中です。':!base.rumorOn||base.priceDate>=base.rumorOn?'噂の起点と基準株価の日付を確認中です。':close.priceDate<base.rumorOn?'噂の起点より後の終値を確認中です。':!base.shareBasisOn||base.shareBasisOn!==close.shareBasisOn?'株価の分割基準を確認中です。':null;
  if(!premiumIssue&&base&&(!Number.isFinite(base.price)||base.price<=0))premiumIssue='基準株価を確認中です。';
  const premium=!premiumIssue&&close&&base?(close.price/base.price-1)*100:null;
- return {close,multiple,issue,base,premium,premiumIssue};
+ return {close,multiple,issue,forecastMultiple:forecast.multiple,forecastIssue:forecast.issue,base,premium,premiumIssue};
 }
 export const signedPercent=(n:number)=>{const rounded=Math.round(n*10)/10;return (rounded>0?'+':'')+rounded.toFixed(1)+'%';};
 export function parseManualPrice(raw:Record<string,unknown>,today=japanToday()) {
