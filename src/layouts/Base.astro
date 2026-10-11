@@ -55,7 +55,6 @@ const navigation = [
     <header class="site-header">
       <div class="site-header__inner">
         <a class="site-header__brand" href="/">非公開化ウォッチ</a>
-        <span class="site-header__tag">非公開化の噂とその後を追う</span>
         <nav class="site-nav" aria-label="サイト内メニュー">
           {navigation.map(item => <a href={item.href} aria-current={item.active ? (currentPath === (item.href.replace(/\/$/, '') || '/') ? 'page' : 'location') : undefined}>{item.label}</a>)}
         </nav>
@@ -75,9 +74,6 @@ const navigation = [
           <a href="/mypage/">マイページ</a>
           <a href="/requests/">追加掲載・訂正依頼</a>
         </nav>
-        <p class="site-footer__note">
-          非公開化をめぐる情報と経過を記録しています。掲載情報の取り扱いは免責事項をご覧ください。
-        </p>
         <p class="site-footer__note">© 非公開化ウォッチ</p>
       </div>
     </footer>

@@ -28,7 +28,6 @@ const {event}=Astro.props;
                 ) : (
                   event.sourceName || '—'
                 )}</span>
-                <span>本サイト初回掲載: {formatDateTime(event.sitePublishedAt)}</span>
-                {event.updatedAt !== event.sitePublishedAt && <span>最終修正: {formatDateTime(event.updatedAt)}</span>}
+                <details><summary>掲載履歴</summary><p>初回掲載: {formatDateTime(event.sitePublishedAt)}{event.updatedAt !== event.sitePublishedAt && <> ／ 最終修正: {formatDateTime(event.updatedAt)}</>}</p></details>
               </div>
             </article>

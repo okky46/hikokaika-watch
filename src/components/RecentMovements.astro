@@ -8,7 +8,7 @@ const href = (slug:string,id:string)=>`/cases/${encodeURIComponent(slug)}/#event
 ---
 <section class="recent-movements" data-recent-movements aria-labelledby="recent-movements-title">
   <header class="recent-movements__head">
-    <div><h2 id="recent-movements-title">最近動いた案件</h2><p class="small muted"><time datetime={asOf}>{asOf.replaceAll('-', '/')}</time>時点 · 直近30日の公表</p></div>
+    <div><h2 id="recent-movements-title">最近の動き</h2><p class="small muted"><time datetime={asOf}>{asOf.replaceAll('-', '/')}</time>時点 · 直近30日の公表</p></div>
     <button type="button" class="recent-movements__pause" data-recent-pause aria-pressed="false" hidden>動きを止める</button>
   </header>
   {items.length ? <>

@@ -19,9 +19,6 @@ const statusMap = Object.fromEntries(
   noindex
 >
   <h1>マイページ</h1>
-  <p class="small muted">
-    気になる銘柄の変化と、自分が次に確かめたいことを確認できます。
-  </p>
 
   <div id="mp-unavailable" class="notice" hidden>
     現在ログインできません。銘柄や記事は引き続き閲覧できます。
@@ -67,7 +64,7 @@ const statusMap = Object.fromEntries(
       <h2 class="section-title">銘柄ごとのメモ</h2>
       <p class="small muted">メモは銘柄の詳細ページで編集できます。次のチェック日が早い順に並びます。</p>
       <div id="mp-notes"></div>
-      <p class="empty-state" id="mp-notes-empty" hidden>銘柄ごとのメモはまだありません。気になる銘柄の詳細ページで「次に確かめたいこと」を保存すると、ここに表示されます。</p>
+      <p class="empty-state" id="mp-notes-empty" hidden>銘柄ごとのメモはありません。銘柄詳細の「メモ」で保存してください。</p>
     </section>
 
     <section class="section" aria-label="全体メモ">

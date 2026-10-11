@@ -38,7 +38,7 @@ for(const file of ['index.html','cases/0001-toyo-demo-seiki/index.html','compani
   assert.doesNotMatch(read(file),/価格のアテ|data-valuation(?: |>)|data-tob-row|data-metric-kind="(?:per|pbr)"|href="\/tob-comparables\//);
 }
 assert.ok(!fs.existsSync('dist/articles/unpublished-secret'));
-assert.match(read('cases/999z-tracking/index.html'),/この銘柄の出来事はまだ掲載していません/);
+assert.match(read('cases/999z-tracking/index.html'),/経過はまだ掲載していません/);
 assert.match(read('cases/999z-tracking/index.html'),/噂段階/);
 assert.match(read('cases/999z-tracking/index.html'),/報道なし/);
 assert.ok(!files.some(f=>/local-admin-check|__adminCheckClient/.test(f)), 'local test harness must not ship');
