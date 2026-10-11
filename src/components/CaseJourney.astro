@@ -16,7 +16,7 @@ let eventCount=0;
 ---
 <section class="section case-journey" id="watch-history" aria-label="観察と報道の経過">
   <span id="timeline"></span>
-  <div class="workspace-heading"><h2>経過</h2><a class="btn small" data-public-record href={`/admin/?case=${c.id}&record=observation`} hidden>観察を追加</a></div>
+  <div class="workspace-heading"><h2>経過</h2></div>
   {check&&<p class="watch-check small">確認結果：<a href={`#observation-${check.id}`}>{check.occurred_on||check.date_note}：{OBSERVATION_OUTCOME[check.outcome]}</a></p>}
   <div class="journey-controls"><label>表示する記録<select data-journey-filter><option value="all">観察と報道・開示</option><option value="observation">観察・確認結果</option><option value="event">報道・開示</option></select></label><label class="timeline-sort">並び順<select id="timeline-order" aria-controls="case-timeline"><option value="newest">新しい順</option><option value="oldest">古い順</option></select></label></div>
   {rows.length>0&&<details class="small muted"><summary>日付・並び順</summary><p>出来事の時期で並べます。月・号数だけの情報は参考位置、時期が不明な観察は末尾です。掲載・記録日時は各記録の履歴で確認できます。</p></details>}

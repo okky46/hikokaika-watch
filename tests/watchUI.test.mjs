@@ -26,7 +26,7 @@ test('監視の往復：理由と確認日を保存、追加観察を再訪ホ�
  const c={id,slug:'demo',companyName:'架空の会社',securityCode:'0000',watch:manifest,events:[],trackingReason:'起点',summary:'状況'};
  const notebook=await render('WatchNotebook',{caseId:id});
  const client=await bundle("import {setupWatchWorkspace} from './watchWorkspaceUI.ts';import {setupWatchReadState} from './watchReadState.ts';setupWatchReadState();window.ready=setupWatchWorkspace();");
- const html=`<section data-watch-case="${id}" data-watch-manifest='${JSON.stringify(manifest)}'><p data-watch-message></p><div data-watch-change-links></div><button data-watch-mark>確認済み</button>${notebook}</section>`;
+ const html=`<section data-watch-case="${id}" data-watch-manifest='${JSON.stringify(manifest)}'>${notebook}</section>`;
  async function open(html,saved={}){const dom=new JSDOM(html,{url:'https://local.invalid',runScripts:'outside-only'});dom.window.matchMedia=()=>({matches:false});for(const [k,v] of Object.entries(saved))dom.window.localStorage.setItem(k,v);dom.window.eval(client);await dom.window.ready;return dom;}
  const snapshot=dom=>Object.fromEntries(Object.keys(dom.window.localStorage).map(k=>[k,dom.window.localStorage.getItem(k)]));
  const detail=await open(html),d=detail.window.document;
@@ -43,6 +43,36 @@ test('監視の往復：理由と確認日を保存、追加観察を再訪ホ�
  const revisit=await open(html.replace(JSON.stringify(manifest),JSON.stringify(changed)),saved);assert.equal(revisit.window.document.querySelector('[name=scenario]').value,'材料が見当たらない上昇');
  revisit.window.document.querySelector('[data-watch-mark]').click();const read=snapshot(revisit);revisit.window.close();
  const done=await open(await render('WatchDesk',{cases:[{...c,watch:changed}]}),read);assert.equal(done.window.document.querySelector('[data-count=changed]').textContent,'0');assert.match(done.window.document.querySelector('[data-desk-list]').textContent,/交渉開始時期を確認/);done.window.close();
+});
+test('メモ内の更新：初期状態は閉じ、既存リンクで開き、読了してもメモを保持する',async()=>{
+ const manifest={summary:'2222222222222222'},id='demo';
+ const html=`<section data-watch-case="${id}" data-watch-manifest='${JSON.stringify(manifest)}'><header id="case-overview" data-watch-item="summary"><h1>架空の会社</h1></header>${await render('WatchNotebook',{caseId:id})}</section>`;
+ const client=await bundle("import {setupWatchWorkspace} from './watchWorkspaceUI.ts';import {setupWatchReadState} from './watchReadState.ts';setupWatchReadState();window.ready=setupWatchWorkspace();");
+ const dom=new JSDOM(html,{url:'https://local.invalid',runScripts:'outside-only'});
+ dom.window.matchMedia=()=>({matches:true});dom.window.HTMLElement.prototype.scrollIntoView=()=>{};
+ dom.window.localStorage.setItem('hikokaika:checked:v1',JSON.stringify({demo:{at:'2026-10-01T00:00:00Z',entries:{summary:'1111111111111111'}}}));
+ dom.window.eval(client);await dom.window.ready;const d=dom.window.document,panel=d.querySelector('#watch-review');
+ assert(panel.closest('[data-notebook]'));assert.equal(panel.open,false);
+ assert.equal(d.querySelector('[data-watch-mark]').disabled,false);
+ assert.match(panel.querySelector('[data-watch-message]').textContent,/1項目/);
+ assert.equal(panel.querySelector('[data-watch-change-links] a').getAttribute('href'),'#case-overview');
+ d.querySelector('[name=freeText]').value='入力中のメモ';
+ dom.window.location.hash='#watch-review';dom.window.dispatchEvent(new dom.window.HashChangeEvent('hashchange'));
+ assert.equal(panel.open,true);assert.equal(d.querySelector('.note-entry').open,false);
+ panel.querySelector('[data-watch-mark]').click();assert.match(panel.textContent,/変更はありません/);
+ assert.equal(d.querySelector('[name=freeText]').value,'入力中のメモ');
+ panel.open=false;dom.window.dispatchEvent(new dom.window.Event('pageshow'));assert.equal(panel.open,true);
+ dom.window.close();
+ const blocked=new JSDOM(html,{url:'https://local.invalid/#watch-review',runScripts:'outside-only'});
+ blocked.window.matchMedia=()=>({matches:false});blocked.window.HTMLElement.prototype.scrollIntoView=()=>{};
+ Object.defineProperty(blocked.window,'localStorage',{get(){throw Error('blocked');}});
+ blocked.window.eval(client);await blocked.window.ready;
+ assert.equal(blocked.window.document.querySelector('#watch-review').open,true);
+ assert.equal(blocked.window.document.querySelector('[name=freeText]').disabled,true);
+ assert.equal(blocked.window.document.querySelector('[data-watch-mark]').disabled,false);
+ blocked.window.document.querySelector('[data-watch-mark]').click();
+ assert.match(blocked.window.document.querySelector('[data-watch-message]').textContent,/保存できません/);
+ blocked.window.close();
 });
 test('価格画面：登録値を読み込み、手入力・方式切替を保持し、時点不一致を反映しない',async()=>{
  const financials=JSON.parse(fs.readFileSync('data/sample/valuations.json','utf8'))[0];

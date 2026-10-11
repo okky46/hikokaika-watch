@@ -24,7 +24,7 @@ export async function setupWatchWorkspace(){
   const deskStatus=desk?.querySelector<HTMLElement>('[data-desk-status]');
   let filter='all',busy=false,dirty=false;
   function status(message:string){if(noteStatus)noteStatus.textContent=message;if(deskStatus)deskStatus.textContent=message;}
-  function controls(){notebook?.querySelectorAll<HTMLInputElement|HTMLButtonElement>('input,textarea,button').forEach(el=>el.disabled=busy||!repo.ready);}
+  function controls(){notebook?.querySelectorAll<HTMLInputElement|HTMLButtonElement>('form input,form textarea,form button,[data-follow]').forEach(el=>el.disabled=busy||!repo.ready);}
   function baseline(id:string){
     const root=notebook?.closest<HTMLElement>('[data-watch-case]');
     if(root&&!readChecked(storage)[id])saveChecked(storage,id,JSON.parse(root.dataset.watchManifest??'{}'));
@@ -88,5 +88,4 @@ export async function setupWatchWorkspace(){
     // Do not leave a previous account's private record visible after an identity change.
     for(const k of fields)if(form)field(k).value='';desk?.querySelector('[data-desk-list]')?.replaceChildren();dirty=false;busy=true;controls();status('ログイン状態が変わりました。再読み込みすると、そのアカウントの記録が表示されます。');
   }});
-  if(db&&repo.account){const admin=await db.rpc('is_admin');if(!admin.error&&admin.data)document.querySelectorAll<HTMLElement>('[data-public-record]').forEach(el=>el.hidden=false);}
 }

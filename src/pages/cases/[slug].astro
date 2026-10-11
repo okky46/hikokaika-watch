@@ -85,12 +85,10 @@ const timelineAdSlots = [
       <span class="case-section-nav__code">{c.securityCode}</span>
       <span class="case-section-nav__name" title={c.companyName}>{c.companyName}</span>
     </div>
-    <a href="#watch-review">更新</a>
     <a href="#watch-history">経過</a>
     <a href="#note-section">メモ</a>
     <a href="#quick-valuation">価格の試算</a>
   </nav>
-  <section class="watch-read-bar" id="watch-review" aria-label="前回からの更新"><div><h2>前回からの更新</h2><p data-watch-message aria-live="polite" hidden></p><div data-watch-change-links class="watch-links" aria-label="更新箇所へのリンク"></div></div><div class="review-actions"><button type="button" class="btn btn--primary" data-watch-mark>確認済みにする</button><span class="small muted">このブラウザーに保存</span></div></section>
   <div class="case-workspace">
   <div class="case-workspace-main">
   <CaseJourney c={c} adSlots={timelineAdSlots}/>
