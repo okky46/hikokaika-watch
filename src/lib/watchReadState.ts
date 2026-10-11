@@ -30,7 +30,7 @@ export function setupWatchReadState(){
       const badge=root.querySelector<HTMLElement>('[data-watch-badge]');
       if(badge){badge.hidden=!previous;badge.textContent=changes.length?'確認後に更新あり':'ここまで確認済み';badge.classList.toggle('watch-badge--changed',changes.length>0);}
       const message=root.querySelector<HTMLElement>('[data-watch-message]');
-      if(message)message.textContent=previous?`${new Date(previous.at).toLocaleString('ja-JP')}に確認。${changes.length?`${changes.length}項目に追加・修正・取り下げがあります。`:'確認した内容から変更はありません。'}`:'読み終えたら「ここまで確認済みにする」で記録できます。';
+      if(message){message.hidden=!previous;message.textContent=previous?`${new Date(previous.at).toLocaleString('ja-JP')}に確認。${changes.length?`${changes.length}項目に追加・修正・取り下げがあります。`:'確認後の変更はありません。'}`:'';}
       root.querySelectorAll<HTMLElement>('[data-watch-item]').forEach(item=>{
         const changed=!!previous&&changes.includes(item.dataset.watchItem!);item.classList.toggle('watch-item--changed',changed);
         item.querySelector<HTMLElement>('[data-item-change]')?.remove();
@@ -54,7 +54,7 @@ export function setupWatchReadState(){
   }
   for(const root of list)root.querySelector('[data-watch-mark]')?.addEventListener('click',()=>{
     try{saveChecked(localStorage,root.dataset.watchCase!,JSON.parse(root.dataset.watchManifest??'{}'));refresh();}
-    catch{const message=root.querySelector('[data-watch-message]');if(message)message.textContent='確認状態を保存できませんでした。ブラウザーの保存設定を確認して、もう一度お試しください。';}
+    catch{const message=root.querySelector<HTMLElement>('[data-watch-message]');if(message){message.hidden=false;message.textContent='確認状態を保存できませんでした。ブラウザーの保存設定を確認して、もう一度お試しください。';}}
   });
   filter?.addEventListener('change',refresh);window.addEventListener('storage',refresh);window.addEventListener('pageshow',refresh);document.addEventListener('watch-baseline-saved',refresh);refresh();
 }

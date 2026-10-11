@@ -89,7 +89,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
     <!-- ============ 会社 ============ -->
     <section class="section" data-panel="companies" hidden>
-      <h2 class="section-title">会社の登録・編集</h2>
+      <h2 class="section-title">会社</h2>
       <div class="card" style="margin-bottom:0.8rem">
         <form id="company-form">
           <input type="hidden" id="co-id" />
@@ -115,7 +115,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
     <!-- ============ 案件 ============ -->
     <section class="section" data-panel="cases" hidden>
-      <h2 class="section-title">案件の登録・編集</h2>
+      <h2 class="section-title">銘柄</h2>
       <div class="card" style="margin-bottom:0.8rem">
         <form id="case-form">
           <p class="small">記事・報道イベントなしでも登録できます。会社が未登録なら <button type="button" class="btn" data-create-company="cases">会社を追加してここへ戻る</button></p>
@@ -154,7 +154,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
     <!-- ============ 出来事 ============ -->
     <section class="section" data-panel="events" hidden>
-      <h2 class="section-title">出来事の追加・編集</h2>
+      <h2 class="section-title">出来事</h2>
       <div class="form-row" style="max-width:26rem">
         <label for="ev-case-select">対象案件</label>
         <select id="ev-case-select"><option value="">案件を選択</option></select>
@@ -202,7 +202,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
     <!-- ============ 株価 ============ -->
     <section class="section" data-panel="prices" hidden>
-      <h2 class="section-title">株価情報の登録・編集</h2>
+      <h2 class="section-title">株価</h2>
       <p>営業日ごとの終値は「日次終値」に登録します。保存後に「公開処理」でサイトを再ビルドしてください。</p>
       <DailyPriceImport/>
       <div class="form-row" style="max-width:26rem">
@@ -245,7 +245,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
     <!-- ============ 訂正履歴 ============ -->
     <section class="section" data-panel="corrections" hidden>
-      <h2 class="section-title">訂正履歴の確認</h2>
+      <h2 class="section-title">訂正履歴</h2>
       <p class="small muted">「訂正」イベントおよび訂正済み表示の付いた出来事の一覧(最終修正の新しい順)。</p>
       <div id="correction-list"></div>
       <p class="empty-state" id="correction-empty" hidden>訂正履歴はまだありません。掲載済みの出来事を訂正すると、ここに記録されます。</p>
@@ -286,7 +286,7 @@ const commentStanceLabels = COMMENT_STANCE_LABELS;
 
     <!-- ============ セキュリティ ============ -->
     <section class="section" data-panel="security" hidden>
-      <h2 class="section-title">セキュリティ（2段階認証）</h2>
+      <h2 class="section-title">2段階認証</h2>
       <div class="card">
         <p class="small">
           Supabase Auth の TOTP(認証アプリ)を登録すると、DB側で aal2 セッションを必須化できます

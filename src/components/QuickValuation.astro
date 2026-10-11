@@ -15,31 +15,31 @@ const fields=[['ebitda','EBITDA（百万円）'],['multiple','想定EV/EBITDA（
 ---
 <section id="quick-valuation" class="section quick-valuation" data-quick-valuation data-sets={JSON.stringify(sets)} data-bases={JSON.stringify(bases)}>
   <span id="valuation" aria-hidden="true"></span>
-  <div class="watch-section-heading"><div><span class="small muted">前提を変えて考える</span><h2 class="section-title">価格の試算</h2></div></div>
-  <p>市場プレミアム、利益、資産の3つの見方で試せます。入力はこの画面内だけで使い、掲載データは変わりません。</p>
+  <h2 class="section-title">価格の試算</h2>
+  <p class="small muted">入力値は保存されません。</p>
   <div class="quick-methods" role="group" aria-label="価格の試算方法">
     <button type="button" class="btn" data-method="premium" aria-pressed="true">市場プレミアム</button><button type="button" class="btn" data-method="ev" aria-pressed="false">EV/EBITDA</button><button type="button" class="btn" data-method="nav" aria-pressed="false">実質NAV</button>
   </div>
   <div class="card quick-panel" data-panel="premium">
-    <h3>起点の株価に、プレミアムを加える</h3>
-    <label>基準にする起点<select data-base><option value="">自分で株価を入力</option>{bases.map(b=><option value={b.id}>{b.label}</option>)}</select></label>
-    <p class="small muted" data-base-note>{bases.length?'登録済みの起点を選ぶか、自分で基準株価を入力できます。':'基準株価は未登録です。気になった時点や報道前の株価を入力できます。'}</p>
+    <h3>市場プレミアム</h3>
+    <label>基準株価の選択<select data-base><option value="">自分で株価を入力</option>{bases.map(b=><option value={b.id}>{b.label}</option>)}</select></label>
+    <p class="small muted" data-base-note>{bases.length?'登録済みの株価を選ぶか、基準株価を入力してください。':'基準株価を入力してください。'}</p>
     <div class="quick-grid"><label>基準株価（円）<input type="number" step="any" min="0.01" data-q="base" inputmode="decimal"/></label><label>想定プレミアム（%）<input type="number" step="any" min="-99.99" value="30" data-q="premium" inputmode="decimal"/></label></div>
     <p class="small muted">30%は試すための仮定です。過去事例の平均ではありません。株式分割前後の価格を比較するときは、同じ基準にそろえてください。</p>
     <p class="quick-result" data-output="premium" aria-live="polite">基準株価を入力してください</p><p class="small" data-formula="premium"></p>
   </div>
   <div class="card quick-panel" data-panel="ev" hidden>
-    <h3>事業の価値から、1株の価値を考える</h3>
+    <h3>EV/EBITDA</h3>
     {industry&&/銀行|保険|証券|金融/.test(industry)&&<p class="notice">金融業では負債や利息が事業と密接なため、EV/EBITDAによる比較には向きません。資産面の試算も確認してください。</p>}
     <p class="small">金額は百万円、株式数は百万株で入力します。残高は同じ基準日・連結範囲にそろえます。</p>
     {sets.length>0&&<div class="quick-load"><label>使う財務情報<select data-load-set>{sets.map(s=><option value={s.key}>{s.label}</option>)}</select></label><button type="button" class="btn" data-load-ev>登録値を入力欄へ反映</button></div>}
-    <p class="small muted" data-ev-origin>未登録の項目も自由に入力できます。調整額0は追加調整を置かない仮定です。</p>
+    <p class="small muted" data-ev-origin>調整額0は追加調整を置かない仮定です。</p>
     <div class="quick-grid">{fields.map(([key,label])=><label>{label}<input type="number" step="any" min={key==='adjustments'?undefined:'0'} value={key==='adjustments'?'0':undefined} data-q={key} inputmode="decimal"/></label>)}</div>
     <p class="quick-result" data-output="ev" aria-live="polite">財務数値と想定倍率を入力してください</p><p class="small" data-formula="ev"></p>
     <p class="small muted">（EBITDA × 倍率 − 有利子負債 ＋ 現金等 − EVへの加算調整）÷ 株式数。EBITDAが0以下のときは、この方式では試算しません。</p>
   </div>
   <div class="card quick-panel" data-panel="nav" hidden>
-    <h3>株主に帰属する純資産を、時価の差額で調整する</h3>
+    <h3>実質NAV</h3>
     <p class="small">親会社の株主に帰属する純資産を使います。負債はすでに差し引かれているため、ここで二度引きません。</p>
     {financials?.facts.bps&&<button type="button" class="btn" data-load-nav>登録BPSから純資産を概算</button>}
     <p class="small muted" data-nav-origin>時価未調査の資産は調整に含めません。含み益が0と確認できたという意味ではありません。</p>
