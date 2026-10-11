@@ -27,6 +27,76 @@ test('噂直前比：未確認・分割不一致・下落・報道前価格の�
  assert.equal(marketMetrics({...c,preRumorClose:{...c.preRumorClose,shareBasisOn:'2025-03-31'}},financials,'2026-10-08').premium,null);
  assert.equal(signedPercent(marketMetrics({...c,dailyCloses:[{...quote,price:1200}]},financials,'2026-10-08').premium),'-20.0%');
 });
+function withForecast(){
+ const record=structuredClone(financials);
+ record.forecastFacts=structuredClone(record.facts);
+ record.forecastFacts.eps.basis='company_forecast';
+ record.forecastFacts.ebitda={...record.facts.ebitda,value:3000000000,basis:'company_forecast',period:'2027年3月期',note:'会社予想営業利益20億円＋前期通期償却費10億円の参考値。'};
+ // The forecast set may use different, but internally aligned, actual balances.
+ record.forecastFacts.cash.value=2000000000;
+ return record;
+}
+test('会社予想倍率：独立した計算一式を使い、実績と予想を同じ終値で算出する',()=>{
+ const record=parseValuation(withForecast()),before=structuredClone(record);
+ const m=marketMetrics(c,record,'2026-10-08');
+ assert.equal(m.multiple,22e9/1.5e9);
+ assert.equal(m.forecastMultiple,21e9/3e9);
+ assert.equal(m.forecastIssue,null);
+ assert.deepEqual(record,before);
+ const actualMissing=structuredClone(record);delete actualMissing.facts.cash;
+ const independent=marketMetrics(c,actualMissing,'2026-10-08');
+ assert.equal(independent.multiple,null);assert.equal(independent.forecastMultiple,7);
+});
+test('会社予想倍率：欠損・不整合を実績で代用せず、分母とEVの非正数を除外する',()=>{
+ const record=withForecast();
+ assert.equal(marketMetrics(c,financials,'2026-10-08').forecastMultiple,null);
+ assert.match(marketMetrics(c,financials,'2026-10-08').forecastIssue,/会社予想/);
+ for(const mutate of [
+  r=>delete r.forecastFacts.cash,
+  r=>r.forecastFacts.ebitda.value=0,
+  r=>r.forecastFacts.ebitda.value=-1,
+  r=>r.forecastFacts.ebitda.basis='actual',
+  r=>r.forecastFacts.debt.basis='company_forecast',
+  r=>r.forecastFacts.shares.period='2025-03-31',
+  r=>r.forecastFacts.ebitda.scope='standalone',
+  r=>r.forecastFacts.cash.value=23e9,
+  r=>r.shareBasisOn='2025-03-31',
+  r=>r.ebitdaPeriodMonths=3,
+  r=>r.industry='銀行業',
+ ]){
+  const changed=structuredClone(record);mutate(changed);
+  const m=marketMetrics(c,changed,'2026-10-08');assert.equal(m.forecastMultiple,null);assert.ok(m.forecastIssue);
+ }
+ const mismatch=marketMetrics({...c,dailyCloses:[{...quote,shareBasisOn:null}]},record,'2026-10-08');
+ assert.equal(mismatch.multiple,null);assert.equal(mismatch.forecastMultiple,null);
+ const noClose=marketMetrics({...c,dailyCloses:[]},record,'2026-10-08');
+ assert.equal(noClose.forecastMultiple,null);assert.equal(noClose.forecastIssue,'終値が未登録です。');
+});
+test('詳細の実描画：実績と会社予想の倍率・対象期・根拠を同時表示する',async()=>{
+ const path=await import('node:path'),{pathToFileURL}=await import('node:url');
+ const {transform}=await import('@astrojs/compiler-rs');
+ const {transform:stripTypes}=await import('esbuild');
+ const {experimental_AstroContainer:AstroContainer}=await import('astro/container');
+ const {JSDOM}=await import('jsdom');
+ const file=path.resolve('src/components/MarketQuote.astro');
+ let code=(await transform(fs.readFileSync(file,'utf8'),{filename:pathToFileURL(file).href,internalURL:'astro/compiler-runtime',resultScopedSlot:true,renderScript:true,resolvePath:s=>s})).code;
+ code=code.replaceAll('astro/compiler-runtime',import.meta.resolve('astro/compiler-runtime'));
+ for(const match of [...code.matchAll(/from ['"]([^'"]+)['"]/g)]){
+  const spec=match[1];if(spec.startsWith('.'))code=code.replaceAll(spec,pathToFileURL(path.resolve(path.dirname(file),spec+'.ts')).href);
+ }
+ code=(await stripTypes(code,{loader:'ts',format:'esm'})).code;
+ const Component=(await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)).default;
+ const container=await AstroContainer.create();
+ const html=await container.renderToString(Component,{props:{caseData:c,financials:withForecast(),detail:true}});
+ const dom=new JSDOM(html),items=[...dom.window.document.querySelectorAll('.market-quote__item')];
+ assert.equal(items.length,4);
+ assert.match(items[1].textContent,/EV\/EBITDA（実績）14.67倍2026年3月期/);
+ assert.match(items[2].textContent,/EV\/EBITDA（会社予想）7倍2027年3月期/);
+ assert.match(dom.window.document.querySelector('details').textContent,/会社予想営業利益20億円＋前期通期償却費10億円/);
+ dom.window.close();
+ const missing=await container.renderToString(Component,{props:{caseData:c,financials,detail:true}});
+ assert.match(missing,/会社予想の財務数値が未登録です。/);
+});
 test('半手動JSON：銘柄・重複・日付・金額を保存前に検証する',()=>{
  const cases=[{id,code:'0001',name:'架空会社'}];const input={code:'0001',date:'2026-10-07',price:2100,shareBasisOn:'2026-03-31'};
  assert.equal(parseDailyPriceBatch([input],cases,'2026-10-08')[0].row.source_name,null);
