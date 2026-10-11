@@ -1,0 +1,76 @@
+/* The same rows keep search, sorting, favorites and read state in both layouts. */
+.list-display-controls { display:flex; flex-wrap:wrap; align-items:center; gap:.6rem; }
+.tracking-view-switch { display:inline-flex; gap:0; }
+.tracking-view-switch[hidden] { display:none; }
+.tracking-view-switch button { border-radius:0; min-height:36px; padding:.4rem .75rem; }
+.tracking-view-switch button:first-child { border-radius:6px 0 0 6px; }
+.tracking-view-switch button:last-child { border-radius:0 6px 6px 0; margin-left:-1px; }
+.tracking-view-switch button[aria-pressed=true] { position:relative; background:var(--color-primary); border-color:var(--color-primary); color:white; }
+.tracking-card-label { display:none; }
+.tracking-filters .stage-options { min-width:0; max-width:100%; }
+#tracking-results .tracking-table tr[hidden],
+#tracking-results .tracking-table [hidden] { display:none !important; }
+
+/* Keep the table available at every width; narrow screens scroll inside it. */
+#tracking-results[data-layout=list] .table-wrap {
+  overflow-x:auto; background:var(--color-surface); border:1px solid var(--color-line);
+  border-radius:var(--radius-lg); box-shadow:var(--shadow-card);
+}
+#tracking-results[data-layout=list] .tracking-table { display:table; width:100%; min-width:720px; }
+#tracking-results[data-layout=list] .tracking-table thead { display:table-header-group; }
+#tracking-results[data-layout=list] .tracking-table tbody { display:table-row-group; }
+#tracking-results[data-layout=list] .tracking-table tr {
+  display:table-row; width:auto; padding:0; margin:0; border:0; border-radius:0; box-shadow:none;
+}
+#tracking-results[data-layout=list] .tracking-table td {
+  display:table-cell; width:auto; padding:.5rem .6rem; border-bottom:1px solid var(--color-line);
+}
+#tracking-results[data-layout=list] .tracking-table tbody tr:last-child td { border-bottom:0; }
+#tracking-results[data-layout=list] .tracking-table td::before,
+#tracking-results[data-layout=list] .tracking-market > div::before { display:none; }
+#tracking-results[data-layout=list] .case-link,
+#tracking-results[data-layout=list] .tracking-value { font-size:inherit; }
+
+/* Compact cards show identity, market values and the current status. */
+#tracking-results[data-layout=cards] .table-wrap { overflow:visible; background:none; border:0; box-shadow:none; }
+#tracking-results[data-layout=cards] .tracking-table { display:block; min-width:0; width:100%; }
+#tracking-results[data-layout=cards] .tracking-table thead { display:none; }
+#tracking-results[data-layout=cards] .tracking-table tbody {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr)); gap:.6rem;
+}
+#tracking-results[data-layout=cards] .tracking-table tr {
+  display:grid; grid-template-columns:minmax(0,1fr); gap:.3rem; align-content:start;
+  width:auto; padding:.6rem .75rem; margin:0; border:1px solid var(--color-line);
+  border-radius:var(--radius); background:var(--color-surface); box-shadow:var(--shadow-card);
+}
+#tracking-results[data-layout=cards] .tracking-table td {
+  display:block; width:auto; min-width:0; grid-column:1; padding:0; border:0;
+}
+#tracking-results[data-layout=cards] .tracking-table td::before,
+#tracking-results[data-layout=cards] .tracking-market > div::before { display:none; }
+#tracking-results[data-layout=cards] .tracking-identity { grid-row:1; }
+#tracking-results[data-layout=cards] .tracking-company { align-items:center; gap:.35rem; }
+#tracking-results[data-layout=cards] .tracking-company > div { display:flex; flex-wrap:wrap; align-items:baseline; gap:.15rem .45rem; min-width:0; }
+#tracking-results[data-layout=cards] .tracking-company br { display:none; }
+#tracking-results[data-layout=cards] .case-link { font-size:1rem; line-height:1.4; }
+#tracking-results[data-layout=cards] .fav-toggle { flex:none; min-width:28px; min-height:28px; }
+#tracking-results[data-layout=cards] .tracking-table .tracking-market {
+  grid-row:2; display:flex; flex-wrap:wrap; align-items:baseline; gap:.2rem .9rem;
+}
+#tracking-results[data-layout=cards] .tracking-market > div { display:flex; align-items:baseline; gap:.3rem; }
+#tracking-results[data-layout=cards] .tracking-multiple { margin:0; }
+#tracking-results[data-layout=cards] .tracking-card-label { display:inline; color:var(--color-ink-soft); font-size:.72rem; }
+#tracking-results[data-layout=cards] .tracking-value { font-size:.95rem; }
+#tracking-results[data-layout=cards] .tracking-situation { grid-row:3; }
+#tracking-results[data-layout=cards] .tracking-status { line-height:1.5; }
+#tracking-results[data-layout=cards] .tracking-status .badge { margin-right:.35rem; }
+#tracking-results[data-layout=cards] .status-note { display:inline; margin:0; font-size:.83rem; line-height:1.5; }
+#tracking-results[data-layout=cards] .period-match { margin:.3rem 0 0; }
+#tracking-results[data-layout=cards] .tracking-table :is(.tracking-links,.tracking-check,.tracking-summary,.process-note,.activity-note) { display:none; }
+
+@media(max-width:760px) {
+  .list-display-controls { width:100%; justify-content:space-between; }
+  .list-display-controls .filter-field { min-width:0; }
+  .list-display-controls select { max-width:100%; font-size:.85rem; }
+  .tracking-view-switch button { min-height:44px; }
+}
