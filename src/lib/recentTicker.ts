@@ -7,7 +7,7 @@ export function setupRecentTicker(root:HTMLElement) {
  const details=root.querySelector('details');
  const position=root.querySelector<HTMLElement>('[data-recent-position]');
  let index=0,paused=false,hovered=false;
- const updateButton=()=>{button.hidden=motion.matches;button.setAttribute('aria-pressed',String(paused));button.textContent=paused?'動かす':'動きを止める';};
+ const updateButton=()=>{const action=paused?'自動切り替えを再開':'自動切り替えを一時停止';button.hidden=motion.matches;button.setAttribute('aria-pressed',String(paused));button.setAttribute('aria-label',action);button.title=action;};
  updateButton();motion.addEventListener('change',updateButton);
  button.addEventListener('click',()=>{paused=!paused;updateButton();});
  root.addEventListener('mouseenter',()=>{hovered=true;});root.addEventListener('mouseleave',()=>{hovered=false;});

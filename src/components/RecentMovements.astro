@@ -9,7 +9,10 @@ const href = (slug:string,id:string)=>`/cases/${encodeURIComponent(slug)}/#event
 <section class="recent-movements" data-recent-movements aria-labelledby="recent-movements-title">
   <header class="recent-movements__head">
     <div><h2 id="recent-movements-title">最近の動き</h2><p class="small muted"><time datetime={asOf}>{asOf.replaceAll('-', '/')}</time>時点 · 直近30日の公表</p></div>
-    <button type="button" class="recent-movements__pause" data-recent-pause aria-pressed="false" hidden>動きを止める</button>
+    <button type="button" class="recent-movements__pause" data-recent-pause aria-pressed="false" aria-label="自動切り替えを一時停止" title="自動切り替えを一時停止" hidden>
+      <svg class="recent-movements__pause-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M4 3h3v10H4zM9 3h3v10H9z"/></svg>
+      <svg class="recent-movements__play-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M4 2.5 12.5 8 4 13.5Z"/></svg>
+    </button>
   </header>
   {items.length ? <>
     <div class="recent-ticker" aria-live="off">
@@ -37,7 +40,9 @@ document.querySelectorAll<HTMLElement>('[data-recent-movements]').forEach(setupR
 .recent-movements{position:relative;margin:.6rem 0;border:1px solid var(--color-line);border-radius:var(--radius);background:var(--color-surface);padding:.55rem .75rem}
 .recent-movements__head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.2rem;padding-right:3rem;min-height:44px}
 h2{font-size:1rem;margin:0}.recent-movements__head p{margin:.2rem 0 0;font-size:.75rem}
-.recent-movements__pause{flex:none;background:transparent;border:1px solid var(--color-line);border-radius:4px;padding:.3rem .55rem;min-height:44px;color:var(--color-ink-soft);font-size:.75rem;cursor:pointer}
+.recent-movements__pause{flex:none;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--color-line);border-radius:4px;width:32px;height:32px;min-height:32px;padding:0;color:var(--color-ink-soft);cursor:pointer}
+.recent-movements__pause svg{display:block;width:14px;height:14px}
+.recent-movements__pause[aria-pressed="false"] .recent-movements__play-icon,.recent-movements__pause[aria-pressed="true"] .recent-movements__pause-icon{display:none}
 .recent-movements__pause[hidden],.recent-ticker__item[hidden]{display:none!important}
 .recent-ticker{overflow:hidden;min-height:3.6rem}
 .recent-ticker__item{display:grid;grid-template-columns:6.2rem minmax(0,1fr) auto;align-items:center;gap:.6rem;min-height:3.6rem;color:var(--color-ink);text-decoration:none;padding:.25rem .1rem}

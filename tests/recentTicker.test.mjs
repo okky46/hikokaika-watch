@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
 import {setupRecentTicker} from '../src/lib/recentTicker.ts';
 test('最近の動き：自動切替・停止・読書中の停止・動きの低減を守る',()=>{
- const dom=new JSDOM('<section><button data-recent-pause hidden></button><div><a href="#a" data-recent-item>最初</a><a href="#b" data-recent-item hidden>次</a><a href="#c" data-recent-item hidden>最後</a></div><span data-recent-position>1 / 3</span><details></details></section>',{pretendToBeVisual:true});
+ const dom=new JSDOM('<section><button data-recent-pause hidden><svg aria-hidden="true"></svg><svg aria-hidden="true"></svg></button><div><a href="#a" data-recent-item>最初</a><a href="#b" data-recent-item hidden>次</a><a href="#c" data-recent-item hidden>最後</a></div><span data-recent-position>1 / 3</span><details></details></section>',{pretendToBeVisual:true});
  const oldWindow=globalThis.window,oldDocument=globalThis.document;globalThis.window=dom.window;globalThis.document=dom.window.document;
  let tick,cleared=false;dom.window.setInterval=(fn)=>{tick=fn;return 1;};dom.window.clearInterval=()=>{cleared=true;};const motion=new dom.window.EventTarget();motion.matches=false;dom.window.matchMedia=()=>motion;
  try{
   const root=document.querySelector('section'),items=[...root.querySelectorAll('a')],button=root.querySelector('button'),details=root.querySelector('details');const cleanup=setupRecentTicker(root);
-  const active=()=>items.findIndex(x=>!x.hidden);assert.equal(button.hidden,false);tick();assert.equal(active(),1);assert.equal(root.querySelector('[data-recent-position]').textContent,'2 / 3');
-  button.click();tick();assert.equal(active(),1);assert.equal(button.getAttribute('aria-pressed'),'true');button.click();
+  const icons=[...button.children];const active=()=>items.findIndex(x=>!x.hidden);assert.equal(button.hidden,false);assert.equal(button.getAttribute('aria-label'),'自動切り替えを一時停止');assert.equal(button.title,'自動切り替えを一時停止');tick();assert.equal(active(),1);assert.equal(root.querySelector('[data-recent-position]').textContent,'2 / 3');
+  button.click();tick();assert.equal(active(),1);assert.equal(button.getAttribute('aria-pressed'),'true');assert.equal(button.getAttribute('aria-label'),'自動切り替えを再開');assert.equal(button.title,'自動切り替えを再開');assert.deepEqual([...button.children],icons);button.click();assert.equal(button.getAttribute('aria-label'),'自動切り替えを一時停止');assert.deepEqual([...button.children],icons);
   root.dispatchEvent(new dom.window.Event('mouseenter'));tick();assert.equal(active(),1);root.dispatchEvent(new dom.window.Event('mouseleave'));
   details.open=true;tick();assert.equal(active(),1);details.open=false;
   items[1].focus();tick();assert.equal(active(),1);items[1].blur();
