@@ -61,7 +61,7 @@ test('画面：会社予想を初期表示し、実績切替で倍率・出典�
  const price=d.querySelector('[data-price]'),multiple=d.querySelector('[data-multiple]'),selector=d.querySelector('[data-financial-basis]');
  assert.equal(selector.value,'forecast');assert.equal(price.value,'');assert.equal(multiple.value,'');
  price.value='1400';price.dispatchEvent(new dom.window.Event('input'));
- assert.equal(d.querySelector('[data-result="per"]').textContent,'7倍');assert.match(d.querySelector('[data-result="evEbitda"]').textContent,/4.67倍/);
+ assert.equal(d.querySelector('[data-result="per"]').textContent,'7倍');assert.match(d.querySelector('[data-result="evEbitda"]').textContent,/4.7倍/);
  assert.match(d.querySelector('[data-result-basis="per"]').textContent,/会社予想・2027年3月期/);
  assert.equal(d.querySelector('.reference-section').closest('[data-financial-view]').hidden,false);
  assert.match(d.querySelector('.reference-section [data-reference-metric="per"]').textContent,/参考値なし/);

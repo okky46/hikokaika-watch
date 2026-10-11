@@ -1,5 +1,6 @@
 ---
 import {marketMetrics,signedPercent,marketDateLabel} from '../lib/marketMetrics';
+import {formatEvEbitda} from '../lib/format';
 import type {CaseListItem} from '../lib/types';
 import type {Financials} from '../lib/valuation';
 interface Props {caseData:Pick<CaseListItem,'dailyCloses'|'preRumorClose'>; financials?:Financials; detail?:boolean}
@@ -10,9 +11,9 @@ const number=(v:number)=>v.toLocaleString('ja-JP',{maximumFractionDigits:2});
 {detail&&<p class="market-update-date small muted">株価の最終更新日：{m.close?<time datetime={m.close.priceDate}>{marketDateLabel(m.close.priceDate)}</time>:'未登録'}</p>}
 <div class:list={['market-quote',{'market-quote--detail':detail}]}>
  <div class="market-quote__item"><span class="small muted">株価（終値）</span><strong>{m.close?number(m.close.price)+'円':'未登録'}</strong>{m.close&&<small><time datetime={m.close.priceDate}>{marketDateLabel(m.close.priceDate)}</time> 終値</small>}</div>
- <div class="market-quote__item market-quote__ev"><span class="small">EV/EBITDA（実績）</span><strong>{m.multiple!==null?number(m.multiple)+'倍':'算出待ち'}</strong><small>{m.multiple!==null?financials?.facts.ebitda?.period:m.issue}</small></div>
- <div class="market-quote__item market-quote__ev"><span class="small">EV/EBITDA（会社予想）</span><strong>{m.forecastMultiple!==null?number(m.forecastMultiple)+'倍':'算出待ち'}</strong><small>{m.forecastMultiple!==null?financials?.forecastFacts?.ebitda?.period:m.forecastIssue}</small></div>
- {detail&&<div class="market-quote__item"><span class="small muted">最初の噂の直前比</span><strong>{m.premium!==null?signedPercent(m.premium):'算出待ち'}</strong><small>{m.premium!==null&&m.base?m.base.priceDate+' 終値 '+number(m.base.price)+'円から':m.premiumIssue}</small></div>}
+ {detail&&<div class="market-quote__item"><span class="small muted">最初の噂の直前比</span><strong class:list={{'market-quote__text':m.premium===null}}>{m.premium!==null?signedPercent(m.premium):'算出待ち'}</strong><small>{m.premium!==null&&m.base?m.base.priceDate+' 終値 '+number(m.base.price)+'円から':m.premiumIssue}</small></div>}
+ <div class="market-quote__item market-quote__ev"><span class="small">EV/EBITDA（実績）</span><strong>{m.multiple!==null?formatEvEbitda(m.multiple)+'倍':'算出待ち'}</strong><small>{m.multiple!==null?financials?.facts.ebitda?.period:m.issue}</small></div>
+ <div class="market-quote__item market-quote__ev"><span class="small">EV/EBITDA（会社予想）</span><strong>{m.forecastMultiple!==null?formatEvEbitda(m.forecastMultiple)+'倍':'算出待ち'}</strong><small>{m.forecastMultiple!==null?financials?.forecastFacts?.ebitda?.period:m.forecastIssue}</small></div>
 </div>
 {detail&&<details class="market-quote-basis"><summary>株価・倍率・プレミアムの計算根拠</summary>
  <p class="small">株価は手動更新の終値です。表示されている日付の値を使っています。</p>

@@ -1,4 +1,5 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
+import {formatEvEbitda} from './format.ts';
 import {parseValuation,FIELDS,METRICS,basisLabel,valuationMethodLabel,prerequisites,multipleFromPrice,priceFromMultiple} from './valuation.ts';
 import type {ValuationRecord,Comparable,Financials,Field,Fact} from './valuation';
 type Row={id:string;draft:ValuationRecord;published:ValuationRecord|null;revision:number};
@@ -30,7 +31,7 @@ export function setupValuationAdmin(client:SupabaseClient){
     const sharePrice=priceFromMultiple(facts,'evEbitda',multiple.valueAsNumber);
     const number=(value:number)=>value.toLocaleString('ja-JP',{maximumFractionDigits:2});
     root.querySelector<HTMLElement>('[data-va-ev-value]')!.textContent=issue??(!price.value?'株価を入力してください。':!price.validity.valid||ratio===null?'計算できる正の株価・EVを確認してください。':number(price.valueAsNumber*facts.shares!.value+facts.debt!.value-facts.cash!.value+facts.adjustments!.value));
-    root.querySelector<HTMLElement>('[data-va-ev-ratio]')!.textContent=issue??(!price.value?'株価を入力してください。':!price.validity.valid||ratio===null?'計算できる正の株価・EVを確認してください。':`${number(ratio)}倍`);
+    root.querySelector<HTMLElement>('[data-va-ev-ratio]')!.textContent=issue??(!price.value?'株価を入力してください。':!price.validity.valid||ratio===null?'計算できる正の株価・EVを確認してください。':`${formatEvEbitda(ratio)}倍`);
     root.querySelector<HTMLElement>('[data-va-ev-share-price]')!.textContent=issue??(!multiple.value?'倍率を入力してください。':!multiple.validity.valid||sharePrice===null?'計算できる正の倍率・株主価値を確認してください。':number(sharePrice));
   }
   function buttons(){el<HTMLButtonElement>('va-publish').disabled=busy||dirty||!current;el<HTMLButtonElement>('va-unpublish').disabled=busy||dirty||!current?.published;el<HTMLButtonElement>('va-batch-save').disabled=busy||dirty||!batch.length;el<HTMLButtonElement>('va-batch-publish').disabled=busy||dirty||!savedBatch.length||!el<HTMLInputElement>('va-batch-reviewed').checked;}

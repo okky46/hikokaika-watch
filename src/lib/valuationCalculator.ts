@@ -1,4 +1,5 @@
 import {METRICS,basisLabel,prerequisites,multipleFromPrice,priceFromMultiple} from './valuation.ts';
+import {formatEvEbitda} from './format.ts';
 import type {Financials,Metric} from './valuation';
 export function setupValuationCalculator(root:HTMLElement){
  const sets=JSON.parse(root.dataset.factSets??'[]') as {key:string;facts:Financials['facts']}[];
@@ -14,7 +15,7 @@ export function setupValuationCalculator(root:HTMLElement){
    const out=root.querySelector<HTMLElement>(`[data-result="${key}"]`)!,fact=f[key==='per'?'eps':key==='pbr'?'bps':'ebitda'];
    root.querySelector<HTMLElement>(`[data-result-basis="${key}"]`)!.textContent=fact?`${basisLabel(fact.basis)}・${fact.period}`:'財務数値未登録';
    const value=multipleFromPrice(f,key,price.valueAsNumber);
-   out.textContent=prerequisites(f,key)??(!price.value?'株価を入力してください':!price.validity.valid||value===null?'株価の入力範囲と財務数値を確認してください。計算には0より大きい株価・EVが必要です。':`${number(value)}倍`);
+   out.textContent=prerequisites(f,key)??(!price.value?'株価を入力してください':!price.validity.valid||value===null?'株価の入力範囲と財務数値を確認してください。計算には0より大きい株価・EVが必要です。':`${key==='evEbitda'?formatEvEbitda(value):number(value)}倍`);
   }
   const key=metric.value as Metric,fact=f[key==='per'?'eps':key==='pbr'?'bps':'ebitda'];
   const output=root.querySelector<HTMLElement>('[data-scenario-output]');
