@@ -87,7 +87,7 @@ body:has(.case-section-nav) :is(#watch-review,#note-section) { scroll-margin-top
 
 /* 株価と倍率を1列にまとめ、状況と概要に近づける。 */
 .tracking-table th:nth-child(1){width:18%}
-.tracking-table th:nth-child(2){width:7rem}
+.tracking-table th:nth-child(2){width:7rem;white-space:normal;overflow-wrap:anywhere}
 .tracking-table th:nth-child(3){width:17%}
 .tracking-table th:nth-child(4){width:auto}
 .tracking-table .tracking-value{display:block;font-size:inherit;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
