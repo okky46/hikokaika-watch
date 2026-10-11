@@ -499,7 +499,7 @@ describe('phase 3 analytics and advertising regressions', () => {
     assert.match(journey, /slot&&/);
   });
 
-  it('emits the timeline loader only when generated HTML contains an ad row', () => {
+  it('loads the verification script once on every page while keeping ad rows conditional', () => {
     const eventsPath = 'data/sample/case_events.json';
     const originalEvents = fs.readFileSync(eventsPath, 'utf8');
     const events = JSON.parse(originalEvents);
@@ -540,6 +540,14 @@ describe('phase 3 analytics and advertising regressions', () => {
         throw result.error;
       }
       assert.equal(result.status, 0, result.stderr || result.stdout || 'nested build failed');
+      const walk = dir => fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => entry.isDirectory() ? walk(path.join(dir, entry.name)) : [path.join(dir, entry.name)]);
+      for (const file of walk('dist').filter(file => file.endsWith('.html'))) {
+        const html = fs.readFileSync(file, 'utf8');
+        const head = html.match(/<head>([\s\S]*?)<\/head>/)?.[1];
+        assert.ok(head, `${file}: missing head`);
+        assert.equal(count(html, 'adsbygoogle.js'), 1, `${file}: duplicate or missing loader`);
+        assert.match(head, /<script async src="https:\/\/pagead2\.googlesyndication\.com\/pagead\/js\/adsbygoogle\.js\?client=ca-pub-7279911661354282" crossorigin="anonymous"><\/script>/, `${file}: incorrect verification script`);
+      }
     };
     const page = (slug) => fs.readFileSync(`dist/cases/${slug}/index.html`, 'utf8');
     const count = (html, value) => html.split(value).length - 1;
@@ -553,7 +561,7 @@ describe('phase 3 analytics and advertising regressions', () => {
         PUBLIC_ADSENSE_SLOT_CASE_TIMELINE_2: '2222222222',
       });
       assert.equal(count(page('0003-kakuu-foods-hd'), '<ins class="adsbygoogle"'), 0);
-      assert.equal(count(page('0003-kakuu-foods-hd'), 'adsbygoogle.js'), 0);
+      assert.equal(count(page('0003-kakuu-foods-hd'), 'adsbygoogle.js'), 1);
       assert.equal(count(page('0005-mihon-denshi'), '<ins class="adsbygoogle"'), 1);
       assert.equal(count(page('0005-mihon-denshi'), 'adsbygoogle.js'), 1);
       assert.equal(count(page('0004-demo-systems'), '<ins class="adsbygoogle"'), 2);
@@ -566,7 +574,12 @@ describe('phase 3 analytics and advertising regressions', () => {
       assert.equal(count(page('0004-demo-systems'), '<ins class="adsbygoogle"'), 1);
       assert.equal(count(page('0004-demo-systems'), 'adsbygoogle.js'), 1);
       assert.equal(count(page('0005-mihon-denshi'), '<ins class="adsbygoogle"'), 0);
-      assert.equal(count(page('0005-mihon-denshi'), 'adsbygoogle.js'), 0);
+      assert.equal(count(page('0005-mihon-denshi'), 'adsbygoogle.js'), 1);
+
+      build({});
+      for (const file of fs.readdirSync('dist', { recursive: true }).filter(file => file.endsWith('.html'))) {
+        assert.equal(count(fs.readFileSync(path.join('dist', file), 'utf8'), '<ins class="adsbygoogle"'), 0, `${file}: ad unit emitted without configuration`);
+      }
     } finally {
       fs.writeFileSync(eventsPath, originalEvents);
     }
