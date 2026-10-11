@@ -5,6 +5,15 @@ const {caseId}=Astro.props;
 <aside class="watch-notebook card" id="note-section" data-notebook={caseId} aria-label="自分の監視記録">
   <div class="workspace-heading"><h2>メモ</h2><button type="button" class="btn" data-follow disabled>監視する</button></div>
   <p class="small muted" data-personal-scope>保存先を確認しています。</p>
+  <details class="note-updates" id="watch-review">
+    <summary class="btn small">前回からの更新</summary>
+    <div class="note-updates__content small">
+      <p data-watch-message aria-live="polite" hidden></p>
+      <div data-watch-change-links class="watch-links" aria-label="更新箇所へのリンク"></div>
+      <button type="button" class="btn small" data-watch-mark>確認済みにする</button>
+      <p class="muted">確認状態はこのブラウザーに保存します。</p>
+    </div>
+  </details>
   <details class="note-entry" open><summary>メモを編集</summary>
   <form data-notebook-form>
     <label>見立て<input name="scenario" type="text" maxlength="1000" disabled/></label>

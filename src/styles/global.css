@@ -58,8 +58,6 @@
 .watch-section-heading{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap}
 .watch-section-heading .section-title{margin-top:.25rem}
 .watch-list-controls{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;margin:.75rem 0}
-.watch-read-bar{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.2rem;background:var(--color-surface);border:1px solid var(--color-line);border-radius:var(--radius);margin:1rem 0}
-.watch-read-bar p{margin:.25rem 0}.watch-read-bar button{flex-shrink:0}
 .watch-badge{display:inline-block;border:1px solid var(--color-line-strong);background:var(--color-bg);color:var(--color-ink-soft);border-radius:4px;padding:.16rem .45rem;font-size:.8rem;line-height:1.5}
 .watch-badge--changed{background:#fff1d6;border-color:#c28b29;color:#6c4500}
 .watch-item--changed{outline:2px solid #c28b29;outline-offset:3px}
@@ -69,7 +67,7 @@
 .watch-interpretation{border-left:3px solid var(--color-line-strong);padding-left:.8rem;color:var(--color-ink-soft)}
 .watch-recorded{margin-bottom:0}.watch-check{padding:.7rem .9rem;background:var(--color-surface);border-left:3px solid var(--color-line-strong)}
 .revisit-list .watch-badge{margin-left:.7rem}.revisit-list p{margin:.5rem 0 0}
-@media(max-width:640px){.watch-read-bar{align-items:stretch;flex-direction:column}.watch-section-heading{gap:.3rem}.watch-observation{padding:1rem}}
+@media(max-width:640px){.watch-section-heading{gap:.3rem}.watch-observation{padding:1rem}}
 
 * {
   box-sizing: border-box;
@@ -176,6 +174,7 @@ code {
 
 .site-nav {
   display: flex;
+  margin-left: auto;
   gap: 0.25rem;
   flex-wrap: wrap;
   align-items: center;
@@ -1064,7 +1063,7 @@ details > summary:focus-visible { outline: 2px solid var(--color-focus); outline
   main { padding: 1rem 1rem 2rem; }
   .site-header__inner { gap: .3rem .75rem; padding-block: .5rem; }
   .site-header__tag { display: none; }
-  .site-nav { width: 100%; justify-content: space-between; gap: 0; }
+  .site-nav { width: 100%; justify-content: flex-end; gap: .5rem; }
   .site-nav a { min-height: 44px; display: inline-flex; align-items: center; padding-inline: .25rem; white-space: nowrap; }
   .site-footer__nav { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .4rem .8rem; }
   .site-footer__nav a { display: flex; align-items: center; min-height: 44px; }

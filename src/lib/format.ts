@@ -32,6 +32,11 @@ export function formatPrice(price: number | null | undefined): string {
   return `${price.toLocaleString('ja-JP', { maximumFractionDigits: 2 })}円`;
 }
 
+/** EV/EBITDAの表示だけを小数1桁にそろえ、計算用の値は保持する。 */
+export function formatEvEbitda(value: number): string {
+  return value.toLocaleString('ja-JP', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+
 /** 経過日数(a から b まで)。負値や不正日付は null */
 export function daysBetween(aIso: string | null, bIso: string | null): number | null {
   if (!aIso || !bIso) return null;

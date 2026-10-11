@@ -17,6 +17,10 @@ test('public build gate rejects injected scripts, inline handlers, weak CSP and 
   };
   try {
     assert.equal(verify(html), 1);
+    assert.throws(() => verify(html + '<a href="/admin/?record=observation" hidden>観察を追加</a>'), /admin navigation/);
+    assert.throws(() => verify(html + '<form action="https://hikokaika.com/admin/"></form>'), /admin navigation/);
+    assert.throws(() => verify(html + '<button data-public-record hidden>編集</button>'), /admin control/);
+    assert.equal(verify(html + '<a href="/requests/">追加掲載・訂正依頼</a>'), 1);
     assert.throws(() => verify(html.replace(script, 'alert("injected")')), /matching hash/);
     assert.throws(() => verify(html + '<form onsubmit="alert(1)"></form>'), /event handler/);
     assert.throws(() => verify(html.replace("script-src 'self'", "script-src 'unsafe-inline'")), /weak script CSP/);

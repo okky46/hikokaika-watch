@@ -16,6 +16,10 @@ export function verifySecurityBuild(directory='dist',env=process.env){
    try{assert.notEqual(JSON.parse(Buffer.from(match[0].split('.')[1],'base64url')).role,'service_role',`${file}: service role in public build`);}catch(error){if(error.code==='ERR_ASSERTION')throw error;}
   }
   if(!file.endsWith('.html'))continue;
+  if(!path.relative(directory,file).split(path.sep).includes('admin')){
+   assert.doesNotMatch(text,/\b(?:href|action)=["'](?:https?:\/\/[^"'\/]+)?\/admin(?:[\/?#"'])/i,`${file}: admin navigation in public page`);
+   assert.doesNotMatch(text,/data-public-record/,`${file}: admin control in public page`);
+  }
   pages++;
   const policy=text.match(/<meta\s+http-equiv="content-security-policy"\s+content="([^"]*)"/i)?.[1];
   assert.ok(policy,`${file}: missing CSP`);

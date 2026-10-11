@@ -21,6 +21,19 @@ export function saveChecked(storage:Pick<Storage,'getItem'|'setItem'>,id:string,
 export function setupWatchReadState(){
   const list=[...document.querySelectorAll<HTMLElement>('[data-watch-case]')];
   const filter=document.querySelector<HTMLInputElement>('[data-watch-updates-only]');
+  // Keep existing My Page and bookmarked update links usable after moving the panel.
+  function revealUpdates(){
+    if(location.hash==='#watch-review'){
+      const panel=document.querySelector<HTMLDetailsElement>('details#watch-review');
+      if(panel){panel.open=true;panel.scrollIntoView();}
+    }
+  }
+  document.querySelectorAll('a[href="#watch-review"]').forEach(link=>link.addEventListener('click',()=>{
+    const panel=document.querySelector<HTMLDetailsElement>('details#watch-review');if(panel)panel.open=true;
+  }));
+  window.addEventListener('hashchange',revealUpdates);
+  window.addEventListener('pageshow',revealUpdates);
+  revealUpdates();
   function refresh(){
     let saved:Record<string,ReadState>={};try{saved=readChecked(localStorage);}catch{}
     for(const root of list){
