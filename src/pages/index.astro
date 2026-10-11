@@ -19,7 +19,7 @@ const homeAdSlot = import.meta.env.PUBLIC_ADSENSE_SLOT_HOME ?? '';
 const hasHomeAd = Boolean(import.meta.env.PUBLIC_ADSENSE_CLIENT && homeAdSlot);
 const stages=[{id:'',label:'すべて'},{id:'pre',label:'正式発表前'},{id:'post',label:'正式発表後'},{id:'closed',label:'完了・終了'},{id:'unreviewed',label:'分類確認中'}];
 ---
-<Base title="非公開化ウォッチ" description="非公開化・MBO・親子上場解消に関する噂、報道、会社発表とその後の経過を整理するデータベース。" path="/" hasAdSlots={hasHomeAd}>
+<Base title="非公開化ウォッチ" description="非公開化・MBO・親子上場解消に関する噂、報道、会社発表とその後の経過を整理するデータベース。" path="/">
   {isSampleData && <p class="notice">開発・デモ用の<strong>架空のサンプルデータ</strong>です。実在の企業・報道とは関係ありません。</p>}
   <section class="tracking-intro" aria-label="サービス概要">
     <h1>追跡銘柄</h1>

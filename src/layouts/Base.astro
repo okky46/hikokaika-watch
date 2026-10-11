@@ -9,11 +9,9 @@ interface Props {
   path?: string;
   /** 検索エンジンに登録させないページ(マイページ・管理画面) */
   noindex?: boolean;
-  /** Whether this page renders one or more configured AdSense slots. */
-  hasAdSlots?: boolean;
 }
 
-const { title, description, path, noindex: requestedNoindex = false, hasAdSlots = false } = Astro.props;
+const { title, description, path, noindex: requestedNoindex = false } = Astro.props;
 const noindex = requestedNoindex || import.meta.env.DEPLOY_ENV !== 'production';
 
 const site = Astro.site ?? new URL('https://hikokaika.com');
@@ -46,8 +44,8 @@ const navigation = [
     <meta name="twitter:card" content="summary" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     {!noindex && <link rel="sitemap" href="/sitemap.xml" />}
-    {hasAdSlots && import.meta.env.PUBLIC_ADSENSE_CLIENT && !import.meta.env.DEV && (
-      <script async src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${import.meta.env.PUBLIC_ADSENSE_CLIENT}`} crossorigin="anonymous"></script>
+    {!import.meta.env.DEV && (
+      <script is:inline async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7279911661354282" crossorigin="anonymous"></script>
     )}
   </head>
   <body>

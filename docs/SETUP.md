@@ -219,10 +219,12 @@ $$;
 
 ### Google AdSense
 
+- 2026-10-12: 所有権確認用の `ca-pub-7279911661354282` のスクリプトは、広告枠の設定にかかわらず全ページの共通 `<head>` に1回出力する。開発サーバーでは読み込まず、静的ビルドには含める。今回の追加では広告ユニットや自動広告の設定を行わない。
+
 - `PUBLIC_ADSENSE_CLIENT` に AdSense の client ID(`ca-pub-...`)を設定し、各 `PUBLIC_ADSENSE_SLOT_*` に AdSense 管理画面で発行された対応する広告ユニットIDを設定すると、仕様で定めた広告枠だけに広告タグが出力されます。広告ユニットIDは数値化せず文字列のまま設定します。
 - `PUBLIC_ADSENSE_SLOT_HOME` はトップの発表前・発表後セクション間、`PUBLIC_ADSENSE_SLOT_CASE_TIMELINE_1` と `PUBLIC_ADSENSE_SLOT_CASE_TIMELINE_2` は案件詳細の3件目・6件目の後に対応します。client ID または該当スロットIDが未設定の枠は出力されません。
 - AdSense 管理画面 → Ads → By ad unit で各広告ユニットを作成し、表示される `data-ad-slot` の値を上記のスロット変数へ設定します。内部配置名（例: `home-between-sections`）を設定してはいけません。
-- 未設定の場合、広告関連タグ・空の広告ラッパー・空のタイムライン行はHTMLへ一切出力されません。ローカル開発時のプレースホルダ表示も必要な client ID とスロットIDがある場合だけ表示されます。
+- 広告枠が未設定の場合、広告ユニット・空の広告ラッパー・空のタイムライン行はHTMLへ出力されません。所有権確認用スクリプトは出力されます。ローカル開発時のプレースホルダ表示も必要な client ID とスロットIDがある場合だけ表示されます。
 - `public/ads.txt` は審査・承認後に AdSense 管理画面で提示される正式な行へ差し替えてください。例:
   ```text
   google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0
@@ -248,7 +250,7 @@ Cloudflare側ではhikokaika.comの自動セットアップが有効で、2026-1
 
 | 変数 | 種別 | 用途 |
 |---|---|---|
-| `PUBLIC_ADSENSE_CLIENT` | 公開 | AdSense client ID。未設定なら広告タグ非出力。 |
+| `PUBLIC_ADSENSE_CLIENT` | 公開 | 広告ユニット用のAdSense client ID。審査後は `ca-pub-7279911661354282` を設定する。未設定なら広告ユニットは非出力。 |
 | `PUBLIC_ADSENSE_SLOT_HOME` | 公開 | トップ用のAdSense広告ユニットID。 |
 | `PUBLIC_ADSENSE_SLOT_CASE_TIMELINE_1` | 公開 | 案件詳細の3件目後用のAdSense広告ユニットID。 |
 | `PUBLIC_ADSENSE_SLOT_CASE_TIMELINE_2` | 公開 | 案件詳細の6件目後用のAdSense広告ユニットID。 |
