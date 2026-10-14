@@ -1,4 +1,5 @@
 ---
+import TobTerms from '../../components/TobTerms.astro';
 import MarketQuote from '../../components/MarketQuote.astro';
 import Base from '../../layouts/Base.astro';
 import QuickValuation from '../../components/QuickValuation.astro';
@@ -73,7 +74,7 @@ const timelineAdSlots = [
       </section>
       <section class="case-overview__status" aria-label="今の状況">
         <h2>今の状況</h2>
-        <TrackingStatus profile={c.tracking} activity={c.activity}/>
+        <TrackingStatus profile={c.tracking} activity={c.activity}/><TobTerms caseData={c}/>
       </section>
     </div>
     <StockLinks code={c.securityCode}/>

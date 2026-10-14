@@ -109,3 +109,11 @@ body:has(.case-section-nav) :is(#watch-review,#note-section) { scroll-margin-top
 .tracking-table .tracking-missing{color:var(--color-ink-soft);font-size:.9rem;font-weight:400}
 
 @media(min-width:761px){.tracking-table tbody td:nth-child(-n+3){vertical-align:middle}}
+
+/* TOB条件と上場廃止後の参考値。既存のフォント・指標順・余白を維持する。 */
+.tob-terms{display:grid;grid-template-columns:5em minmax(0,1fr);gap:.25rem .6rem;margin:.55rem 0 0;padding-top:.5rem;border-top:1px solid var(--color-line)}
+.tob-terms>div{display:contents}.tob-terms dt{color:var(--color-ink-soft)}.tob-terms dd{margin:0;overflow-wrap:anywhere}.tob-terms__source{font-size:.75rem}
+.market-quote--reference .market-quote__item:first-child,.market-quote--reference .market-quote__ev{color:#606872}
+.tracking-table .tracking-market--reference .tracking-value{color:#606872}
+.tracking-reference-note{display:block;color:#606872;font-size:.7rem;line-height:1.5;margin-top:.25rem}
+.desk-intensity{display:block;margin:.6rem 0}.desk-settings{display:flex;justify-content:space-between;align-items:center;gap:.5rem;flex-wrap:wrap;margin-top:.5rem}.desk-settings select{max-width:10rem}

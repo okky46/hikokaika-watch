@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
+import {JSDOM} from 'jsdom';
 const walk=dir=>fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(dir,e.name)):[path.join(dir,e.name)]);
 const files=walk('dist');
 for(const file of files.filter(f=>/\.(html|json|xml|js)$/.test(f))){
@@ -23,7 +24,13 @@ assert.match(read('cases/0001-toyo-demo-seiki/index.html'),/観察と報道の�
 assert.match(read('cases/0001-toyo-demo-seiki/index.html'),/data-valuation-tool/);
 assert.match(read('cases/0001-toyo-demo-seiki/index.html'),/価格の試算/);
 assert.match(read('index.html'),/EV\/EBITDA（会社予想）/);
-assert.doesNotMatch(read('index.html'),/EV\/EBITDA（実績）/);
+const marketDocument=new JSDOM(read('index.html')).window.document;
+for(const cell of marketDocument.querySelectorAll('.tracking-market')){
+ const reference=cell.classList.contains('tracking-market--reference');
+ assert.match(cell.querySelector('.tracking-multiple').textContent,reference?/EV\/EBITDA（実績）/:/EV\/EBITDA（会社予想）/);
+ if(reference)assert.match(cell.textContent,/TOB価格・実績倍率（参考）/);
+}
+marketDocument.defaultView.close();
 assert.match(read('cases/0001-toyo-demo-seiki/index.html'),/EV\/EBITDA（実績）/);
 assert.match(read('cases/0001-toyo-demo-seiki/index.html'),/EV\/EBITDA（会社予想）/);
 assert.doesNotMatch(read('index.html'),/最初の噂の直前比/);

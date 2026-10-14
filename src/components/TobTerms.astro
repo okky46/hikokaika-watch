@@ -1,0 +1,16 @@
+---
+import type {CaseListItem} from '../lib/types';
+import {tobTermsFor,offerPriceFor} from '../lib/tobTerms';
+interface Props {caseData:CaseListItem}
+const {caseData:c}=Astro.props;
+const terms=tobTermsFor(c);
+const eligible=['announced','offer_open','offer_succeeded','delisted','privatized'].includes(c.tracking?.public_status??'');
+const succeeded=['offer_succeeded','delisted','privatized'].includes(c.tracking?.public_status??'');
+const price=offerPriceFor(c)?.price;
+---
+{eligible&&<dl class="tob-terms small" aria-label="TOB条件">
+ <div><dt>TOB価格</dt><dd>{price?price.toLocaleString('ja-JP')+'円':'未確認'}</dd></div>
+ <div><dt>買付期間</dt><dd>{terms?.period??'未確認'}</dd></div>
+ <div><dt>成立</dt><dd>{succeeded?'確認済み':'未確認'}</dd></div>
+ {terms&&<div class="tob-terms__source"><dt>出典</dt><dd><a href={`#${terms.sourceEventId}`}>開示・経過</a><span class="muted"> ／ {terms.checkedOn}確認</span></dd></div>}
+</dl>}

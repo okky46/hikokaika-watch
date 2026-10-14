@@ -71,7 +71,8 @@ const stages=[{id:'',label:'すべて'},{id:'pre',label:'正式発表前'},{id:'
     </div>
     <TrackingLegend/>
     <div class="tracking-results" id="tracking-results" data-layout="list">
-      <div class="watch-list-controls"><label class="filter-check"><input id="watch-updated-only" type="checkbox"/> 確認後の更新のみ</label><a class="small" href="/mypage/#my-watch">監視中の銘柄 →</a></div>
+      <div class="watch-list-controls"><label class="filter-check"><input id="watch-updated-only" type="checkbox"/> 確認後の更新のみ</label><a class="small" href="/mypage/#my-watch">お気に入りの銘柄 →</a></div>
+      <p class="small muted" data-favorite-status role="status" hidden></p>
       <TrackingTable cases={cases}/>
     </div>
     {hasHomeAd && <AdSlot placement="home-between-sections" slotId={homeAdSlot}/>}
@@ -79,6 +80,7 @@ const stages=[{id:'',label:'すべて'},{id:'pre',label:'正式発表前'},{id:'
   <script is:inline type="application/json" id="tracking-search-data" set:html={searchData}/>
 </Base>
 <script>
+  import { setupFavoriteList } from '../lib/favoriteListUI';
   import { getSupabase } from '../lib/supabaseBrowser';
   import { setupTrackingList } from '../lib/trackingList';
   import { setupTrackingView } from '../lib/trackingView';
@@ -86,78 +88,7 @@ const stages=[{id:'',label:'すべて'},{id:'pre',label:'正式発表前'},{id:'
   const favOnly=document.getElementById('f-fav') as HTMLInputElement;
   const intensitySel=document.getElementById('f-intensity') as HTMLSelectElement;
   let favorites=new Map<string,number>();
-  let loggedIn=false;
   const clearPersonal=()=>{favOnly.checked=false;intensitySel.value='';};
   const applyFilters=setupTrackingList(id=>(!favOnly.checked||favorites.has(id))&&(!intensitySel.value||favorites.get(id)===Number(intensitySel.value)),clearPersonal);
-  // ---------- お気に入り(ログイン時のみ Supabase に接続) ----------
-  const supabase = getSupabase();
-
-  function renderFavButtons() {
-    for (const btn of document.querySelectorAll<HTMLButtonElement>('[data-fav-toggle]')) {
-      const id = btn.dataset.favToggle ?? '';
-      const on = favorites.has(id);
-      btn.textContent = on ? '★' : '☆';
-      btn.setAttribute('aria-pressed', String(on));
-      btn.title = loggedIn
-        ? on
-          ? 'お気に入りから外す'
-          : 'お気に入りに登録'
-        : 'ログインしてお気に入りに登録';
-    }
-  }
-
-  async function initFavorites() {
-    if (!supabase) return; // ログイン機能が無効な環境ではお気に入りUIは初期状態のまま
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user;
-    if (!user) return;
-    loggedIn = true;
-    for (const el of document.querySelectorAll<HTMLElement>('[data-login-only]')) {
-      el.hidden = false;
-    }
-    const { data: favs } = await supabase
-      .from('user_case_favorites')
-      .select('case_id, intensity');
-    favorites = new Map((favs ?? []).map((f) => [f.case_id as string, f.intensity as number]));
-    renderFavButtons();
-    applyFilters();
-  }
-
-  document.addEventListener('click', async (e) => {
-    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-fav-toggle]');
-    if (!btn) return;
-    if (!supabase || !loggedIn) {
-      if (confirm('お気に入りに登録するにはログインが必要です。マイページでログインしますか？')) {
-        location.href = '/mypage/';
-      }
-      return;
-    }
-    const caseId = btn.dataset.favToggle ?? '';
-    const { data: sessionData } = await supabase.auth.getSession();
-    const userId = sessionData.session?.user?.id;
-    if (!userId) return;
-
-    btn.disabled = true;
-    if (favorites.has(caseId)) {
-      const { error } = await supabase
-        .from('user_case_favorites')
-        .delete()
-        .eq('user_id', userId)
-        .eq('case_id', caseId);
-      if (!error) favorites.delete(caseId);
-    } else {
-      const { error } = await supabase
-        .from('user_case_favorites')
-        .upsert({ user_id: userId, case_id: caseId, intensity: 1 });
-      if (!error) favorites.set(caseId, 1);
-    }
-    btn.disabled = false;
-    renderFavButtons();
-    applyFilters();
-  });
-
-  supabase?.auth.onAuthStateChange((event) => {
-    if(event==='SIGNED_OUT') { loggedIn=false;favorites.clear();clearPersonal();document.querySelectorAll<HTMLElement>('[data-login-only]').forEach(el=>el.hidden=true);renderFavButtons();applyFilters(); }
-  });
-  initFavorites();
+  setupFavoriteList(getSupabase(),rows=>{favorites=rows;applyFilters();});
 </script>

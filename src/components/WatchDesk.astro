@@ -5,16 +5,17 @@ interface Props {cases:CaseDetail[]}
 const {cases}=Astro.props;
 const items=cases.map(watchWorkspaceCase);
 ---
-<section id="my-watch" class="watch-desk section" data-watch-desk data-workspace-cases={JSON.stringify(items)} aria-label="自分の監視銘柄">
-  <div class="workspace-heading"><h2>監視中の銘柄</h2><a class="btn" href="/">銘柄を探す</a></div>
-  <p class="small muted" data-personal-scope>監視中の銘柄を読み込んでいます。</p>
+<section id="my-watch" class="watch-desk section" data-watch-desk data-workspace-cases={JSON.stringify(items)} aria-label="お気に入りの銘柄">
+  <div class="workspace-heading"><h2>お気に入りの銘柄</h2><a class="btn" href="/">銘柄を探す</a></div>
+  <p class="small muted" data-personal-scope>お気に入りの銘柄を読み込んでいます。</p>
   <div class="desk-filters" role="group" aria-label="確認する銘柄の絞り込み">
-    <button type="button" class="btn" data-desk-filter="all" aria-pressed="true">監視中 <span data-count="all">0</span></button>
+    <button type="button" class="btn" data-desk-filter="all" aria-pressed="true">お気に入り <span data-count="all">0</span></button>
     <button type="button" class="btn" data-desk-filter="changed" aria-pressed="false">確認後に更新 <span data-count="changed">0</span></button>
     <button type="button" class="btn" data-desk-filter="due" aria-pressed="false">確認日到来 <span data-count="due">0</span></button>
   </div>
+  <label class="small desk-intensity">関心度で絞り込み <select data-desk-intensity><option value="">すべて</option><option value="3">3: 最重要</option><option value="2">2: 注目</option><option value="1">1: 経過確認</option></select></label>
   <div class="desk-list" data-desk-list></div>
-  <div class="watch-start card" data-desk-empty hidden><p>監視中の銘柄はありません。銘柄詳細の「監視する」で追加できます。</p><a href="/" class="btn btn--primary">銘柄を選ぶ</a></div>
+  <div class="watch-start card" data-desk-empty hidden><p>お気に入りの銘柄はありません。銘柄詳細の「お気に入りに追加」で追加できます。</p><a href="/" class="btn btn--primary">銘柄を選ぶ</a></div>
   <p class="small" data-desk-status role="status"></p>
-  <noscript><p>監視中の銘柄と自分の記録にはJavaScriptが必要です。<a href="/">銘柄の経過は一覧から閲覧できます。</a></p></noscript>
+  <noscript><p>お気に入りの銘柄と自分の記録にはJavaScriptが必要です。<a href="/">銘柄の経過は一覧から閲覧できます。</a></p></noscript>
 </section>
