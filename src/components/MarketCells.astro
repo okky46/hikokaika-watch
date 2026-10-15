@@ -1,0 +1,12 @@
+---
+import {marketMetrics} from '../lib/marketMetrics';
+import type {MarketCase} from '../lib/marketMetrics';
+import type {Financials} from '../lib/valuation';
+import {formatEvEbitda} from '../lib/format';
+interface Props {caseData:MarketCase;financials?:Financials}
+const {caseData,financials}=Astro.props;
+const m=marketMetrics(caseData,financials);
+const number=(v:number)=>v.toLocaleString('ja-JP',{maximumFractionDigits:2});
+---
+<td class:list={['tracking-market',{'tracking-market--reference':m.reference}]}><div class="tracking-price" aria-label={m.priceLabel}><span class="sr-only">{m.priceLabel}：</span><span class="tracking-card-label" aria-hidden="true">{m.reference?'TOB価格':'終値'}</span>{m.price?<span class="tracking-value">{number(m.price.price)}円</span>:<span class="tracking-missing" aria-label={m.reference?'TOB価格未確認':'株価未登録'}>ー</span>}</div>
+      <div class="tracking-multiple" aria-label={`EV/EBITDA（${m.listBasis}）${m.reference?'・参考':''}`}><span class="sr-only">EV/EBITDA（{m.listBasis}）：</span><span class="tracking-card-label" aria-hidden="true">EV/EBITDA（{m.listBasis}）</span>{m.listMultiple!==null?<span class="tracking-value">{formatEvEbitda(m.listMultiple)}倍</span>:<span class="tracking-missing" title={m.listIssue||undefined} aria-label={m.listIssue||'倍率未登録'}>ー</span>}</div>{m.reference&&<small class="tracking-reference-note">TOB価格・実績倍率（参考）</small>}</td>

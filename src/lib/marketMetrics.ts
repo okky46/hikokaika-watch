@@ -2,6 +2,9 @@ import {multipleFromPrice,prerequisites} from './valuation.ts';
 import type {Financials} from './valuation.ts';
 import type {CaseListItem} from './types.ts';
 import {japanToday,previousTradingDay,tradingDay,validDay} from './tradingCalendar.ts';
+import {offerPriceFor} from './tobTerms.ts';
+export type MarketCase=Pick<CaseListItem,'dailyCloses'|'preRumorClose'> & Partial<Pick<CaseListItem,'tracking'|'formalOfferPrice'|'slug'|'securityCode'>>;
+export const isDelisted=(c:Pick<MarketCase,'tracking'>)=>['delisted','privatized'].includes(c.tracking?.public_status??'');
 export function marketFinancialIssue(financials?:Financials,basis:'actual'|'company_forecast'='actual'):string|null {
  const f=basis==='actual'?financials?.facts:financials?.forecastFacts;
  if(!f)return basis==='actual'?'財務数値が未登録です。':'会社予想の財務数値が未登録です。';
@@ -14,25 +17,31 @@ export function marketFinancialIssue(financials?:Financials,basis:'actual'|'comp
  if(!financials?.shareBasisOn)return '株式数の分割基準を確認中です。';
  return null;
 }
-export function marketMetrics(c:Pick<CaseListItem,'dailyCloses'|'preRumorClose'>,financials?:Financials,today=japanToday()) {
+export function marketMetrics(c:MarketCase,financials?:Financials,today=japanToday()) {
  const cutoff=previousTradingDay(today)??today;
  const close=c.dailyCloses.filter(p=>validDay(p.priceDate)&&p.priceDate<=cutoff&&p.priceDate<today&&tradingDay(p.priceDate)!==false&&Number.isFinite(p.price)&&p.price>0).at(-1)??null;
+ const reference=isDelisted(c);
+ const offer=offerPriceFor(c);
+ const price=reference?(offer&&validDay(offer.priceDate)&&offer.priceDate<=today&&Number.isFinite(offer.price)&&offer.price>0?offer:null):close;
+ const priceLabel=reference?'TOB価格（参考）':'株価（終値）';
+ const noPrice=reference?'TOB価格を確認中です。':'終値が未登録です。';
  const f=financials?.facts;
  const calculate=(basis:'actual'|'company_forecast')=>{
   const facts=basis==='actual'?f:financials?.forecastFacts;
-  let issue=!close?'終値が未登録です。':marketFinancialIssue(financials,basis);
-  if(!issue&&(!close?.shareBasisOn||!financials?.shareBasisOn||close.shareBasisOn!==financials.shareBasisOn))issue='株価と株式数の分割基準を確認中です。';
-  const multiple=!issue&&facts&&close?multipleFromPrice(facts,'evEbitda',close.price):null;
+  let issue=!price?noPrice:marketFinancialIssue(financials,basis);
+  if(!issue&&(!price?.shareBasisOn||!financials?.shareBasisOn||price.shareBasisOn!==financials.shareBasisOn))issue=reference?'TOB価格と株式数の分割基準を確認中です。':'株価と株式数の分割基準を確認中です。';
+  const multiple=!issue&&facts&&price?multipleFromPrice(facts,'evEbitda',price.price):null;
   if(!issue&&multiple===null)issue='EVが0以下のため倍率を表示できません。';
   return {multiple,issue};
  };
  const {multiple,issue}=calculate('actual');
  const forecast=calculate('company_forecast');
  const base=c.preRumorClose??null;
- let premiumIssue=!close?'終値が未登録です。':!base?'噂直前の基準株価を確認中です。':!base.rumorOn||base.priceDate>=base.rumorOn?'噂の起点と基準株価の日付を確認中です。':close.priceDate<base.rumorOn?'噂の起点より後の終値を確認中です。':!base.shareBasisOn||base.shareBasisOn!==close.shareBasisOn?'株価の分割基準を確認中です。':null;
+ let premiumIssue=!price?noPrice:!base?'噂直前の基準株価を確認中です。':!base.rumorOn||base.priceDate>=base.rumorOn?'噂の起点と基準株価の日付を確認中です。':price.priceDate<base.rumorOn?'噂の起点より後の価格を確認中です。':!base.shareBasisOn||base.shareBasisOn!==price.shareBasisOn?'株価の分割基準を確認中です。':null;
  if(!premiumIssue&&base&&(!Number.isFinite(base.price)||base.price<=0))premiumIssue='基準株価を確認中です。';
- const premium=!premiumIssue&&close&&base?(close.price/base.price-1)*100:null;
- return {close,multiple,issue,forecastMultiple:forecast.multiple,forecastIssue:forecast.issue,base,premium,premiumIssue};
+ const premium=!premiumIssue&&price&&base?(price.price/base.price-1)*100:null;
+ // Completed cases use the historical actual multiple in the list, with an explicit label.
+ return {close,price,priceLabel,reference,multiple,issue,forecastMultiple:forecast.multiple,forecastIssue:forecast.issue,base,premium,premiumIssue,listMultiple:reference?multiple:forecast.multiple,listIssue:reference?issue:forecast.issue,listBasis:reference?'実績':'会社予想'};
 }
 export const signedPercent=(n:number)=>{const rounded=Math.round(n*10)/10;return (rounded>0?'+':'')+rounded.toFixed(1)+'%';};
 export function parseManualPrice(raw:Record<string,unknown>,today=japanToday()) {

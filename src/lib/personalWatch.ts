@@ -28,7 +28,7 @@ export function createPersonalWatch(db:SupabaseClient|null,storage:Pick<Storage,
     }
     if(userId&&db){
       const [f,n]=await Promise.all([db.from('user_case_favorites').select('case_id,intensity'),db.from('user_case_notes').select('case_id,body')]);
-      if(f.error||n.error)throw Error('監視中の銘柄とメモを読み込めません。通信を確認して再読み込みしてください。');
+      if(f.error||n.error)throw Error('お気に入りの銘柄とメモを読み込めません。通信を確認して再読み込みしてください。');
       for(const x of f.data??[])rows[x.case_id]={...emptyRecord(),watching:true,intensity:x.intensity};
       for(const x of n.data??[])rows[x.case_id]={...(rows[x.case_id]??emptyRecord()),body:x.body};
     }else rows=readLocalWatch(storage);
@@ -38,11 +38,11 @@ export function createPersonalWatch(db:SupabaseClient|null,storage:Pick<Storage,
     if(!ready)throw Error('記録の読み込みが完了していません。再読み込みしてから保存してください。');
     if(db){const s=await db.auth.getSession();if(s.error||(s.data.session?.user.id??null)!==userId){ready=false;throw Error('ログイン状態が変わりました。入力を控え、再読み込みしてから保存してください。');}}
   }
-  function localSave(id:string,r:PersonalRecord,editing=false){
+  function localSave(id:string,r:PersonalRecord,editing=false,intensityOnly=false){
     // Read at write-time so changes made in another tab are not lost.
     const current=readLocalWatch(storage);
     if(editing&&(current[id]?.body??'')!==(rows[id]?.body??''))throw Error('別のタブで記録が変わりました。入力を控え、再読み込みしてから保存してください。');
-    current[id]=editing?r:{...(current[id]??r),watching:r.watching};
+    current[id]=editing?r:intensityOnly?{...(current[id]??r),intensity:r.intensity}:{...(current[id]??r),watching:r.watching};
     try{storage.setItem(LOCAL_WATCH_KEY,JSON.stringify(current));}
     catch{throw Error('このブラウザーに保存できません。入力を控え、空き容量や保存設定を確認してからもう一度保存してください。');}
     rows=current;
@@ -51,9 +51,19 @@ export function createPersonalWatch(db:SupabaseClient|null,storage:Pick<Storage,
     await currentIdentity();const r=rows[id]??emptyRecord();
     if(db&&userId){
       const result=watching?await db.from('user_case_favorites').upsert({user_id:userId,case_id:id,intensity:r.intensity}):await db.from('user_case_favorites').delete().eq('user_id',userId).eq('case_id',id);
-      if(result.error)throw Error('監視の設定を保存できません。通信を確認し、もう一度お試しください。');
+      if(result.error)throw Error('お気に入りの設定を保存できません。通信を確認し、もう一度お試しください。');
       rows[id]={...r,watching};
     }else localSave(id,{...r,watching});
+  }
+  async function setIntensity(id:string,intensity:number){
+    await currentIdentity();
+    if(![1,2,3].includes(intensity))throw Error('関心度は1〜3で選んでください。');
+    const r=rows[id];if(!r?.watching)throw Error('お気に入りを再読み込みしてください。');
+    if(db&&userId){
+      const result=await db.from('user_case_favorites').update({intensity}).eq('user_id',userId).eq('case_id',id);
+      if(result.error)throw Error('関心度を保存できません。通信を確認し、もう一度お試しください。');
+      rows[id]={...r,intensity};
+    }else localSave(id,{...r,intensity},false,true);
   }
   async function save(id:string,note:StructuredNotePayload){
     await currentIdentity();const prior=rows[id]??emptyRecord();
@@ -63,8 +73,8 @@ export function createPersonalWatch(db:SupabaseClient|null,storage:Pick<Storage,
       const saved=await db.from('user_case_notes').upsert({user_id:userId,case_id:id,body:result.body});
       if(saved.error)throw Error('記録を保存できません。入力を控え、通信を確認してもう一度保存してください。');
       rows[id]={...prior,body:result.body};
-      try{await follow(id,true);}catch{throw Error('メモは保存しましたが、監視への追加ができませんでした。「監視する」をもう一度押してください。');}
+      try{await follow(id,true);}catch{throw Error('メモは保存しましたが、お気に入りへの追加ができませんでした。「お気に入りに追加」をもう一度押してください。');}
     }else localSave(id,{...prior,watching:true,body:result.body},true);
   }
-  return {load,follow,save,get rows(){return rows;},get account(){return !!userId;},get identity(){return userId;},get ready(){return ready;}};
+  return {load,follow,save,setIntensity,get rows(){return rows;},get account(){return !!userId;},get identity(){return userId;},get ready(){return ready;}};
 }

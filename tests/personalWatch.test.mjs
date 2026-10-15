@@ -30,3 +30,22 @@ test('アカウント読込・保存失敗を匿名保存で隠さず、入力�
  const s=storage(),{db,state}=accountDB(),a=createPersonalWatch(db,s);state.readError=true;await assert.rejects(a.load(),/読み込めません/);assert.equal(a.ready,false);assert.equal(s.getItem(LOCAL_WATCH_KEY),null);
  state.readError=false;await a.load();state.writeError=true;await assert.rejects(a.save('demo',note()),/保存できません/);assert.equal(a.rows.demo.body,'以前の自由メモ');assert.equal(s.getItem(LOCAL_WATCH_KEY),null);
 });
+
+
+test('関心度：保存済みメモと別タブの変更を保全し、解除後もメモを残す',async()=>{
+ const s=storage(),a=createPersonalWatch(null,s);await a.load();await a.save('demo',note('元のメモ'));
+ const b=createPersonalWatch(null,s);await b.load();await b.save('demo',note('別タブの新しいメモ'));
+ await a.setIntensity('demo',3);
+ assert.equal(readLocalWatch(s).demo.intensity,3);assert.equal(parseStructuredNote(readLocalWatch(s).demo.body).note.freeText,'別タブの新しいメモ');
+ await assert.rejects(a.setIntensity('demo',4));await a.follow('demo',false);
+ assert.equal(readLocalWatch(s).demo.watching,false);assert.equal(readLocalWatch(s).demo.intensity,3);assert.match(readLocalWatch(s).demo.body,/別タブの新しいメモ/);
+});
+
+test('アカウントの関心度：本人・案件を限定し、通信失敗で成功扱いにしない',async()=>{
+ const {db,state}=accountDB(),filters=[];const from=db.from.bind(db);
+ db.from=table=>({...from(table),update(row){state.calls.push({table,row});const q={eq(k,v){filters.push([k,v]);return q;},then(resolve){resolve({error:state.writeError?{}:null});}};return q;}});
+ const s=storage(),a=createPersonalWatch(db,s);await a.load();await a.setIntensity('demo',2);
+ assert.equal(a.rows.demo.intensity,2);assert.deepEqual(filters,[['user_id','owner'],['case_id','demo']]);assert.equal(a.rows.demo.body,'以前の自由メモ');
+ state.writeError=true;await assert.rejects(a.setIntensity('demo',1),/関心度を保存できません/);assert.equal(a.rows.demo.intensity,2);assert.equal(s.getItem(LOCAL_WATCH_KEY),null);
+ state.user='another';await assert.rejects(a.setIntensity('demo',1),/ログイン状態/);
+});

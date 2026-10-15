@@ -5,17 +5,11 @@ import { loadPublicData } from '../lib/publicData';
 const { details, isSampleData } = await loadPublicData();
 
 
-import { CASE_STATUS, STATUS_ORDER } from '../lib/status';
-
-// ステータスのラベル・トーンをクライアントJSへ渡す(表示用)
-const statusMap = Object.fromEntries(
-  STATUS_ORDER.map((s) => [s, { label: CASE_STATUS[s].label, mark: CASE_STATUS[s].mark, tone: CASE_STATUS[s].tone }]),
-);
 ---
 
 <Base
   title="マイページ"
-  description="監視中の銘柄の変化と、自分の気づき・次の確認日を確認するページ。"
+  description="お気に入りの銘柄の変化と、自分の気づき・次の確認日を確認するページ。"
   noindex
 >
   <h1>マイページ</h1>
@@ -41,24 +35,6 @@ const statusMap = Object.fromEntries(
   </section>
 
   <div id="mp-content" hidden>
-    <section class="section" aria-label="お気に入りの銘柄">
-      <h2 class="section-title">お気に入りの銘柄</h2>
-      <div class="filter-bar" style="margin-bottom:0.6rem">
-        <div class="filter-field">
-          <label for="mp-intensity-filter">関心度で絞り込み</label>
-          <select id="mp-intensity-filter">
-            <option value="">すべて</option>
-            <option value="3">3: 最重要</option>
-            <option value="2">2: 注目</option>
-            <option value="1">1: 経過確認</option>
-          </select>
-        </div>
-      </div>
-      <div id="mp-favorites"></div>
-      <p class="empty-state" id="mp-fav-empty" hidden>
-        お気に入りはまだありません。<a href="/">銘柄の一覧</a>の☆から登録できます。
-      </p>
-    </section>
 
     <section class="section" aria-label="銘柄ごとのメモ">
       <h2 class="section-title">銘柄ごとのメモ</h2>
@@ -80,7 +56,6 @@ const statusMap = Object.fromEntries(
   </div>
 </Base>
 
-<script is:inline type="application/json" id="mypage-status-map" set:html={JSON.stringify(statusMap).replaceAll('<', '\\u003c')} />
 
 <script>
   import { getSupabase, isSupabaseConfigured } from '../lib/supabaseBrowser';
@@ -95,10 +70,6 @@ const statusMap = Object.fromEntries(
     status: string;
   };
 
-  const statusMap = JSON.parse(document.getElementById('mypage-status-map')!.textContent!) as Record<
-    string,
-    { label: string; mark: string; tone: string }
-  >;
 
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -108,11 +79,8 @@ const statusMap = Object.fromEntries(
   const emailEl = $('mp-email');
   const content = $('mp-content');
   const authStatus = $('mp-auth-status');
-  const favContainer = $('mp-favorites');
-  const favEmpty = $('mp-fav-empty');
   const notesContainer = $('mp-notes');
   const notesEmpty = $('mp-notes-empty');
-  const intensityFilter = $<HTMLSelectElement>('mp-intensity-filter');
   const globalNote = $<HTMLTextAreaElement>('mp-global-note');
   const globalStatus = $('mp-global-status');
 
@@ -120,7 +88,6 @@ const statusMap = Object.fromEntries(
 
   let userId: string | null = null;
   let caseIndex = new Map<string, CaseInfo>();
-  let favorites: { case_id: string; intensity: number; updated_at: string }[] = [];
 
   function escapeHtml(s: string): string {
     return s.replace(/[&<>"']/g, (ch) =>
@@ -128,11 +95,6 @@ const statusMap = Object.fromEntries(
     );
   }
 
-
-  function badgeHtml(status: string): string {
-    const def = statusMap[status] ?? { label: status, mark: '・', tone: 'pause' };
-    return `<span class="badge badge--${def.tone}"><span class="badge__mark" aria-hidden="true">${def.mark}</span>${escapeHtml(def.label)}</span>`;
-  }
 
   function caseLinkHtml(info: CaseInfo | undefined, caseId: string): string {
     if (!info) return `<span class="muted small">(非公開または削除された案件: ${escapeHtml(caseId.slice(0, 8))}…)</span>`;
@@ -147,40 +109,6 @@ const statusMap = Object.fromEntries(
     } catch {
       caseIndex = new Map();
     }
-  }
-
-  function renderFavorites() {
-    const filter = intensityFilter.value;
-    const items = favorites.filter((f) => !filter || String(f.intensity) === filter);
-    favEmpty.hidden = items.length > 0;
-    favContainer.innerHTML = items
-      .map((f) => {
-        const info = caseIndex.get(f.case_id);
-        return `
-        <div class="card" style="margin-bottom:0.5rem; display:flex; gap:0.8rem; align-items:center; flex-wrap:wrap;">
-          ${info ? badgeHtml(info.status) : ''}
-          <div style="flex:1; min-width:12rem;">${caseLinkHtml(info, f.case_id)}</div>
-          <label class="small muted">関心度
-            <select data-fav-intensity="${f.case_id}">
-              <option value="1" ${f.intensity === 1 ? 'selected' : ''}>1: 経過確認</option>
-              <option value="2" ${f.intensity === 2 ? 'selected' : ''}>2: 注目</option>
-              <option value="3" ${f.intensity === 3 ? 'selected' : ''}>3: 最重要</option>
-            </select>
-          </label>
-          <button type="button" class="btn btn--danger" data-fav-remove="${f.case_id}">解除</button>
-        </div>`;
-      })
-      .join('');
-  }
-
-  async function loadFavorites() {
-    if (!supabase) return;
-    const { data } = await supabase
-      .from('user_case_favorites')
-      .select('case_id, intensity, updated_at')
-      .order('updated_at', { ascending: false });
-    favorites = data ?? [];
-    renderFavorites();
   }
 
   function formatLocalDate(date: Date): string {
@@ -253,7 +181,7 @@ const statusMap = Object.fromEntries(
     content.hidden = false;
 
     await loadCaseIndex();
-    await Promise.all([loadFavorites(), loadCaseNotes(), loadGlobalNote()]);
+    await Promise.all([loadCaseNotes(), loadGlobalNote()]);
   }
 
   $('mp-login')?.addEventListener('click', async () => {
@@ -270,40 +198,6 @@ const statusMap = Object.fromEntries(
     if (!supabase) return;
     await supabase.auth.signOut();
     location.reload();
-  });
-
-  intensityFilter?.addEventListener('change', renderFavorites);
-
-  document.addEventListener('change', async (e) => {
-    const sel = (e.target as HTMLElement).closest<HTMLSelectElement>('[data-fav-intensity]');
-    if (!sel || !supabase || !userId) return;
-    const caseId = sel.dataset.favIntensity ?? '';
-    await supabase
-      .from('user_case_favorites')
-      .update({ intensity: Number(sel.value) })
-      .eq('user_id', userId)
-      .eq('case_id', caseId);
-    const fav = favorites.find((f) => f.case_id === caseId);
-    if (fav) fav.intensity = Number(sel.value);
-    if (intensityFilter.value) renderFavorites();
-  });
-
-  document.addEventListener('click', async (e) => {
-    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-fav-remove]');
-    if (!btn || !supabase || !userId) return;
-    const caseId = btn.dataset.favRemove ?? '';
-    btn.disabled = true;
-    const { error } = await supabase
-      .from('user_case_favorites')
-      .delete()
-      .eq('user_id', userId)
-      .eq('case_id', caseId);
-    if (!error) {
-      favorites = favorites.filter((f) => f.case_id !== caseId);
-      renderFavorites();
-    } else {
-      btn.disabled = false;
-    }
   });
 
   $('mp-global-save')?.addEventListener('click', async () => {
