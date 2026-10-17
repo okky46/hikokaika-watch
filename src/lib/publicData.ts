@@ -298,7 +298,7 @@ export function assemble(raw: RawData): PublicData {
     });
   }
 
-  // 上場廃止・非公開化完了を末尾にまとめ、各グループ内は出来事の新しい順。
+  // 正式発表前など→正式発表済み→上場廃止・非公開化完了。各グループ内は出来事の新しい順。
   details.sort(
     (a, b) => compareCases(a.search,b.search,'event'),
   );

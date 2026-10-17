@@ -64,9 +64,10 @@ export function latestDatedEvent(c: Pick<SearchCase,'events'>): SearchEvent | nu
   return c.events.filter(e=>!!e.date.start).sort((a,b)=>timelineDateKey(b.date).localeCompare(timelineDateKey(a.date)) || a.id.localeCompare(b.id))[0] ?? null;
 }
 export function compareCases(a: SearchCase, b: SearchCase, sort: SearchFilters['sort']): number {
-  const delisted = (c: SearchCase) => c.status==='delisted' || c.status==='privatized';
-  const delistedOrder=Number(delisted(a))-Number(delisted(b));
-  if(delistedOrder)return delistedOrder;
+  const group = (c: SearchCase) => c.status==='delisted' || c.status==='privatized' ? 2
+    : c.status!=='unreviewed' && PUBLIC_TRACKING_STATUS[c.status].stage==='post' ? 1 : 0;
+  const groupOrder=group(a)-group(b);
+  if(groupOrder)return groupOrder;
   const stable=()=>a.code.localeCompare(b.code,'en') || a.id.localeCompare(b.id);
   if(sort==='code')return stable();
   if(sort==='updated')return b.updatedAt.localeCompare(a.updatedAt) || stable();
